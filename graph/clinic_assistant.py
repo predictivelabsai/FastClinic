@@ -237,5 +237,20 @@ async def answer_stream(message: str):
                                       "args": ev["data"].get("input", {})})
             elif kind == "on_tool_end":
                 yield ("tool_end", {"name": ev.get("name", "tool")})
-    except Exception as e:
-        yield ("error", str(e))
+    except Exception as e:  # noqa: BLE001 — degrade gracefully, never surface a raw error
+        yield ("token", _stream_error_message(e))
+
+
+def _stream_error_message(e: Exception) -> str:
+    """A user-friendly fallback for a mid-stream model failure.
+
+    A 401/auth error means a model provider is selected but its API key is
+    missing or invalid — explain that plainly rather than leaking "Error: 401".
+    """
+    low = f"{type(e).__name__} {e}".lower()
+    if any(s in low for s in ("401", "unauthor", "invalid api key", "incorrect api key",
+                              "authentication", "permission", "no api key", "api_key")):
+        return ("⚠ The AI assistant has no valid model API key configured, so free-form "
+                "chat is unavailable on this deployment. Set `MODEL_PROVIDER` and the matching "
+                "key (e.g. `OPENAI_API_KEY`) to enable it.\n\n" + _fallback())
+    return f"⚠ assistant error: `{e}`\n\n" + _fallback()

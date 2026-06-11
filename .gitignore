@@ -219,3 +219,7 @@ fastclinic.sqlite
 
 # Local deploy credentials (mirrored to GitHub Actions secrets)
 .secrets
+
+# Demo walkthrough: keep the GIF, ignore intermediate frames
+docs/demo/frames/
+!docs/demo/fastclinic-walkthrough.gif
