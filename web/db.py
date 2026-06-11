@@ -10,7 +10,10 @@ import os
 import sqlite3
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB_PATH = os.getenv("FASTCLINIC_DB", os.path.join(ROOT, "fastclinic.sqlite"))
+# `or` (not a getenv default) so an empty FASTCLINIC_DB="" — e.g. a blank value
+# left in a deploy env — falls back to the bundled path instead of opening an
+# empty throwaway database.
+DB_PATH = os.getenv("FASTCLINIC_DB") or os.path.join(ROOT, "fastclinic.sqlite")
 
 # "Today" reference for due/lapsed maths. The sample export runs to mid-2026;
 # override with FASTCLINIC_TODAY=YYYY-MM-DD to pin a reference date for demos.
