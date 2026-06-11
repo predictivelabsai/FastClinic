@@ -1,0 +1,267 @@
+{
+  "database": "mmg",
+  "description": "MyMedicalGateway — medical-travel platform database",
+  "tables": {
+    "user": {
+      "description": "Registered patients / portal users",
+      "columns": {
+        "id": "integer PK",
+        "email": "varchar(50)",
+        "title": "varchar(50)",
+        "password": "varchar(255)",
+        "first_name": "varchar(50)",
+        "last_name": "varchar(50)",
+        "phone": "varchar(20)",
+        "address": "varchar(300)",
+        "dob": "date",
+        "medical_problem": "varchar(255)",
+        "social_auth_enabled": "boolean",
+        "social_auth_provider": "enum(google,apple)",
+        "accepted_client_terms_and_conditions": "boolean",
+        "is_validated_by_professional": "boolean",
+        "is_social_account": "boolean",
+        "receive_call": "boolean",
+        "receive_sms": "boolean",
+        "receive_email": "boolean",
+        "receive_post": "boolean",
+        "receive_whatsapp": "boolean",
+        "treatment_id": "integer FK -> treatment.id",
+        "hospital_group_id": "integer FK -> hospital_group.id",
+        "last_viewed_treatment_package": "integer FK -> hospital_treatments.id"
+      }
+    },
+    "location": {
+      "description": "Countries / regions where hospitals operate",
+      "columns": {
+        "id": "integer PK",
+        "name": "varchar(50) UNIQUE — country name"
+      }
+    },
+    "hospital_group": {
+      "description": "Parent organisations that own one or more hospitals",
+      "columns": {
+        "id": "integer PK",
+        "hospital_group_name": "varchar(100)",
+        "common_name": "varchar(100)",
+        "ultimate_parent_company_name": "varchar(100)",
+        "entity_type": "enum(Private Limited Company, Public Listed Company, Foundation, Not-for-profit, Church)",
+        "headquarters_city": "varchar(100)",
+        "headquarters_country": "varchar(100)",
+        "headquarters_website": "varchar(255)",
+        "ceo_name": "varchar(100)",
+        "number_of_hospitals": "integer",
+        "total_medical_staff": "integer",
+        "total_annual_treatments": "integer",
+        "confirmed_by_medical": "boolean",
+        "confirmed_by_sales": "boolean",
+        "confirmed_by_management": "boolean"
+      }
+    },
+    "hospital": {
+      "description": "Individual hospital sites",
+      "columns": {
+        "id": "integer PK",
+        "name": "varchar(100)",
+        "address": "varchar(255)",
+        "city": "varchar(100)",
+        "nearest_international_airport": "varchar(100)",
+        "airlines_travelling_to_uk": "varchar(255)",
+        "hospital_director_name": "varchar(100)",
+        "all_treatment_specialities_covered": "boolean",
+        "total_number_of_beds": "integer",
+        "total_medical_staff": "integer",
+        "total_annual_treatments": "integer",
+        "promotional_description": "varchar(350)",
+        "primary_contact_name": "varchar(100)",
+        "primary_contact_email": "varchar(100)",
+        "primary_contact_phone": "varchar(20)",
+        "diagnostic_manager_name": "varchar(100)",
+        "diagnostic_manager_email": "varchar(100)",
+        "diagnostic_manager_phone": "varchar(20)",
+        "contry_id": "integer FK -> location.id (note: typo in schema, 'contry' not 'country')",
+        "hospital_group_id": "integer FK -> hospital_group.id"
+      }
+    },
+    "treatment_type": {
+      "description": "Speciality categories (e.g. Orthopaedics, Cardiac Surgery)",
+      "columns": {
+        "id": "integer PK",
+        "name": "varchar(100) UNIQUE",
+        "display_order": "integer"
+      }
+    },
+    "treatment": {
+      "description": "Specific procedures within a speciality",
+      "columns": {
+        "id": "integer PK",
+        "name": "varchar(100)",
+        "description": "varchar(500)",
+        "treatment_type_id": "integer FK -> treatment_type.id",
+        "category": "varchar(50)",
+        "average_uk_price": "float — average UK private price in EUR",
+        "average_eu_price": "float — average EU price in EUR",
+        "uk_range": "varchar(100)",
+        "eu_range": "varchar(100)",
+        "is_approved": "boolean"
+      }
+    },
+    "hospital_treatments": {
+      "description": "Junction: which treatments a hospital offers (with price estimates)",
+      "columns": {
+        "id": "integer PK",
+        "hospital_id": "integer FK -> hospital.id",
+        "treatment_id": "integer FK -> treatment.id",
+        "priority_price_estimate": "integer",
+        "regular_price_estimate": "integer",
+        "priority_wait_estimate_days": "integer",
+        "regular_wait_estimate_days": "integer"
+      }
+    },
+    "hospital_treatment_type": {
+      "description": "Specialist heads per hospital per speciality (head_of_specialty, head_bio)",
+      "columns": {
+        "id": "integer PK",
+        "hospital_id": "integer FK -> hospital.id",
+        "treatment_type_id": "integer FK -> treatment_type.id",
+        "head_of_specialty": "varchar(100) — specialist doctor name",
+        "head_bio": "varchar(100) — short bio of the specialist",
+        "head_image": "binary"
+      }
+    },
+    "hospital_group_treatments": {
+      "description": "Group-level treatment pricing with pre/post-op details",
+      "columns": {
+        "id": "integer PK",
+        "hospital_group_id": "integer FK -> hospital_group.id",
+        "treatment_id": "integer FK -> treatment.id",
+        "price": "float — treatment price in EUR",
+        "nights_in_hospital": "integer",
+        "nights_in_hospital_post_op": "integer",
+        "co_morbidities": "text",
+        "medications": "text",
+        "post_operative_care": "varchar(255)",
+        "pre_op_full_blood_count": "boolean",
+        "pre_op_x_ray": "boolean",
+        "pre_op_ct": "boolean",
+        "pre_op_mri": "boolean",
+        "pre_op_ecg": "boolean",
+        "post_op_full_blood_count": "boolean",
+        "post_op_x_ray": "boolean",
+        "post_op_mri": "boolean",
+        "post_op_ecg": "boolean"
+      }
+    },
+    "patient_quote": {
+      "description": "Patient quote requests — one per user, tracks the full booking funnel",
+      "columns": {
+        "id": "integer PK",
+        "user_id": "integer FK -> user.id UNIQUE",
+        "time_requested": "datetime",
+        "hospital_price_eur": "float",
+        "treatment_id": "integer FK -> treatment.id",
+        "hospital_id": "integer FK -> hospital.id",
+        "initial_payment_completed": "boolean",
+        "diagnostics_submitted": "boolean",
+        "diagnostics_approved": "boolean",
+        "final_payment_completed": "boolean",
+        "treatment_completed": "boolean",
+        "is_cancelled": "boolean",
+        "is_expired": "boolean",
+        "initial_payment_date": "datetime",
+        "diagnostics_submitted_date": "datetime",
+        "diagnostics_approved_date": "datetime",
+        "final_payment_date": "datetime",
+        "cancelled_date": "datetime",
+        "expired_date": "datetime",
+        "confirmed_treatment_date": "datetime",
+        "proposed_date_1": "datetime",
+        "proposed_date_2": "datetime",
+        "proposed_date_3": "datetime"
+      }
+    },
+    "callback_requests": {
+      "description": "Patient callback request submissions",
+      "columns": {
+        "id": "integer PK",
+        "name": "varchar(100)",
+        "phone": "varchar(20)",
+        "email": "varchar(100)",
+        "preferred_time": "varchar(50)",
+        "terms_agreed": "boolean",
+        "comments": "text",
+        "email_sent": "boolean",
+        "email_sent_at": "datetime",
+        "created_at": "datetime",
+        "status": "varchar(20) — pending, contacted, completed, cancelled",
+        "user_id": "integer FK -> user.id nullable"
+      }
+    },
+    "conversations": {
+      "description": "AI chat conversation threads",
+      "columns": {
+        "id": "integer PK",
+        "thread_id": "varchar(255) UNIQUE",
+        "user_id": "varchar(255)",
+        "created_at": "datetime",
+        "updated_at": "datetime"
+      }
+    },
+    "conversation_messages": {
+      "description": "Individual messages within a conversation",
+      "columns": {
+        "id": "integer PK",
+        "conversation_id": "integer FK -> conversations.id CASCADE",
+        "role": "varchar(32) — user, assistant, system, tool",
+        "content": "text",
+        "created_at": "datetime"
+      }
+    },
+    "referrals": {
+      "description": "Patient referrals to hospital treatments",
+      "columns": {
+        "referral_id": "integer PK",
+        "user_id": "integer FK -> user.id",
+        "hospital_treatment_id": "integer FK -> hospital_treatments.id",
+        "referred_at": "datetime"
+      }
+    },
+    "insurance_company": {
+      "description": "Insurance providers accepted by hospital groups",
+      "columns": {
+        "id": "integer PK",
+        "name": "varchar(100)",
+        "region": "varchar(50)"
+      }
+    },
+    "financing_option": {
+      "description": "How patients finance their treatment (self, insurance, etc.)",
+      "columns": {
+        "id": "integer PK",
+        "code": "varchar(50) UNIQUE",
+        "name": "varchar(100)"
+      }
+    }
+  },
+  "key_joins": [
+    "hospital.contry_id -> location.id (note typo: 'contry_id' not 'country_id')",
+    "hospital.hospital_group_id -> hospital_group.id",
+    "treatment.treatment_type_id -> treatment_type.id",
+    "hospital_treatments.hospital_id -> hospital.id",
+    "hospital_treatments.treatment_id -> treatment.id",
+    "hospital_treatment_type.hospital_id -> hospital.id",
+    "hospital_treatment_type.treatment_type_id -> treatment_type.id",
+    "hospital_group_treatments.hospital_group_id -> hospital_group.id",
+    "hospital_group_treatments.treatment_id -> treatment.id",
+    "patient_quote.user_id -> user.id",
+    "patient_quote.treatment_id -> treatment.id",
+    "patient_quote.hospital_id -> hospital.id",
+    "callback_requests.user_id -> user.id",
+    "referrals.user_id -> user.id",
+    "referrals.hospital_treatment_id -> hospital_treatments.id"
+  ],
+  "useful_queries": {
+    "hospitals_with_specialists": "SELECT h.name, htt.head_of_specialty, htt.head_bio, tt.name AS speciality FROM hospital h JOIN hospital_treatment_type htt ON h.id = htt.hospital_id JOIN treatment_type tt ON htt.treatment_type_id = tt.id WHERE htt.head_of_specialty IS NOT NULL",
+    "treatment_prices_by_country": "SELECT l.name AS country, t.name AS treatment, hgt.price FROM hospital_group_treatments hgt JOIN hospital_group hg ON hgt.hospital_group_id = hg.id JOIN hospital h ON h.hospital_group_id = hg.id JOIN location l ON h.contry_id = l.id JOIN treatment t ON hgt.treatment_id = t.id",
+    "patient_funnel": "SELECT COUNT(*) AS total, SUM(CASE WHEN initial_payment_completed THEN 1 ELSE 0 END) AS paid, SUM(CASE WHEN diagnostics_approved THEN 1 ELSE 0 END) AS diag_ok, SUM(CASE WHEN treatment_completed THEN 1 ELSE 0 END) AS completed FROM patient_quote"
+  }
+}

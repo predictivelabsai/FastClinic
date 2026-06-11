@@ -1,0 +1,19 @@
+services:
+  fastclinic:
+    build: .
+    container_name: fastclinic-cockpit
+    ports:
+      - "5005:5005"
+    env_file:
+      - .env
+    environment:
+      # Point the cockpit at the data volume so the database lives outside the image.
+      FASTCLINIC_DB: /data/fastclinic.sqlite
+    volumes:
+      # Persist the SQLite DB + place PMS exports here. Build with:
+      #   docker compose exec fastclinic python -m pms.importer /data/export.xlsx /data/fastclinic.sqlite
+      - fastclinic-data:/data
+    restart: unless-stopped
+
+volumes:
+  fastclinic-data:

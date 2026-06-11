@@ -1,0 +1,2 @@
+# Timestamped runs are regenerated locally; keep only the latest snapshot.
+curonia_eval_*.json

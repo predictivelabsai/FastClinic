@@ -1,0 +1,1194 @@
+{
+  "timestamp": "2026-06-11T17:07:11",
+  "db_row_counts": {
+    "patient": 1000,
+    "diagnosis": 5406,
+    "note": 3908,
+    "item": 24772,
+    "consultation": 9791,
+    "client": 1000
+  },
+  "summary": {
+    "total": 111,
+    "passed": 111,
+    "failed": 0,
+    "pass_rate": 1.0,
+    "by_suite": {
+      "shortcuts": {
+        "passed": 59,
+        "total": 59
+      },
+      "chat": {
+        "passed": 25,
+        "total": 25
+      },
+      "routes": {
+        "passed": 23,
+        "total": 23
+      },
+      "coverage": {
+        "passed": 4,
+        "total": 4
+      }
+    },
+    "by_category": {
+      "kpi": {
+        "passed": 7,
+        "total": 7
+      },
+      "due": {
+        "passed": 9,
+        "total": 9
+      },
+      "lapsed": {
+        "passed": 8,
+        "total": 8
+      },
+      "followup": {
+        "passed": 7,
+        "total": 7
+      },
+      "revenue": {
+        "passed": 3,
+        "total": 3
+      },
+      "patients": {
+        "passed": 7,
+        "total": 7
+      },
+      "patient": {
+        "passed": 11,
+        "total": 11
+      },
+      "help": {
+        "passed": 4,
+        "total": 4
+      },
+      "unknown": {
+        "passed": 3,
+        "total": 3
+      },
+      "chat_freeform": {
+        "passed": 20,
+        "total": 20
+      },
+      "chat_shortcut": {
+        "passed": 3,
+        "total": 3
+      },
+      "chat_empty": {
+        "passed": 2,
+        "total": 2
+      },
+      "page": {
+        "passed": 3,
+        "total": 3
+      },
+      "activation": {
+        "passed": 8,
+        "total": 8
+      },
+      "clinic": {
+        "passed": 4,
+        "total": 4
+      },
+      "marketing": {
+        "passed": 3,
+        "total": 3
+      },
+      "admin": {
+        "passed": 2,
+        "total": 2
+      },
+      "export": {
+        "passed": 3,
+        "total": 3
+      },
+      "field_coverage": {
+        "passed": 4,
+        "total": 4
+      }
+    }
+  },
+  "cases": [
+    {
+      "suite": "shortcuts",
+      "question": "/kpi",
+      "category": "kpi",
+      "expect_contains": "Clinic KPIs",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 464 - **Total patients**: 1,000 - **Visits (30d)**: 244 - **Revenue (90d)**: €76,111 - **Lifetime revenue**: €1,33"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/kpi",
+      "category": "kpi",
+      "expect_contains": "Active patients",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 464 - **Total patients**: 1,000 - **Visits (30d)**: 244 - **Revenue (90d)**: €76,111 - **Lifetime revenue**: €1,33"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/kpi",
+      "category": "kpi",
+      "expect_contains": "1,000",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 464 - **Total patients**: 1,000 - **Visits (30d)**: 244 - **Revenue (90d)**: €76,111 - **Lifetime revenue**: €1,33"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/kpi",
+      "category": "kpi",
+      "expect_contains": "Lifetime revenue",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 464 - **Total patients**: 1,000 - **Visits (30d)**: 244 - **Revenue (90d)**: €76,111 - **Lifetime revenue**: €1,33"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "kpi:",
+      "category": "kpi",
+      "expect_contains": "Clinic KPIs",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 464 - **Total patients**: 1,000 - **Visits (30d)**: 244 - **Revenue (90d)**: €76,111 - **Lifetime revenue**: €1,33"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/kpis",
+      "category": "kpi",
+      "expect_contains": "Clinic KPIs",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 464 - **Total patients**: 1,000 - **Visits (30d)**: 244 - **Revenue (90d)**: €76,111 - **Lifetime revenue**: €1,33"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "KPI:",
+      "category": "kpi",
+      "expect_contains": "Clinic KPIs",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 464 - **Total patients**: 1,000 - **Visits (30d)**: 244 - **Revenue (90d)**: €76,111 - **Lifetime revenue**: €1,33"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/due",
+      "category": "due",
+      "expect_contains": "Immunisations & Care Plans Due",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Immunisations & Care Plans Due (1820)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1011 | Immunisation | 2020-04-16 | "
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/due",
+      "category": "due",
+      "expect_contains": "Open Activation",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Immunisations & Care Plans Due (1820)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1011 | Immunisation | 2020-04-16 | "
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/due vaccine",
+      "category": "due",
+      "expect_contains": "Immunisations & Care Plans Due",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Immunisations & Care Plans Due (484)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1011 | Immunisation | 2020-04-16 | o"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/due health_plan",
+      "category": "due",
+      "expect_contains": "Immunisations & Care Plans Due",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Immunisations & Care Plans Due (517)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1470 | Health check | 2020-05-05 | o"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/due repeat_prescription",
+      "category": "due",
+      "expect_contains": "Immunisations & Care Plans Due",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Immunisations & Care Plans Due (819)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1081 | Repeat prescription | 2020-05"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/due nonsense",
+      "category": "due",
+      "expect_contains": "Immunisations & Care Plans Due",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Immunisations & Care Plans Due (1820)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1011 | Immunisation | 2020-04-16 | "
+    },
+    {
+      "suite": "shortcuts",
+      "question": "due:",
+      "category": "due",
+      "expect_contains": "Immunisations & Care Plans Due",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Immunisations & Care Plans Due (1820)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1011 | Immunisation | 2020-04-16 | "
+    },
+    {
+      "suite": "shortcuts",
+      "question": "due: vaccine",
+      "category": "due",
+      "expect_contains": "Immunisations & Care Plans Due",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Immunisations & Care Plans Due (484)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1011 | Immunisation | 2020-04-16 | o"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/reminders",
+      "category": "due",
+      "expect_contains": "Immunisations & Care Plans Due",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Immunisations & Care Plans Due (1820)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1011 | Immunisation | 2020-04-16 | "
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/lapsed",
+      "category": "lapsed",
+      "expect_contains": "Lapsed Patients (>12mo)",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Lapsed Patients (>12mo) — 225, €291,187 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1013 | 2025-05-05 | 13mo | €3,0"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/lapsed",
+      "category": "lapsed",
+      "expect_contains": "at risk",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Lapsed Patients (>12mo) — 225, €291,187 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1013 | 2025-05-05 | 13mo | €3,0"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/lapsed 6",
+      "category": "lapsed",
+      "expect_contains": "Lapsed Patients (>6mo)",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Lapsed Patients (>6mo) — 417, €531,114 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1013 | 2025-05-05 | 13mo | €3,09"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/lapsed 9",
+      "category": "lapsed",
+      "expect_contains": "Lapsed Patients (>9mo)",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Lapsed Patients (>9mo) — 314, €410,838 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1013 | 2025-05-05 | 13mo | €3,09"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/lapsed 18",
+      "category": "lapsed",
+      "expect_contains": "Lapsed Patients (>18mo)",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Lapsed Patients (>18mo) — 132, €169,494 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1159 | 2024-09-16 | 21mo | €2,6"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/lapsed 24",
+      "category": "lapsed",
+      "expect_contains": "Lapsed Patients (>24mo)",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Lapsed Patients (>24mo) — 75, €92,422 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1810 | 2024-06-06 | 24mo | €2,646"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/lapsed abc",
+      "category": "lapsed",
+      "expect_contains": "Lapsed Patients (>12mo)",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Lapsed Patients (>12mo) — 225, €291,187 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1013 | 2025-05-05 | 13mo | €3,0"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "lapsed: 9",
+      "category": "lapsed",
+      "expect_contains": "Lapsed Patients (>9mo)",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Lapsed Patients (>9mo) — 314, €410,838 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1013 | 2025-05-05 | 13mo | €3,09"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/followup",
+      "category": "followup",
+      "expect_contains": "Post-Visit Follow-up (14d)",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Post-Visit Follow-up (14d) — 175  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1054 | 2026-06-10 | consultation,referral | €78 | | #113"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/followup 7",
+      "category": "followup",
+      "expect_contains": "Post-Visit Follow-up (7d)",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Post-Visit Follow-up (7d) — 121  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1054 | 2026-06-10 | consultation,referral | €78 | | #1131"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/followup 30",
+      "category": "followup",
+      "expect_contains": "Post-Visit Follow-up (30d)",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Post-Visit Follow-up (30d) — 244  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1054 | 2026-06-10 | consultation,referral | €78 | | #113"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/followup 60",
+      "category": "followup",
+      "expect_contains": "Post-Visit Follow-up (60d)",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Post-Visit Follow-up (60d) — 355  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1054 | 2026-06-10 | consultation,referral | €78 | | #113"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/followup xyz",
+      "category": "followup",
+      "expect_contains": "Post-Visit Follow-up (14d)",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Post-Visit Follow-up (14d) — 175  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1054 | 2026-06-10 | consultation,referral | €78 | | #113"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "followup:",
+      "category": "followup",
+      "expect_contains": "Post-Visit Follow-up (14d)",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Post-Visit Follow-up (14d) — 175  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1054 | 2026-06-10 | consultation,referral | €78 | | #113"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/follow-up",
+      "category": "followup",
+      "expect_contains": "Post-Visit Follow-up (14d)",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Post-Visit Follow-up (14d) — 175  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1054 | 2026-06-10 | consultation,referral | €78 | | #113"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/revenue",
+      "category": "revenue",
+      "expect_contains": "Revenue by Category",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Revenue by Category  | Category | Lines | Revenue | | --- | --- | --- | | Health check / care plan | 1582 | €256,910 | | Medication | 7346 | €254,727 | | Co"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "revenue:",
+      "category": "revenue",
+      "expect_contains": "Revenue by Category",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Revenue by Category  | Category | Lines | Revenue | | --- | --- | --- | | Health check / care plan | 1582 | €256,910 | | Medication | 7346 | €254,727 | | Co"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/revenue",
+      "category": "revenue",
+      "expect_contains": "Immunisation",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Revenue by Category  | Category | Lines | Revenue | | --- | --- | --- | | Health check / care plan | 1582 | €256,910 | | Medication | 7346 | €254,727 | | Co"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/patients",
+      "category": "patients",
+      "expect_contains": "### Patients",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Patients (20)  | ID | Name | Sex | City | Visits | Last visit | Lifetime € | | --- | --- | --- | --- | --- | --- | --- | | #1054 | Noah Walker | Male | Leed"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/patients London",
+      "category": "patients",
+      "expect_contains": "### Patients",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Patients (20)  | ID | Name | Sex | City | Visits | Last visit | Lifetime € | | --- | --- | --- | --- | --- | --- | --- | | #1138 | Jack Hall | Male | London"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/patients Manchester",
+      "category": "patients",
+      "expect_contains": "### Patients",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Patients (20)  | ID | Name | Sex | City | Visits | Last visit | Lifetime € | | --- | --- | --- | --- | --- | --- | --- | | #1999 | Charlie Green | Male | Ma"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/patients Smith",
+      "category": "patients",
+      "expect_contains": "### Patients",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Patients (20)  | ID | Name | Sex | City | Visits | Last visit | Lifetime € | | --- | --- | --- | --- | --- | --- | --- | | #1976 | Isla Smith | Female | She"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/patients Bristol",
+      "category": "patients",
+      "expect_contains": "### Patients",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Patients (20)  | ID | Name | Sex | City | Visits | Last visit | Lifetime € | | --- | --- | --- | --- | --- | --- | --- | | #1435 | Samuel Clarke | Male | Br"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/patients zzzzzz",
+      "category": "patients",
+      "expect_contains": "none match",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Patients  *(none match)*"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "patients: Leeds",
+      "category": "patients",
+      "expect_contains": "### Patients",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Patients (20)  | ID | Name | Sex | City | Visits | Last visit | Lifetime € | | --- | --- | --- | --- | --- | --- | --- | | #1054 | Noah Walker | Male | Leed"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/patient 1001",
+      "category": "patient",
+      "expect_contains": "Patient #1001",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Patient #1001  - **Name**: James Wright - **Sex**: Male - **DOB**: 1958-12-29 - **City**: Manchester - **NHS number**: 403 877 3615 - **Critical notes**: As"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/patient 1206",
+      "category": "patient",
+      "expect_contains": "Patient #1206",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Patient #1206  - **Name**: Lily Thompson - **Sex**: Female - **DOB**: 2012-07-28 - **City**: Leeds - **NHS number**: 461 544 5605 - **Critical notes**: — - "
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/patient 1500",
+      "category": "patient",
+      "expect_contains": "Patient #1500",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Patient #1500  - **Name**: Charlotte Wood - **Sex**: Female - **DOB**: 2024-12-04 - **City**: Leeds - **NHS number**: 566 938 1808 - **Critical notes**: Ant"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/patient 1800",
+      "category": "patient",
+      "expect_contains": "Patient #1800",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Patient #1800  - **Name**: Hannah Brown - **Sex**: Female - **DOB**: 1972-10-07 - **City**: Leeds - **NHS number**: 419 558 1872 - **Critical notes**: Latex"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/patient 2000",
+      "category": "patient",
+      "expect_contains": "Patient #2000",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Patient #2000  - **Name**: James Wilson - **Sex**: Male - **DOB**: 2001-04-25 - **City**: Manchester - **NHS number**: 494 642 3582 - **Critical notes**: Ch"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/patient 1206",
+      "category": "patient",
+      "expect_contains": "Lifetime value",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Patient #1206  - **Name**: Lily Thompson - **Sex**: Female - **DOB**: 2012-07-28 - **City**: Leeds - **NHS number**: 461 544 5605 - **Critical notes**: — - "
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/patient 1206",
+      "category": "patient",
+      "expect_contains": "Open patient",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Patient #1206  - **Name**: Lily Thompson - **Sex**: Female - **DOB**: 2012-07-28 - **City**: Leeds - **NHS number**: 461 544 5605 - **Critical notes**: — - "
+    },
+    {
+      "suite": "shortcuts",
+      "question": "patient: 1300",
+      "category": "patient",
+      "expect_contains": "Patient #1300",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Patient #1300  - **Name**: Adam Wright - **Sex**: Male - **DOB**: 1999-04-23 - **City**: Manchester - **NHS number**: 679 636 3129 - **Critical notes**: — -"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/patient 99999",
+      "category": "patient",
+      "expect_contains": "No patient #99999",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "No patient #99999."
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/patient abc",
+      "category": "patient",
+      "expect_contains": "Usage:",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "Usage: `/patient ID` (e.g. `/patient 117753`)"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/patient",
+      "category": "patient",
+      "expect_contains": "Usage:",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "Usage: `/patient ID` (e.g. `/patient 117753`)"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/help",
+      "category": "help",
+      "expect_contains": "FastClinic Cockpit Commands",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### FastClinic Cockpit Commands  | Command | What it does | | --- | --- | | `/kpi` | Clinic KPIs snapshot | | `/due [vaccine\\|health_plan\\|repeat_prescription]`"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/help",
+      "category": "help",
+      "expect_contains": "/lapsed",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### FastClinic Cockpit Commands  | Command | What it does | | --- | --- | | `/kpi` | Clinic KPIs snapshot | | `/due [vaccine\\|health_plan\\|repeat_prescription]`"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/?",
+      "category": "help",
+      "expect_contains": "FastClinic Cockpit Commands",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### FastClinic Cockpit Commands  | Command | What it does | | --- | --- | | `/kpi` | Clinic KPIs snapshot | | `/due [vaccine\\|health_plan\\|repeat_prescription]`"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "help:",
+      "category": "help",
+      "expect_contains": "FastClinic Cockpit Commands",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### FastClinic Cockpit Commands  | Command | What it does | | --- | --- | | `/kpi` | Clinic KPIs snapshot | | `/due [vaccine\\|health_plan\\|repeat_prescription]`"
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/unknowncmd",
+      "category": "unknown",
+      "expect_contains": "Unknown command",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "Unknown command `/unknowncmd`. Type `/help` for options."
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/foobar",
+      "category": "unknown",
+      "expect_contains": "Unknown command",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "Unknown command `/foobar`. Type `/help` for options."
+    },
+    {
+      "suite": "shortcuts",
+      "question": "/xyz123",
+      "category": "unknown",
+      "expect_contains": "Unknown command",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "Unknown command `/xyz123`. Type `/help` for options."
+    },
+    {
+      "suite": "chat",
+      "question": "How many patients are due for immunisations?",
+      "category": "chat_freeform",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "I can answer questions about the clinic, but no AI provider is configured yet. Meanwhile, try a shortcut command:  - `/kpi` — clinic KPIs - `/due` — immunisatio"
+    },
+    {
+      "suite": "chat",
+      "question": "Which patients have lapsed?",
+      "category": "chat_freeform",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "I can answer questions about the clinic, but no AI provider is configured yet. Meanwhile, try a shortcut command:  - `/kpi` — clinic KPIs - `/due` — immunisatio"
+    },
+    {
+      "suite": "chat",
+      "question": "What is our revenue this quarter?",
+      "category": "chat_freeform",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "I can answer questions about the clinic, but no AI provider is configured yet. Meanwhile, try a shortcut command:  - `/kpi` — clinic KPIs - `/due` — immunisatio"
+    },
+    {
+      "suite": "chat",
+      "question": "Tell me about patient 1206",
+      "category": "chat_freeform",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "I can answer questions about the clinic, but no AI provider is configured yet. Meanwhile, try a shortcut command:  - `/kpi` — clinic KPIs - `/due` — immunisatio"
+    },
+    {
+      "suite": "chat",
+      "question": "Who should we contact today?",
+      "category": "chat_freeform",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "I can answer questions about the clinic, but no AI provider is configured yet. Meanwhile, try a shortcut command:  - `/kpi` — clinic KPIs - `/due` — immunisatio"
+    },
+    {
+      "suite": "chat",
+      "question": "What immunisations are overdue?",
+      "category": "chat_freeform",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "I can answer questions about the clinic, but no AI provider is configured yet. Meanwhile, try a shortcut command:  - `/kpi` — clinic KPIs - `/due` — immunisatio"
+    },
+    {
+      "suite": "chat",
+      "question": "How is the clinic performing?",
+      "category": "chat_freeform",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "I can answer questions about the clinic, but no AI provider is configured yet. Meanwhile, try a shortcut command:  - `/kpi` — clinic KPIs - `/due` — immunisatio"
+    },
+    {
+      "suite": "chat",
+      "question": "Draft a reminder message for immunisations",
+      "category": "chat_freeform",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "I can answer questions about the clinic, but no AI provider is configured yet. Meanwhile, try a shortcut command:  - `/kpi` — clinic KPIs - `/due` — immunisatio"
+    },
+    {
+      "suite": "chat",
+      "question": "Show me the most valuable lapsed patients",
+      "category": "chat_freeform",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "I can answer questions about the clinic, but no AI provider is configured yet. Meanwhile, try a shortcut command:  - `/kpi` — clinic KPIs - `/due` — immunisatio"
+    },
+    {
+      "suite": "chat",
+      "question": "What blood tests did we do?",
+      "category": "chat_freeform",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "I can answer questions about the clinic, but no AI provider is configured yet. Meanwhile, try a shortcut command:  - `/kpi` — clinic KPIs - `/due` — immunisatio"
+    },
+    {
+      "suite": "chat",
+      "question": "Who is due for a health check?",
+      "category": "chat_freeform",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "I can answer questions about the clinic, but no AI provider is configured yet. Meanwhile, try a shortcut command:  - `/kpi` — clinic KPIs - `/due` — immunisatio"
+    },
+    {
+      "suite": "chat",
+      "question": "Hello",
+      "category": "chat_freeform",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "I can answer questions about the clinic, but no AI provider is configured yet. Meanwhile, try a shortcut command:  - `/kpi` — clinic KPIs - `/due` — immunisatio"
+    },
+    {
+      "suite": "chat",
+      "question": "Thanks for your help",
+      "category": "chat_freeform",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "I can answer questions about the clinic, but no AI provider is configured yet. Meanwhile, try a shortcut command:  - `/kpi` — clinic KPIs - `/due` — immunisatio"
+    },
+    {
+      "suite": "chat",
+      "question": "What can you do?",
+      "category": "chat_freeform",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "I can answer questions about the clinic, but no AI provider is configured yet. Meanwhile, try a shortcut command:  - `/kpi` — clinic KPIs - `/due` — immunisatio"
+    },
+    {
+      "suite": "chat",
+      "question": "Summarise this week",
+      "category": "chat_freeform",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "I can answer questions about the clinic, but no AI provider is configured yet. Meanwhile, try a shortcut command:  - `/kpi` — clinic KPIs - `/due` — immunisatio"
+    },
+    {
+      "suite": "chat",
+      "question": "What is our most common diagnosis?",
+      "category": "chat_freeform",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "I can answer questions about the clinic, but no AI provider is configured yet. Meanwhile, try a shortcut command:  - `/kpi` — clinic KPIs - `/due` — immunisatio"
+    },
+    {
+      "suite": "chat",
+      "question": "What is our patient mix by gender?",
+      "category": "chat_freeform",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "I can answer questions about the clinic, but no AI provider is configured yet. Meanwhile, try a shortcut command:  - `/kpi` — clinic KPIs - `/due` — immunisatio"
+    },
+    {
+      "suite": "chat",
+      "question": "Which service makes the most money?",
+      "category": "chat_freeform",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "I can answer questions about the clinic, but no AI provider is configured yet. Meanwhile, try a shortcut command:  - `/kpi` — clinic KPIs - `/due` — immunisatio"
+    },
+    {
+      "suite": "chat",
+      "question": "Give me a win-back list for high value patients",
+      "category": "chat_freeform",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "I can answer questions about the clinic, but no AI provider is configured yet. Meanwhile, try a shortcut command:  - `/kpi` — clinic KPIs - `/due` — immunisatio"
+    },
+    {
+      "suite": "chat",
+      "question": "Which patients need a repeat prescription review soon?",
+      "category": "chat_freeform",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "I can answer questions about the clinic, but no AI provider is configured yet. Meanwhile, try a shortcut command:  - `/kpi` — clinic KPIs - `/due` — immunisatio"
+    },
+    {
+      "suite": "chat",
+      "question": "/kpi",
+      "category": "chat_shortcut",
+      "expect_kind": "local",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Clinic KPIs\n\n- **Active patients (90d)**: 464\n- **Total patients**: 1,000\n- **Visits (30d)**: 244\n- **Revenue (90d)**: €76,111\n- **Lifetime revenue**: €1,33"
+    },
+    {
+      "suite": "chat",
+      "question": "/due",
+      "category": "chat_shortcut",
+      "expect_kind": "local",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Immunisations & Care Plans Due (1820)\n\n| Patient | Service | Due | Status | Overdue |\n| --- | --- | --- | --- | --- |\n| #1011 | Immunisation | 2020-04-16 | "
+    },
+    {
+      "suite": "chat",
+      "question": "/lapsed",
+      "category": "chat_shortcut",
+      "expect_kind": "local",
+      "kind": "local",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "### Lapsed Patients (>12mo) — 225, €291,187 at risk\n\n| Patient | Last visit | Lapsed | Lifetime € |\n| --- | --- | --- | --- |\n| #1013 | 2025-05-05 | 13mo | €3,0"
+    },
+    {
+      "suite": "chat",
+      "question": "",
+      "category": "chat_empty",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": ""
+    },
+    {
+      "suite": "chat",
+      "question": "   ",
+      "category": "chat_empty",
+      "expect_kind": "agent",
+      "kind": "agent",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": ""
+    },
+    {
+      "suite": "routes",
+      "path": "/",
+      "category": "page",
+      "expect_contains": "Clinic Overview",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/",
+      "category": "page",
+      "expect_contains": "Total patients",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/ai",
+      "category": "page",
+      "expect_contains": "Assistant",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/activation/reminders",
+      "category": "activation",
+      "expect_contains": "Immunisations",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/activation/reminders?cat=vaccine",
+      "category": "activation",
+      "expect_contains": "Immunisations",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/activation/reminders?cat=health_plan",
+      "category": "activation",
+      "expect_contains": "Immunisations",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/activation/lapsed",
+      "category": "activation",
+      "expect_contains": "Lapsed Reactivation",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/activation/lapsed?months=6",
+      "category": "activation",
+      "expect_contains": "Lapsed Reactivation",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/activation/lapsed?months=24",
+      "category": "activation",
+      "expect_contains": "Lapsed Reactivation",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/activation/followup",
+      "category": "activation",
+      "expect_contains": "Post-Visit Follow-up",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/activation/followup?days=30",
+      "category": "activation",
+      "expect_contains": "Post-Visit Follow-up",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/patients",
+      "category": "clinic",
+      "expect_contains": "Patients",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/patients/1206",
+      "category": "clinic",
+      "expect_contains": "Patient",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/clinical",
+      "category": "clinic",
+      "expect_contains": "Clinical",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/revenue",
+      "category": "clinic",
+      "expect_contains": "Revenue",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/ops/sms",
+      "category": "marketing",
+      "expect_contains": "SMS Broadcaster",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/ops/sms",
+      "category": "marketing",
+      "expect_contains": "Demo mode",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/seo",
+      "category": "marketing",
+      "expect_contains": "SEO",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/admin/data",
+      "category": "admin",
+      "expect_contains": "Data",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/ai/prompt",
+      "category": "admin",
+      "expect_contains": "Prompt",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/activation/reminders/csv",
+      "category": "export",
+      "expect_contains": "patient_id",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/activation/lapsed/csv",
+      "category": "export",
+      "expect_contains": "contact_phone",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/activation/followup/csv",
+      "category": "export",
+      "expect_contains": "consult_at",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "coverage",
+      "question": "synthetic:patient",
+      "category": "field_coverage",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "33 cols, 0 uncovered"
+    },
+    {
+      "suite": "coverage",
+      "question": "synthetic:Consultationdiagnosis",
+      "category": "field_coverage",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "19 cols, 0 uncovered"
+    },
+    {
+      "suite": "coverage",
+      "question": "synthetic:Consultationnote",
+      "category": "field_coverage",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "21 cols, 0 uncovered"
+    },
+    {
+      "suite": "coverage",
+      "question": "synthetic:Consultationitem",
+      "category": "field_coverage",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "27 cols, 0 uncovered"
+    }
+  ]
+}

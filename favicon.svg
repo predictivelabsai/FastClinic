@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <title>FastClinic</title>
+  <rect width="32" height="32" rx="7" fill="#1e6fb8"/>
+  <path fill="#ffffff" d="M13.4 6h5.2v7.4H26v5.2h-7.4V26h-5.2v-7.4H6v-5.2h7.4z"/>
+</svg>

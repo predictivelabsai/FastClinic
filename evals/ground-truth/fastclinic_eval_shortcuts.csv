@@ -1,0 +1,60 @@
+question,expect_contains,category
+/kpi,Clinic KPIs,kpi
+/kpi,Active patients,kpi
+/kpi,"1,000",kpi
+/kpi,Lifetime revenue,kpi
+kpi:,Clinic KPIs,kpi
+/kpis,Clinic KPIs,kpi
+KPI:,Clinic KPIs,kpi
+/due,Immunisations & Care Plans Due,due
+/due,Open Activation,due
+/due vaccine,Immunisations & Care Plans Due,due
+/due health_plan,Immunisations & Care Plans Due,due
+/due repeat_prescription,Immunisations & Care Plans Due,due
+/due nonsense,Immunisations & Care Plans Due,due
+due:,Immunisations & Care Plans Due,due
+due: vaccine,Immunisations & Care Plans Due,due
+/reminders,Immunisations & Care Plans Due,due
+/lapsed,Lapsed Patients (>12mo),lapsed
+/lapsed,at risk,lapsed
+/lapsed 6,Lapsed Patients (>6mo),lapsed
+/lapsed 9,Lapsed Patients (>9mo),lapsed
+/lapsed 18,Lapsed Patients (>18mo),lapsed
+/lapsed 24,Lapsed Patients (>24mo),lapsed
+/lapsed abc,Lapsed Patients (>12mo),lapsed
+lapsed: 9,Lapsed Patients (>9mo),lapsed
+/followup,Post-Visit Follow-up (14d),followup
+/followup 7,Post-Visit Follow-up (7d),followup
+/followup 30,Post-Visit Follow-up (30d),followup
+/followup 60,Post-Visit Follow-up (60d),followup
+/followup xyz,Post-Visit Follow-up (14d),followup
+followup:,Post-Visit Follow-up (14d),followup
+/follow-up,Post-Visit Follow-up (14d),followup
+/revenue,Revenue by Category,revenue
+revenue:,Revenue by Category,revenue
+/revenue,Immunisation,revenue
+/patients,### Patients,patients
+/patients London,### Patients,patients
+/patients Manchester,### Patients,patients
+/patients Smith,### Patients,patients
+/patients Bristol,### Patients,patients
+/patients zzzzzz,none match,patients
+patients: Leeds,### Patients,patients
+/patient 1001,Patient #1001,patient
+/patient 1206,Patient #1206,patient
+/patient 1500,Patient #1500,patient
+/patient 1800,Patient #1800,patient
+/patient 2000,Patient #2000,patient
+/patient 1206,Lifetime value,patient
+/patient 1206,Open patient,patient
+patient: 1300,Patient #1300,patient
+/patient 99999,No patient #99999,patient
+/patient abc,Usage:,patient
+/patient,Usage:,patient
+/help,FastClinic Cockpit Commands,help
+/help,/lapsed,help
+/?,FastClinic Cockpit Commands,help
+help:,FastClinic Cockpit Commands,help
+/unknowncmd,Unknown command,unknown
+/foobar,Unknown command,unknown
+/xyz123,Unknown command,unknown

@@ -1,0 +1,26 @@
+question,expect_kind,category
+How many patients are due for immunisations?,agent,chat_freeform
+Which patients have lapsed?,agent,chat_freeform
+What is our revenue this quarter?,agent,chat_freeform
+Tell me about patient 1206,agent,chat_freeform
+Who should we contact today?,agent,chat_freeform
+What immunisations are overdue?,agent,chat_freeform
+How is the clinic performing?,agent,chat_freeform
+Draft a reminder message for immunisations,agent,chat_freeform
+Show me the most valuable lapsed patients,agent,chat_freeform
+What blood tests did we do?,agent,chat_freeform
+Who is due for a health check?,agent,chat_freeform
+Hello,agent,chat_freeform
+Thanks for your help,agent,chat_freeform
+What can you do?,agent,chat_freeform
+Summarise this week,agent,chat_freeform
+What is our most common diagnosis?,agent,chat_freeform
+What is our patient mix by gender?,agent,chat_freeform
+Which service makes the most money?,agent,chat_freeform
+Give me a win-back list for high value patients,agent,chat_freeform
+Which patients need a repeat prescription review soon?,agent,chat_freeform
+/kpi,local,chat_shortcut
+/due,local,chat_shortcut
+/lapsed,local,chat_shortcut
+,agent,chat_empty
+   ,agent,chat_empty

@@ -1,0 +1,24 @@
+path,expect_contains,expect_not_contains,category
+/,Clinic Overview,No data loaded,page
+/,Total patients,Traceback,page
+/ai,Assistant,Traceback,page
+/activation/reminders,Immunisations,Traceback,activation
+/activation/reminders?cat=vaccine,Immunisations,Traceback,activation
+/activation/reminders?cat=health_plan,Immunisations,Traceback,activation
+/activation/lapsed,Lapsed Reactivation,Traceback,activation
+/activation/lapsed?months=6,Lapsed Reactivation,Traceback,activation
+/activation/lapsed?months=24,Lapsed Reactivation,Traceback,activation
+/activation/followup,Post-Visit Follow-up,Traceback,activation
+/activation/followup?days=30,Post-Visit Follow-up,Traceback,activation
+/patients,Patients,No data loaded,clinic
+/patients/1206,Patient,Traceback,clinic
+/clinical,Clinical,Traceback,clinic
+/revenue,Revenue,Traceback,clinic
+/ops/sms,SMS Broadcaster,No SMS providers configured,marketing
+/ops/sms,Demo mode,sms-result error,marketing
+/seo,SEO,Traceback,marketing
+/admin/data,Data,Traceback,admin
+/ai/prompt,Prompt,Traceback,admin
+/activation/reminders/csv,patient_id,Traceback,export
+/activation/lapsed/csv,contact_phone,Traceback,export
+/activation/followup/csv,consult_at,Traceback,export

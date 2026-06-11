@@ -1,0 +1,21 @@
+# Curonia Cockpit — runtime dependencies.
+# The PMS importer + data layer are stdlib-only (sqlite3, zipfile). These cover
+# the web app, SEO module, SMS, and the lightweight AI assistant.
+python-fasthtml
+python-dotenv
+requests
+PyYAML
+markdownify
+python-dateutil
+openai
+# AI assistant — LangGraph agent + configurable provider.
+# xAI (Grok) and OpenAI both run through langchain-openai (xAI is API-compatible).
+langgraph
+langchain-core
+langchain-openai
+# Optional extra providers (uncomment if MODEL_PROVIDER is set to them):
+# langchain-anthropic
+# langchain-google-genai
+
+# .xlsx downloads (Download XLS buttons)
+openpyxl

@@ -1,0 +1,71 @@
+# SEO audit component registry
+# Order here controls left-nav order.
+# slug: filename stem (also CSV stem: data/seo_audit_<slug>.csv)
+components:
+  - slug: competitive-landscape
+    title: "Competitive Landscape Matrix"
+    icon: "🎯"
+    columns: [competitor, domain, market_position, content_strength, technical_score, brand_presence, notes]
+  - slug: content-gap
+    title: "Content Gap Analysis"
+    icon: "🧩"
+    columns: [topic, covered_by_site, covered_by_competitors, opportunity_level, recommended_action]
+  - slug: keyword-reverse
+    title: "Keyword Reverse-Engineering"
+    icon: "🔑"
+    columns: [keyword, search_intent, current_likely_ranking, difficulty, value, recommendation]
+  - slug: local-keywords
+    title: "High-Intent Local Keywords"
+    icon: "📍"
+    columns: [keyword, location, intent_type, monthly_volume_est, competition, priority]
+  - slug: funnel-map
+    title: "Full-Funnel Keyword Map"
+    icon: "🔻"
+    columns: [keyword, funnel_stage, intent, target_page_type, priority]
+  - slug: technical-audit
+    title: "Full Technical Audit"
+    icon: "⚙️"
+    columns: [check, status, severity, finding, recommendation]
+  - slug: schema-audit
+    title: "Schema Markup Audit"
+    icon: "🏷️"
+    columns: [schema_type, present, quality, missing_properties, recommendation]
+  - slug: internal-linking
+    title: "Internal Linking Audit"
+    icon: "🔗"
+    columns: [page, inbound_links_est, outbound_links_est, role, issue, recommendation]
+  - slug: page-level
+    title: "Page-Level SEO Audit"
+    icon: "📄"
+    columns: [page, title_tag, meta_description, h1_quality, image_alt_coverage, issue, recommendation]
+  - slug: prepublish
+    title: "Pre-Publish Checklist"
+    icon: "✅"
+    columns: [check, required, status, guidance]
+
+  # ----- GEO (Generative Engine Optimization) -----
+  # Inspired by github.com/zubair-trabzada/geo-seo-claude — adapted to the
+  # FastClinic cockpit's CSV-per-component pattern. Each scores how an AI search
+  # engine (ChatGPT, Perplexity, Claude, Gemini, Google AIO) would see the
+  # site. The runner already picks these up via _config.yaml — no code
+  # changes needed.
+  - slug: geo-citability
+    title: "GEO: AI Citability"
+    icon: "💬"
+    columns: [page, answer_block, self_containment, structural_readability, statistical_density, uniqueness, overall_score, top_issue, recommendation]
+  - slug: geo-crawlers
+    title: "GEO: AI Crawler Access"
+    icon: "🤖"
+    columns: [crawler, tier, status, directive_source, recommendation]
+  - slug: geo-llmstxt
+    title: "GEO: llms.txt Audit"
+    icon: "📋"
+    columns: [check, status, score, finding, recommendation]
+  - slug: geo-brand-mentions
+    title: "GEO: Brand Mentions"
+    icon: "📣"
+    columns: [platform, visibility_level, likely_mention, gap, recommendation]
+  - slug: geo-platform-optimizer
+    title: "GEO: Platform Readiness"
+    icon: "🎯"
+    columns: [platform, readiness_score, key_gap, quick_win, longer_term]
