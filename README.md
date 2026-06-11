@@ -15,6 +15,13 @@ Clinical palette: primary blue `#1e6fb8`, dark `#1b2733`, accent green
 > data anywhere in this repository, and the cockpit treats its database as
 > read-only.
 
+## Demo
+
+A click-through of the key screens (regenerate any time with
+`scripts/build_demo_gif.sh`):
+
+![FastClinic walkthrough](docs/demo/fastclinic-walkthrough.gif)
+
 ## Quickstart
 
 ```bash
