@@ -465,11 +465,14 @@ NAV_ITEMS = [
         ("act-reminders", "Immunisation & Plan Due", "💉", "/activation/reminders"),
         ("act-lapsed", "Lapsed Reactivation", "🔁", "/activation/lapsed"),
         ("act-followup", "Post-Visit Follow-up", "📨", "/activation/followup"),
+        ("act-loop", "Activation Loop", "🔄", "/activation/loop"),
     ]),
     ("CLINIC", [
         ("patients", "Patients", "🧑‍⚕️", "/patients"),
+        ("appointments", "Appointments", "📅", "/appointments"),
         ("clinical", "Clinical", "🩺", "/clinical"),
         ("revenue", "Revenue", "💶", "/revenue"),
+        ("billing", "Billing", "🧾", "/billing"),
     ]),
     ("MARKETING", [
         ("sms", "SMS Broadcaster", "📱", "/ops/sms"),

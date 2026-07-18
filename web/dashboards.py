@@ -218,7 +218,7 @@ def patient_detail_view(pid: int):
         NotStr(
             "<table class='tbl'>"
             f"<tr><th>Patient ID</th><td>#{pid}</td></tr>"
-            f"<tr><th>Client ID</th><td>{p['client_id'] or '—'}</td></tr>"
+            f"<tr><th>Contact ID</th><td>{p['party_id'] or '—'}</td></tr>"
             f"<tr><th>Name</th><td>{_escape(p['official_name'] or '—')}</td></tr>"
             f"<tr><th>Sex</th><td>{gender_label(p['gender'])}</td></tr>"
             f"<tr><th>City</th><td>{_escape(p['city'] or '—')}</td></tr>"
@@ -332,7 +332,7 @@ def data_admin_view():
     counts = {}
     if exists:
         from web.db import query
-        for t in ("patient", "client", "consultation", "diagnosis", "note", "item"):
+        for t in ("subject", "party", "subject_party_role", "consultation", "diagnosis", "note", "item"):
             counts[t] = query(f"SELECT COUNT(*) AS n FROM {t}")[0]["n"]
     count_rows = [[t, n] for t, n in counts.items()]
 
@@ -361,9 +361,9 @@ def data_admin_view():
         ),
         Div(
             Div(H3("Patient contacts (needed for outbound campaigns)"), cls="card-header"),
-            P("This export contains client IDs but no patient name/phone/email. "
-              "Provide a clients export to enable real SMS/email sends; until then "
-              "campaign lists key on Client ID."),
+            P("This export contains contact IDs but no name/phone/email. "
+              "Provide a contacts export to enable real SMS/email sends; until then "
+              "campaign lists key on Contact ID."),
             cls="card",
         ),
     )
@@ -460,7 +460,7 @@ def sms_broadcaster_view():
 
     contactable = 0
     if db_exists():
-        contactable = scalar("SELECT COUNT(*) FROM client WHERE phone IS NOT NULL AND phone <> ''") or 0
+        contactable = scalar("SELECT COUNT(*) FROM party WHERE phone IS NOT NULL AND phone <> ''") or 0
 
     demo_banner = None
     if not providers:

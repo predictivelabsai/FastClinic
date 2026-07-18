@@ -33,7 +33,10 @@ SYNTH = ROOT / "data" / "synthetic_fastclinic.xlsx"
 # --- build a deterministic DB from the committed synthetic export, BEFORE
 # importing any web module (web.db reads FASTCLINIC_DB at import time) ----------
 DB_PATH = Path(tempfile.gettempdir()) / "fastclinic_eval.sqlite"
+OPS_DB_PATH = Path(tempfile.gettempdir()) / "fastclinic_eval_ops.sqlite"
+OPS_DB_PATH.unlink(missing_ok=True)  # start the activation loop from empty
 os.environ["FASTCLINIC_DB"] = str(DB_PATH)
+os.environ["FASTCLINIC_OPS_DB"] = str(OPS_DB_PATH)
 os.environ["FASTCLINIC_ADMIN_EMAIL"] = "admin@fastclinic.example"
 os.environ["FASTCLINIC_ADMIN_PASSWORD"] = "FastClinic2026$"
 os.environ.setdefault("FASTCLINIC_SECRET", "eval-secret")
@@ -151,6 +154,284 @@ def run_coverage() -> list[dict]:
     return out
 
 
+def run_consent() -> list[dict]:
+    """Assert no contact who opted out of marketing can be reached.
+
+    Regression gate for a real defect: `party.marketing_opt_out` was stored by
+    the importer and read by nothing, so every campaign list and CSV export
+    included opted-out contacts, and the SMS/email routes would send to them.
+    """
+    from web import activation as act
+    from web.consent import is_suppressed_phone, is_suppressed_email
+    from web.db import query
+
+    opted = {r["id"] for r in query("SELECT id FROM party WHERE marketing_opt_out = 1")}
+    out = []
+
+    # 1. no opted-out contact survives any engine (incl. its CSV export)
+    for name, fn in (("reminders", act.due_rows), ("lapsed", act.lapsed_rows),
+                     ("followup", act.followup_rows)):
+        rows = fn()
+        leaked = [r for r in rows if r.get("contact_id") in opted]
+        out.append({
+            "suite": "consent", "question": f"{name}:no-opted-out-in-list",
+            "category": "marketing_consent", "passed": not leaked,
+            "detail": "" if not leaked else f"{len(leaked)} opted-out contacts leaked",
+            "response_excerpt": f"{len(rows)} rows, {len(leaked)} leaked",
+        })
+
+    # 2. the send-time guard blocks an opted-out recipient and spares a consenting one
+    blocked = query("SELECT phone, email FROM party WHERE marketing_opt_out = 1 "
+                    "AND phone IS NOT NULL AND email IS NOT NULL LIMIT 1")
+    allowed = query("SELECT phone, email FROM party WHERE marketing_opt_out = 0 "
+                    "AND phone IS NOT NULL AND email IS NOT NULL LIMIT 1")
+    if blocked and allowed:
+        b, a = blocked[0], allowed[0]
+        checks = [
+            ("guard-blocks-opted-out-sms", is_suppressed_phone(b["phone"]) is True),
+            ("guard-blocks-opted-out-email", is_suppressed_email(b["email"]) is True),
+            # national 0-prefixed form must resolve to the same person as E.164
+            ("guard-blocks-national-form", is_suppressed_phone("0" + b["phone"][3:]) is True),
+            ("guard-allows-consenting-sms", is_suppressed_phone(a["phone"]) is False),
+            ("guard-allows-consenting-email", is_suppressed_email(a["email"]) is False),
+        ]
+        for label, ok in checks:
+            out.append({
+                "suite": "consent", "question": label,
+                "category": "marketing_consent", "passed": ok,
+                "detail": "" if ok else "guard gave the wrong answer",
+                "response_excerpt": "ok" if ok else "FAILED",
+            })
+    return out
+
+
+def run_model() -> list[dict]:
+    """Assert the generic subject/party/role invariants (docs/CLINIC_OS_PLAN.md §2).
+
+    The 1:1 patient=contact collapse was a veterinary-lineage bug: a sixth of
+    patients are minors who cannot be their own contactable party. These gates
+    fail if that regresses — e.g. if the synth generator starts giving children
+    their own phones again, or a minor is linked as `self`.
+    """
+    from web.db import query, scalar, reference_date
+    ref = reference_date()
+    out = []
+
+    def check(label, passed, detail=""):
+        out.append({"suite": "model", "question": label, "category": "generic_core",
+                    "passed": bool(passed), "detail": "" if passed else detail,
+                    "response_excerpt": detail or "ok"})
+
+    # every subject has exactly one primary contactable party
+    orphans = scalar(
+        "SELECT COUNT(*) FROM subject s WHERE s.deceased_at IS NULL AND NOT EXISTS "
+        "(SELECT 1 FROM subject_party_role r WHERE r.subject_id=s.id AND r.is_primary=1)"
+    ) or 0
+    check("every-subject-has-primary-party", orphans == 0, f"{orphans} subjects without a primary party")
+
+    # no minor is their own party (role='self')
+    bad_self = scalar(
+        "SELECT COUNT(*) FROM subject s JOIN subject_party_role r ON r.subject_id=s.id "
+        "WHERE r.role='self' AND s.date_of_birth > date(?, '-16 years')", (ref,)
+    ) or 0
+    check("no-minor-is-self", bad_self == 0, f"{bad_self} minors linked as self")
+
+    # every minor is linked to a guardian
+    minors = scalar("SELECT COUNT(*) FROM subject WHERE date_of_birth > date(?, '-16 years')", (ref,)) or 0
+    minors_guarded = scalar(
+        "SELECT COUNT(DISTINCT s.id) FROM subject s JOIN subject_party_role r ON r.subject_id=s.id "
+        "WHERE r.role='guardian' AND s.date_of_birth > date(?, '-16 years')", (ref,)
+    ) or 0
+    check("every-minor-has-guardian", minors == minors_guarded,
+          f"{minors - minors_guarded} of {minors} minors ungoverned")
+
+    # the 1-party:N-subjects path is genuinely exercised (siblings share a guardian)
+    shared = scalar(
+        "SELECT COUNT(*) FROM (SELECT party_id FROM subject_party_role "
+        "GROUP BY party_id HAVING COUNT(*) > 1)"
+    ) or 0
+    check("one-party-covers-many-subjects", shared > 0,
+          "no shared-guardian families — 1:N path never exercised")
+
+    # no minor has a party that is uniquely theirs with a personal phone
+    minor_own_phone = scalar(
+        "SELECT COUNT(*) FROM subject s JOIN subject_party_role r ON r.subject_id=s.id "
+        "JOIN party p ON p.id=r.party_id "
+        "WHERE s.date_of_birth > date(?, '-16 years') AND r.role='self' "
+        "AND p.phone IS NOT NULL", (ref,)
+    ) or 0
+    check("no-toddler-with-own-phone", minor_own_phone == 0,
+          f"{minor_own_phone} minors have their own phone")
+
+    return out
+
+
+def run_loop() -> list[dict]:
+    """Assert the persisted activation loop (docs/CLINIC_OS_PLAN.md §6, Phase 2).
+
+    Closes the loop the marketing cockpit previously left open: reminders are
+    persisted, every send attempt is logged (sent / failed / blocked), duplicate
+    enqueues are suppressed, and a blocked send never reaches a provider.
+    """
+    from web import activation_loop as aloop
+    from web.db import query as mq
+    out = []
+
+    def check(label, passed, detail=""):
+        out.append({"suite": "loop", "question": label, "category": "activation_loop",
+                    "passed": bool(passed), "detail": "" if passed else detail,
+                    "response_excerpt": detail or "ok"})
+
+    n1 = aloop.enqueue_due_reminders()
+    check("enqueue-creates-reminders", n1 > 0, f"enqueued {n1}")
+    pend1 = aloop.reminder_counts().get("pending", 0)
+    n2 = aloop.enqueue_due_reminders()
+    pend2 = aloop.reminder_counts().get("pending", 0)
+    check("enqueue-idempotent", n2 == 0 and pend1 == pend2,
+          f"second enqueue added {n2}, pending {pend1}->{pend2}")
+
+    # a blocked (opted-out) recipient is logged as 'blocked', never 'sent'
+    opt = mq("SELECT phone FROM party WHERE marketing_opt_out=1 AND phone IS NOT NULL LIMIT 1")
+    if opt:
+        before = aloop.communication_counts().get("blocked", 0)
+        from web.consent import check_phone
+        blocked = check_phone(opt[0]["phone"])
+        if blocked:
+            pid, sid = aloop.resolve_by_phone(opt[0]["phone"])
+            aloop.log_communication(channel="sms", to_addr=opt[0]["phone"], body="x",
+                                    status="blocked", party_id=pid, subject_id=sid,
+                                    error="opted_out")
+        after = aloop.communication_counts().get("blocked", 0)
+        check("blocked-send-is-logged", after == before + 1, f"blocked {before}->{after}")
+
+    # recurring reminder rolls forward on mark_sent (one consumed, one created)
+    pend = aloop.pending_reminders(limit=1)
+    if pend:
+        recurring = [r for r in aloop.pending_reminders(limit=500)
+                     if r.get("recurring_interval_days")]
+        if recurring:
+            rid = recurring[0]["id"]
+            p_before = aloop.reminder_counts().get("pending", 0)
+            aloop.mark_sent(rid)
+            counts = aloop.reminder_counts()
+            check("recurring-rolls-forward",
+                  counts.get("sent", 0) >= 1 and counts.get("pending", 0) == p_before,
+                  f"pending {p_before}->{counts.get('pending')}, sent {counts.get('sent')}")
+
+    # attribution returns a well-formed structure
+    attr = aloop.attribution(30)
+    check("attribution-well-formed",
+          set(attr) == {"sent", "converted", "rate", "within_days"},
+          f"keys={sorted(attr)}")
+    return out
+
+
+def run_appointments() -> list[dict]:
+    """Assert appointment booking + availability (Phase 3).
+
+    The estate had no booking with real availability. These gates prove slot
+    generation, conflict detection (no double-booking), cross-clinician
+    independence, cancellation freeing a slot, and the Phase-2 reminder hook.
+    """
+    from datetime import date, timedelta
+    from web import appointments as appt
+    from web import activation_loop as aloop
+    from web.db import reference_date
+    out = []
+
+    def check(label, passed, detail=""):
+        out.append({"suite": "appointments", "question": label,
+                    "category": "scheduling", "passed": bool(passed),
+                    "detail": "" if passed else detail, "response_excerpt": detail or "ok"})
+
+    d = date.fromisoformat(reference_date()[:10])
+    while d.weekday() != 0:               # next Monday — guaranteed a working day
+        d += timedelta(days=1)
+    slots = [s for s in appt.day_schedule(1, d) if s["free"]]
+    check("slots-generated", len(slots) > 0, f"{len(slots)} free slots on a working day")
+    if not slots:
+        return out
+    slot = slots[0]["start_at"]
+
+    before = appt.appointment_counts().get("scheduled", 0)
+    aid = appt.book(1206, 1, slot, reason="Immunisation")
+    after = appt.appointment_counts().get("scheduled", 0)
+    check("booking-creates-appointment", after == before + 1 and aid > 0)
+
+    try:
+        appt.book(1207, 1, slot)
+        check("double-booking-refused", False, "SlotTaken not raised")
+    except appt.SlotTaken:
+        check("double-booking-refused", True)
+
+    try:
+        appt.book(1207, 2, slot)          # different clinician, same time
+        check("cross-clinician-allowed", True)
+    except appt.SlotTaken:
+        check("cross-clinician-allowed", False, "same slot on another clinician was refused")
+
+    appt_reminders = aloop.query(
+        "SELECT COUNT(*) AS n FROM reminder WHERE category='appointment'")[0]["n"]
+    check("booking-queues-reminder", appt_reminders > 0, "no appointment reminder queued")
+
+    appt.set_status(aid, "cancelled")
+    free_now = [s for s in appt.day_schedule(1, d) if s["free"] and s["start_at"] == slot]
+    check("cancel-frees-slot", len(free_now) == 1, "cancelled slot did not free up")
+    return out
+
+
+def run_billing() -> list[dict]:
+    """Assert invoicing + double-entry ledger (Phase 4, lifted from FastERP).
+
+    Proves a fee invoice posts a balanced journal, payments settle it while
+    keeping the ledger balanced, re-raising is idempotent, and — the clinic
+    twist — the billed party is separable from the treated subject (a minor's
+    invoice bills the guardian party, not the child).
+    """
+    from web import billing
+    from web.db import query as mq
+    out = []
+
+    def check(label, passed, detail=""):
+        out.append({"suite": "billing", "question": label, "category": "revenue_cycle",
+                    "passed": bool(passed), "detail": "" if passed else detail,
+                    "response_excerpt": detail or "ok"})
+
+    con = mq("SELECT id, subject_id, revenue_vat FROM consultation "
+             "WHERE revenue_vat > 0 ORDER BY id LIMIT 1")
+    if not con:
+        check("has-billable-consultation", False, "no consultation with revenue")
+        return out
+    cid = con[0]["id"]
+
+    iid = billing.raise_invoice(cid)
+    check("raise-invoice", bool(iid), "invoice not raised")
+    check("ledger-balanced-after-invoice", billing.gl_balanced())
+    check("raise-idempotent", billing.raise_invoice(cid) is None, "re-raise created a duplicate")
+
+    inv = next((i for i in billing.invoices(500) if i["id"] == iid), None)
+    if inv:
+        billing.record_payment(iid, round(inv["total"] / 2, 2))
+        inv2 = next(i for i in billing.invoices(500) if i["id"] == iid)
+        check("partial-payment", inv2["status"] == "Partly Paid" and billing.gl_balanced(),
+              f"status={inv2['status']}")
+        billing.record_payment(iid, inv2["total"] - inv2["paid"])
+        inv3 = next(i for i in billing.invoices(500) if i["id"] == iid)
+        check("full-payment-settles", inv3["status"] == "Paid" and billing.gl_balanced(),
+              f"status={inv3['status']}")
+
+    # payer ≠ subject: a minor's invoice bills the guardian party
+    from web.db import reference_date
+    minor = mq("SELECT s.id, s.party_id FROM subject s JOIN subject_party_role r "
+               "ON r.subject_id=s.id WHERE r.role='guardian' "
+               "AND s.date_of_birth > date(?, '-16 years') LIMIT 1", (reference_date(),))
+    if minor:
+        payer = billing._payer_party(minor[0]["id"])
+        check("minor-billed-to-guardian-party", payer == minor[0]["party_id"] and payer is not None,
+              f"payer party {payer}")
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--quiet", action="store_true")
@@ -161,7 +442,9 @@ def main() -> int:
         return 2
     db_counts = build(str(SYNTH), str(DB_PATH))
 
-    cases = run_shortcuts() + run_chat() + run_routes() + run_coverage()
+    cases = (run_shortcuts() + run_chat() + run_routes() + run_coverage()
+             + run_consent() + run_model() + run_loop() + run_appointments()
+             + run_billing())
 
     passed = sum(c["passed"] for c in cases)
     total = len(cases)

@@ -20,9 +20,9 @@ def _days_ago(n: int) -> str:
 def overview_kpis() -> dict:
     ref = reference_date()
     d30, d90 = _days_ago(30), _days_ago(90)
-    total_patients = scalar("SELECT COUNT(*) FROM patient WHERE deceased_at IS NULL") or 0
+    total_patients = scalar("SELECT COUNT(*) FROM subject WHERE deceased_at IS NULL") or 0
     active_90 = scalar(
-        "SELECT COUNT(DISTINCT patient_id) FROM consultation WHERE consult_at >= ?", (d90,)
+        "SELECT COUNT(DISTINCT subject_id) FROM consultation WHERE consult_at >= ?", (d90,)
     ) or 0
     visits_30 = scalar(
         "SELECT COUNT(*) FROM consultation WHERE is_visit=1 AND consult_at >= ?", (d30,)
@@ -31,7 +31,7 @@ def overview_kpis() -> dict:
         "SELECT ROUND(SUM(line_total_vat),0) FROM item WHERE item_at >= ?", (d90,)
     ) or 0
     rev_total = scalar("SELECT ROUND(SUM(line_total_vat),0) FROM item") or 0
-    clients = scalar("SELECT COUNT(*) FROM client") or 0
+    clients = scalar("SELECT COUNT(*) FROM party") or 0
     return {
         "reference_date": ref,
         "total_patients": total_patients,
@@ -69,7 +69,7 @@ def revenue_by_category() -> list[dict]:
 def demographics_mix() -> list[dict]:
     """Patient gender distribution for the demographics chart."""
     rows = query(
-        "SELECT COALESCE(gender,'?') AS gender, COUNT(*) AS n FROM patient GROUP BY gender ORDER BY n DESC"
+        "SELECT COALESCE(gender,'?') AS gender, COUNT(*) AS n FROM subject GROUP BY gender ORDER BY n DESC"
     )
     for r in rows:
         r["label"] = gender_label(r["gender"])
@@ -99,12 +99,12 @@ def patient_list(search: str = "", limit: int = 200) -> list[dict]:
     params.append(limit)
     return query(
         f"""
-        SELECT p.id, p.client_id, p.gender, p.official_name, p.city,
+        SELECT p.id, p.party_id, p.gender, p.official_name, p.city,
                p.date_of_birth, p.deceased_at, p.critical_notes, p.nhs_number,
-               (SELECT COUNT(*) FROM consultation c WHERE c.patient_id=p.id) AS visits,
-               (SELECT MAX(consult_at) FROM consultation c WHERE c.patient_id=p.id) AS last_visit,
-               (SELECT ROUND(SUM(line_total_vat),2) FROM item i WHERE i.patient_id=p.id) AS lifetime_value
-        FROM patient p
+               (SELECT COUNT(*) FROM consultation c WHERE c.subject_id=p.id) AS visits,
+               (SELECT MAX(consult_at) FROM consultation c WHERE c.subject_id=p.id) AS last_visit,
+               (SELECT ROUND(SUM(line_total_vat),2) FROM item i WHERE i.subject_id=p.id) AS lifetime_value
+        FROM subject p
         {where}
         ORDER BY last_visit DESC NULLS LAST
         LIMIT ?
@@ -114,7 +114,7 @@ def patient_list(search: str = "", limit: int = 200) -> list[dict]:
 
 
 def patient_detail(pid: int) -> dict | None:
-    return query_one("SELECT * FROM patient WHERE id=?", (pid,))
+    return query_one("SELECT * FROM subject WHERE id=?", (pid,))
 
 
 def patient_consultations(pid: int) -> list[dict]:
@@ -122,7 +122,7 @@ def patient_consultations(pid: int) -> list[dict]:
         """
         SELECT c.id, c.consult_at, c.revenue_vat, c.item_count,
                (SELECT GROUP_CONCAT(d.name, '; ') FROM diagnosis d WHERE d.consultation_id=c.id) AS diagnoses
-        FROM consultation c WHERE c.patient_id=? ORDER BY c.consult_at DESC
+        FROM consultation c WHERE c.subject_id=? ORDER BY c.consult_at DESC
         """,
         (pid,),
     )
@@ -131,7 +131,7 @@ def patient_consultations(pid: int) -> list[dict]:
 def patient_items(pid: int, limit: int = 60) -> list[dict]:
     return query(
         """SELECT name, category, quantity, line_total_vat, item_at
-           FROM item WHERE patient_id=? ORDER BY item_at DESC LIMIT ?""",
+           FROM item WHERE subject_id=? ORDER BY item_at DESC LIMIT ?""",
         (pid, limit),
     )
 
@@ -141,7 +141,7 @@ def patient_value(pid: int) -> dict:
         """SELECT ROUND(SUM(line_total_vat),2) AS lifetime_value,
                   COUNT(DISTINCT consultation_id) AS visits,
                   MIN(item_at) AS first_seen, MAX(item_at) AS last_seen
-           FROM item WHERE patient_id=?""",
+           FROM item WHERE subject_id=?""",
         (pid,),
     ) or {}
 
@@ -149,7 +149,7 @@ def patient_value(pid: int) -> dict:
 # ----------------------------------------------------------------- clinical ----
 def diagnosis_frequency(limit: int = 20) -> list[dict]:
     return query(
-        """SELECT name, COUNT(*) AS n, COUNT(DISTINCT patient_id) AS patients
+        """SELECT name, COUNT(*) AS n, COUNT(DISTINCT subject_id) AS patients
            FROM diagnosis WHERE name IS NOT NULL AND name != ''
            GROUP BY name ORDER BY n DESC LIMIT ?""",
         (limit,),

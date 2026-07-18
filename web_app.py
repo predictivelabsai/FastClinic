@@ -27,6 +27,12 @@ from web.layout import page, right_pane_reference, LAYOUT_CSS
 from web import dashboards as dash
 from web import activation as act
 from web import commands as cmd
+from web import consent
+from web import activation_loop as aloop
+from web import appointments as appt
+from web import appointments_views as appt_views
+from web import billing
+from web import billing_views
 from web import seo, seo_views
 from web import help_views
 
@@ -170,6 +176,80 @@ def get(session, days: int = 14):
     return _guarded("act-followup", lambda: act.followup_view(days))(session)
 
 
+@rt("/billing")
+def get(session):
+    return _guarded("billing", billing_views.view)(session)
+
+
+@rt("/billing/invoice")
+def post(session, consultation_id: int = 0):
+    if not _auth(session):
+        return ""
+    if consultation_id:
+        billing.raise_invoice(consultation_id)
+    return billing_views.body()
+
+
+@rt("/billing/{invoice_id}/pay")
+def post(session, invoice_id: int, amount: float = 0.0):
+    if not _auth(session):
+        return ""
+    inv = billing.query("SELECT total, paid FROM invoice WHERE id=?", (invoice_id,))
+    pay = amount if amount > 0 else (inv[0]["total"] - inv[0]["paid"] if inv else 0)
+    if pay > 0:
+        billing.record_payment(invoice_id, pay)
+    return billing_views.body()
+
+
+@rt("/activation/loop")
+def get(session):
+    return _guarded("act-loop", act.loop_view)(session)
+
+
+@rt("/activation/reminders/enqueue")
+def post(session):
+    if not _auth(session):
+        return ""
+    n = aloop.enqueue_due_reminders()
+    logger.info("Enqueued %s reminders", n)
+    return act._loop_body()
+
+
+@rt("/appointments")
+def get(session, clinician_id: int = 0, day: str = ""):
+    return _guarded("appointments",
+                    lambda: appt_views.view(clinician_id or None, day or None))(session)
+
+
+@rt("/appointments/book")
+def post(session, subject_id: int = 0, clinician_id: int = 0, start_at: str = "",
+         reason: str = "", day: str = ""):
+    if not _auth(session):
+        return ""
+    day = day or (start_at[:10] if start_at else act.reference_date()[:10])
+    if subject_id and clinician_id and start_at:
+        try:
+            appt.book(subject_id, clinician_id, start_at, reason=reason.strip())
+        except appt.SlotTaken as e:
+            logger.warning("Booking refused: %s", e)
+    return appt_views.body(clinician_id or 1, day)
+
+
+@rt("/appointments/{appt_id}/status")
+def post(session, appt_id: int, to: str = "", clinician_id: int = 0, day: str = ""):
+    if not _auth(session):
+        return ""
+    row = appt.get(appt_id)
+    if to:
+        try:
+            appt.set_status(appt_id, to)
+        except ValueError:
+            pass
+    cid = clinician_id or (row["clinician_id"] if row else 1)
+    d = day or (row["start_at"][:10] if row and row.get("start_at") else act.reference_date()[:10])
+    return appt_views.body(cid, d)
+
+
 @rt("/activation/{engine}/csv")
 def get(session, engine: str, cat: str = "all", months: int = 12, days: int = 14):
     if not _auth(session):
@@ -208,8 +288,23 @@ def post(session, provider: str = "", phone: str = "", message: str = ""):
         return dash.sms_send_result(False, provider or "—", error="Phone number and message are required.")
     if not provider:
         return dash.sms_send_result(False, "—", error="No SMS provider selected.")
+    party_id, subject_id = aloop.resolve_by_phone(phone)
+    blocked = consent.check_phone(phone)
+    if blocked:
+        aloop.log_communication(channel="sms", to_addr=phone, body=message,
+                                status="blocked", party_id=party_id,
+                                subject_id=subject_id, provider=provider,
+                                error="opted_out")
+        logger.warning("SMS send BLOCKED — recipient opted out: to=%s", phone)
+        return dash.sms_send_result(False, provider, error=blocked)
     from util.sms import send
     result = send(phone, message, provider)
+    aloop.log_communication(channel="sms", to_addr=phone, body=message,
+                            status="sent" if result.ok else "failed",
+                            party_id=party_id, subject_id=subject_id,
+                            provider=result.provider,
+                            provider_message_id=result.message_id or "",
+                            error=result.error or "")
     logger.info("SMS send: provider=%s to=%s ok=%s", provider, phone, result.ok)
     return dash.sms_send_result(result.ok, result.provider, result.message_id, result.error)
 
@@ -226,8 +321,22 @@ def post(session, to: str = "", subject: str = "", body: str = ""):
     to, subject, body = to.strip(), subject.strip(), body.strip()
     if not to or not subject or not body:
         return dash.email_send_result(False, error="Recipient, subject, and message are required.")
+    party_id, subject_id = aloop.resolve_by_email(to)
+    blocked = consent.check_email(to)
+    if blocked:
+        aloop.log_communication(channel="email", to_addr=to, body=body,
+                                status="blocked", party_id=party_id,
+                                subject_id=subject_id, error="opted_out")
+        logger.warning("Email send BLOCKED — recipient opted out: to=%s", to)
+        return dash.email_send_result(False, error=blocked)
     from util.email import send as send_email
     result = send_email(to, subject, body)
+    aloop.log_communication(channel="email", to_addr=to, body=body,
+                            status="sent" if result.ok else "failed",
+                            party_id=party_id, subject_id=subject_id,
+                            provider="postmark",
+                            provider_message_id=result.message_id or "",
+                            error=result.error or "")
     logger.info("Email send: to=%s ok=%s", to, result.ok)
     return dash.email_send_result(result.ok, result.message_id, result.error)
 

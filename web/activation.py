@@ -23,7 +23,10 @@ from fasthtml.common import (
 
 from web.db import query, reference_date, db_exists
 from web.layout import kpi_card
-from pms.catalog import RECURRING_INTERVALS_DAYS, category_label, gender_label
+from web.consent import sql_filter, opted_out_count
+from pms.catalog import (
+    RECURRING_INTERVALS_DAYS, recall_interval_days, category_label, gender_label,
+)
 
 CLINIC_PHONE = "+44 20 7946 0123"  # FastClinic (placeholder — update to live number)
 CLINIC_NAME = "FastClinic"
@@ -56,6 +59,17 @@ def _name(r: dict) -> str:
     return r.get("patient_name") or r.get("contact_name") or "there"
 
 
+def _age_years(dob, today: date) -> int | None:
+    """Whole years between a date-of-birth string and the reference date."""
+    if not dob:
+        return None
+    try:
+        b = date.fromisoformat(str(dob)[:10])
+    except ValueError:
+        return None
+    return today.year - b.year - ((today.month, today.day) < (b.month, b.day))
+
+
 # ============================================================ data ============
 def due_rows(cat_filter: str = "all") -> list[dict]:
     """Patients due / overdue for a recurring service, most urgent first."""
@@ -67,20 +81,23 @@ def due_rows(cat_filter: str = "all") -> list[dict]:
     placeholders = ",".join("?" for _ in cats)
     rows = query(
         f"""
-        SELECT i.patient_id, i.category, MAX(i.item_at) AS last_at,
-               p.client_id, p.official_name AS patient_name, p.gender,
-               p.critical_notes, p.deceased_at,
+        SELECT i.subject_id AS patient_id, i.category, MAX(i.item_at) AS last_at,
+               p.party_id AS contact_id, p.official_name AS patient_name, p.gender,
+               p.date_of_birth, p.critical_notes, p.deceased_at,
                c.name AS contact_name, c.phone AS contact_phone
-        FROM item i JOIN patient p ON p.id = i.patient_id
-        LEFT JOIN client c ON c.id = p.client_id
+        FROM item i JOIN subject p ON p.id = i.subject_id
+        LEFT JOIN party c ON c.id = p.party_id
         WHERE i.category IN ({placeholders}) AND p.deceased_at IS NULL
-        GROUP BY i.patient_id, i.category
+              {sql_filter("c")}
+        GROUP BY i.subject_id, i.category
         """,
         tuple(cats),
     )
     out = []
     for r in rows:
-        interval = RECURRING_INTERVALS_DAYS[r["category"]]
+        age = _age_years(r.get("date_of_birth"), today)
+        interval = recall_interval_days(r["category"], age, r.get("gender")) \
+            or RECURRING_INTERVALS_DAYS[r["category"]]
         last = date.fromisoformat(r["last_at"][:10])
         due = last + timedelta(days=interval)
         status = _status(due, today)
@@ -102,16 +119,17 @@ def lapsed_rows(months: int = 12) -> list[dict]:
     today = _ref()
     cutoff = (today - timedelta(days=30 * months)).isoformat()
     rows = query(
-        """
-        SELECT p.id AS patient_id, p.client_id, p.official_name AS patient_name,
+        f"""
+        SELECT p.id AS patient_id, p.party_id AS contact_id, p.official_name AS patient_name,
                p.gender, p.critical_notes,
                cl.name AS contact_name, cl.phone AS contact_phone,
                MAX(c.consult_at) AS last_visit,
-               (SELECT ROUND(SUM(line_total_vat),2) FROM item i WHERE i.patient_id=p.id) AS lifetime_value,
-               (SELECT COUNT(*) FROM consultation c2 WHERE c2.patient_id=p.id) AS visits
-        FROM patient p JOIN consultation c ON c.patient_id = p.id
-        LEFT JOIN client cl ON cl.id = p.client_id
+               (SELECT ROUND(SUM(line_total_vat),2) FROM item i WHERE i.subject_id=p.id) AS lifetime_value,
+               (SELECT COUNT(*) FROM consultation c2 WHERE c2.subject_id=p.id) AS visits
+        FROM subject p JOIN consultation c ON c.subject_id = p.id
+        LEFT JOIN party cl ON cl.id = p.party_id
         WHERE p.deceased_at IS NULL
+              {sql_filter("cl")}
         GROUP BY p.id
         HAVING last_visit < ?
         ORDER BY lifetime_value DESC
@@ -128,16 +146,17 @@ def followup_rows(days: int = 14) -> list[dict]:
     today = _ref()
     cutoff = (today - timedelta(days=days)).isoformat()
     return query(
-        """
-        SELECT c.id AS consultation_id, c.patient_id, c.consult_at, c.revenue_vat,
-               p.client_id, p.official_name AS patient_name, p.gender,
+        f"""
+        SELECT c.id AS consultation_id, c.subject_id AS patient_id, c.consult_at, c.revenue_vat,
+               p.party_id AS contact_id, p.official_name AS patient_name, p.gender,
                cl.name AS contact_name, cl.phone AS contact_phone,
                (SELECT GROUP_CONCAT(DISTINCT cat) FROM
                    (SELECT category AS cat FROM item i WHERE i.consultation_id=c.id)) AS categories,
                (SELECT GROUP_CONCAT(d.name, '; ') FROM diagnosis d WHERE d.consultation_id=c.id) AS diagnoses
-        FROM consultation c JOIN patient p ON p.id = c.patient_id
-        LEFT JOIN client cl ON cl.id = p.client_id
+        FROM consultation c JOIN subject p ON p.id = c.subject_id
+        LEFT JOIN party cl ON cl.id = p.party_id
         WHERE c.is_visit = 1 AND c.consult_at >= ?
+              {sql_filter("cl")}
         ORDER BY c.consult_at DESC
         """,
         (cutoff,),
@@ -185,17 +204,31 @@ def _dl_btns(csv_href: str, n: int):
 
 
 def _has_contacts() -> bool:
-    row = query("SELECT COUNT(*) AS n FROM client WHERE phone IS NOT NULL AND phone <> ''")
+    row = query("SELECT COUNT(*) AS n FROM party WHERE phone IS NOT NULL AND phone <> ''")
     return bool(row and row[0]["n"])
+
+
+def _suppressed_note():
+    """Say what was withheld. Silent filtering reads as 'nobody opted out'."""
+    n = opted_out_count()
+    if not n:
+        return None
+    return P(NotStr(
+        f"<strong>{n}</strong> contacts have opted out of marketing and are excluded "
+        "from every list, export and send below."),
+        style="color:var(--text-mute);font-size:12px;margin:0 0 14px;")
 
 
 def _contacts_note():
     if _has_contacts():
-        row = query("SELECT COUNT(*) AS n FROM client WHERE phone IS NOT NULL AND phone <> ''")
-        return P(NotStr(
-            f"<strong>{row[0]['n']}</strong> patients have a phone on file — lists below "
-            "include name &amp; phone, ready for the SMS Broadcaster or CSV export."),
-            style="color:var(--text-mute);font-size:12px;margin:0 0 14px;")
+        row = query("SELECT COUNT(*) AS n FROM party WHERE phone IS NOT NULL AND phone <> ''")
+        return Div(
+            P(NotStr(
+                f"<strong>{row[0]['n']}</strong> patients have a phone on file — lists below "
+                "include name &amp; phone, ready for the SMS Broadcaster or CSV export."),
+              style="color:var(--text-mute);font-size:12px;margin:0 0 4px;"),
+            _suppressed_note() or "",
+        )
     return P(NotStr(
         "Lists key on <strong>Client ID</strong>. Paste a drafted message into the "
         "<a href='/ops/sms'>SMS</a> or <a href='/ops/email'>Email</a> Broadcaster to send, "
@@ -339,6 +372,62 @@ def followup_view(days: int = 14):
     )
 
 
+def _loop_body():
+    from web import activation_loop as aloop
+    rc = aloop.reminder_counts()
+    cc = aloop.communication_counts()
+    attr = aloop.attribution(within_days=30)
+    pending = aloop.pending_reminders(limit=50)
+    comms = aloop.recent_communications(limit=50)
+
+    cards = Div(
+        kpi_card("Pending reminders", rc.get("pending", 0), warn=bool(rc.get("pending"))),
+        kpi_card("Messages sent", cc.get("sent", 0)),
+        kpi_card("Blocked (opted out)", cc.get("blocked", 0), neutral=True),
+        kpi_card(f"Return rate ({attr['within_days']}d)",
+                 f"{attr['rate']*100:.0f}%" if attr["sent"] else "—",
+                 neutral=True),
+        cls="kpi-grid", style="grid-template-columns:repeat(4,1fr);",
+    )
+    enqueue = Div(
+        A("↻ Queue due reminders", href="/activation/reminders/enqueue",
+          cls="btn primary", **{"hx-post": "/activation/reminders/enqueue",
+                                 "hx-target": "#loop-body", "hx-swap": "outerHTML"}),
+        style="margin:8px 0 16px;",
+    )
+    p_rows = [[f"#{r['subject_id']}", r["category"], r.get("source_engine") or "—",
+               (r.get("due_date") or "—")[:10], r["status"]] for r in pending]
+    c_rows = [[c["id"], f"#{c['subject_id']}" if c["subject_id"] else "—",
+               c["channel"], c["to_addr"], c["status"],
+               (c.get("provider_message_id") or c.get("error") or "")[:24],
+               (c.get("sent_at") or "")[:16]] for c in comms]
+    return Div(
+        cards, enqueue,
+        Div(Div(H3(f"Pending reminders ({len(pending)})"), cls="card-header"),
+            _table(["Subject", "Category", "Source", "Due", "Status"], p_rows)
+            if p_rows else P("No pending reminders — queue due reminders above."),
+            cls="card"),
+        Div(Div(H3(f"Communication log ({len(comms)})"), cls="card-header"),
+            _table(["#", "Subject", "Channel", "To", "Status", "Ref / error", "Sent"], c_rows)
+            if c_rows else P("Nothing sent yet. Blocked and failed sends are logged here too."),
+            cls="card"),
+        id="loop-body",
+    )
+
+
+def loop_view():
+    """The closed activation loop: persisted reminders, the send log, outcomes."""
+    if not db_exists():
+        from web.dashboards import _no_data_view
+        return _no_data_view()
+    return Div(
+        Div(Div(H1("Activation Loop"),
+                Div("Reminders queued → messages sent → return visits attributed", cls="sub")),
+            cls="page-title"),
+        _loop_body(),
+    )
+
+
 # ============================================================ CSV ==============
 def _campaign_table(engine: str, cat: str = "all", months: int = 12, days: int = 14):
     """Return (headers, rows, filename_base) for an engine, or (None, None, None).
@@ -347,26 +436,26 @@ def _campaign_table(engine: str, cat: str = "all", months: int = 12, days: int =
     """
     today = reference_date()
     if engine == "reminders":
-        headers = ["patient_id", "client_id", "patient_name", "contact_phone", "gender",
+        headers = ["patient_id", "contact_id", "patient_name", "contact_phone", "gender",
                    "service", "category", "last_date", "due_date", "days_overdue",
                    "status", "message"]
-        rows = [[r["patient_id"], r["client_id"], r.get("patient_name"), r.get("contact_phone"),
+        rows = [[r["patient_id"], r.get("contact_id"), r.get("patient_name"), r.get("contact_phone"),
                  gender_label(r.get("gender")), r["service"], r["category"], r["last_date"],
                  r["due_date"], r["days_overdue"], r["status"], draft_reminder(r)]
                 for r in due_rows(cat)]
         return headers, rows, f"fastclinic_reminders_{cat}_{today}"
     if engine == "lapsed":
-        headers = ["patient_id", "client_id", "patient_name", "contact_phone", "gender",
+        headers = ["patient_id", "contact_id", "patient_name", "contact_phone", "gender",
                    "last_visit", "months_since", "visits", "lifetime_value", "message"]
-        rows = [[r["patient_id"], r["client_id"], r.get("patient_name"), r.get("contact_phone"),
+        rows = [[r["patient_id"], r.get("contact_id"), r.get("patient_name"), r.get("contact_phone"),
                  gender_label(r.get("gender")), _date(r["last_visit"]), r["months_since"],
                  r["visits"], r["lifetime_value"], draft_lapsed(r)]
                 for r in lapsed_rows(months)]
         return headers, rows, f"fastclinic_lapsed_{months}mo_{today}"
     if engine == "followup":
-        headers = ["patient_id", "client_id", "patient_name", "contact_phone", "consultation_id",
+        headers = ["patient_id", "contact_id", "patient_name", "contact_phone", "consultation_id",
                    "consult_at", "categories", "diagnoses", "revenue_vat", "message"]
-        rows = [[r["patient_id"], r["client_id"], r.get("patient_name"), r.get("contact_phone"),
+        rows = [[r["patient_id"], r.get("contact_id"), r.get("patient_name"), r.get("contact_phone"),
                  r["consultation_id"], _date(r["consult_at"]), r["categories"], r["diagnoses"],
                  r["revenue_vat"], draft_followup(r)]
                 for r in followup_rows(days)]

@@ -87,6 +87,52 @@ def interval_days(category: str) -> int | None:
     return RECURRING_INTERVALS_DAYS.get(category)
 
 
+# --- cohort-keyed recall schedule (COUNTRY-SPECIFIC — the UK adapter's data) ----
+# The flat RECURRING_INTERVALS_DAYS above is the country-neutral default. Real
+# recall is keyed on the cohort a *subject* belongs to, so the engine (generic)
+# is separated from the schedule (a country adapter owns it). See
+# docs/CLINIC_OS_PLAN.md §2/§6. This is a *representative* UK starter set, not the
+# full childhood-immunisation / screening schedule — extend per NHS guidance.
+#
+# Each rule: (category, age_min, age_max, sex, interval_days, label). age bounds
+# are inclusive years (None = open); sex is 'F' | 'M' | None (any). First match
+# wins; a category with no matching rule falls back to the flat interval.
+COHORT_RECALL: list[tuple] = [
+    ("vaccine",              65, None, None, 365, "Annual flu (65+)"),
+    ("vaccine",              0,   17,  None, 180, "Childhood immunisation"),
+    ("health_plan",          40,  74,  None, 365, "NHS Health Check cohort (40–74)"),
+    ("repeat_prescription",  65, None, None,  90, "Medication review (65+)"),
+    # e.g. add ("cervical_screening", 25, 64, 'F', 1095, "Cervical screening")
+    # once such items exist in the catalogue.
+]
+
+
+def _sex_of(gender_code) -> str | None:
+    lbl = GENDER_LABELS.get(str(gender_code).strip() if gender_code is not None else "")
+    return {"Female": "F", "Male": "M"}.get(lbl)
+
+
+def recall_interval_days(category: str, age_years=None, gender_code=None) -> int | None:
+    """Re-visit interval for a recurring service, cohort-aware.
+
+    Consults the country cohort schedule first (age/sex bands); falls back to the
+    flat RECURRING_INTERVALS_DAYS. Returns None for non-recurring categories.
+    """
+    if age_years is not None:
+        sex = _sex_of(gender_code)
+        for cat, amin, amax, rsex, days, _lbl in COHORT_RECALL:
+            if cat != category:
+                continue
+            if amin is not None and age_years < amin:
+                continue
+            if amax is not None and age_years > amax:
+                continue
+            if rsex is not None and rsex != sex:
+                continue
+            return days
+    return RECURRING_INTERVALS_DAYS.get(category)
+
+
 # --- lightweight code lookups -------------------------------------------------
 GENDER_LABELS = {
     "1": "Male",

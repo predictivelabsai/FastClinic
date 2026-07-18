@@ -19,10 +19,20 @@ business-friendly alias the cockpit queries on (e.g. `deceased` -> `deceased_at`
 `date` -> `diagnosis_at`, `created`/`used` on items -> `item_at`); everything
 else keeps its original name. `evals/run_eval.py` asserts 100% field coverage.
 
+Generic model (Clinic OS core; see docs/CLINIC_OS_PLAN.md §2):
+    subject       — the body that receives care (renamed from the export's
+                    `patient`); "Patient" remains the user-facing GP word.
+    party         — the contactable / consenting / billing entity (renamed from
+                    the export's `client`).
+    subject_party_role — N:M link with a role (self | guardian | ...). Adults map
+                    self→themselves; minors map guardian→a parent party. This is
+                    where the 1-party : N-subjects generality lives.
+
 Derived tables built here:
-    consultation  — one row per consultation_id (date, clinician, revenue, patient)
-    client        — one row per client_id (contact columns from an optional
+    consultation  — one row per consultation_id (date, clinician, revenue, subject)
+    party         — one row per party id (contact columns from an optional
                     `client` sheet, else NULL)
+    subject_party_role — derived from subject age + the party link.
 """
 from __future__ import annotations
 
@@ -64,9 +74,13 @@ def _txt(v):
 # business name the cockpit queries on; all others keep their export name.
 _DT, _D = excel_datetime, excel_date
 
-PATIENT_FIELDS = [
+# Model column `subject_id` is stored from the export's `patient_id` key on the
+# child tables (diagnosis/note/item); the raw replica stays faithful to the
+# export's column *names* (xlsx keys unchanged) while the model uses the generic
+# `subject`/`party` vocabulary.
+SUBJECT_FIELDS = [
     ("id", "id", "INTEGER PRIMARY KEY", _int),
-    ("client_id", "client_id", "INTEGER", _int),
+    ("party_id", "client_id", "INTEGER", _int),
     ("gender", "gender", "TEXT", _txt),
     ("date_of_birth", "date_of_birth", "TEXT", _D),
     ("date_of_registration", "date_of_registration", "TEXT", _D),
@@ -103,7 +117,7 @@ PATIENT_FIELDS = [
 DIAGNOSIS_FIELDS = [
     ("id", "id", "INTEGER PRIMARY KEY", _int),
     ("consultation_id", "consultation_id", "INTEGER", _int),
-    ("patient_id", "patient_id", "INTEGER", _int),
+    ("subject_id", "patient_id", "INTEGER", _int),
     ("code", "code", "TEXT", _txt),
     ("name", "name", "TEXT", _txt),
     ("description", "description", "TEXT", _txt),
@@ -125,7 +139,7 @@ DIAGNOSIS_FIELDS = [
 NOTE_FIELDS = [
     ("id", "id", "INTEGER PRIMARY KEY", _int),
     ("consultation_id", "consultation_id", "INTEGER", _int),
-    ("patient_id", "patient_id", "INTEGER", _int),
+    ("subject_id", "patient_id", "INTEGER", _int),
     ("text", "text", "TEXT", _txt),
     ("text_hash", "text_hash", "TEXT", _txt),
     ("type", "type", "INTEGER", _int),
@@ -149,7 +163,7 @@ NOTE_FIELDS = [
 ITEM_FIELDS = [
     ("id", "id", "INTEGER PRIMARY KEY", _int),
     ("consultation_id", "consultation_id", "INTEGER", _int),
-    ("patient_id", "patient_id", "INTEGER", _int),
+    ("subject_id", "patient_id", "INTEGER", _int),
     ("code", "code", "TEXT", _txt),
     ("name", "name", "TEXT", _txt),
     ("item_id", "item_id", "INTEGER", _int),
@@ -179,10 +193,18 @@ ITEM_FIELDS = [
 # Extra computed item columns (not raw export fields).
 ITEM_COMPUTED = [("category", "TEXT"), ("line_total_vat", "REAL")]
 
+# Kept as a module alias so external references (evals field-coverage) that map a
+# sheet to its field list keep working after the rename.
+PATIENT_FIELDS = SUBJECT_FIELDS
+
 _TABLE_FIELDS = {
-    "patient": PATIENT_FIELDS, "diagnosis": DIAGNOSIS_FIELDS,
+    "subject": SUBJECT_FIELDS, "diagnosis": DIAGNOSIS_FIELDS,
     "note": NOTE_FIELDS, "item": ITEM_FIELDS,
 }
+
+# Age (years) below which a subject cannot be their own contactable party. See
+# docs/CLINIC_OS_PLAN.md §2 — minors map to a guardian party, adults to self.
+GUARDIAN_AGE = 16
 
 
 def _create_table(name: str, fields: list, extra: list | None = None) -> str:
@@ -241,7 +263,7 @@ def build(export_path: str, out_path: str = DEFAULT_OUT) -> dict:
     db = sqlite3.connect(out_path)
     db.executescript(_SCHEMA)
 
-    _ingest(db, "patient", PATIENT_FIELDS, patients)
+    _ingest(db, "subject", SUBJECT_FIELDS, patients)
     _ingest(db, "diagnosis", DIAGNOSIS_FIELDS, diagnoses)
     _ingest(db, "note", NOTE_FIELDS, notes)
 
@@ -257,28 +279,36 @@ def build(export_path: str, out_path: str = DEFAULT_OUT) -> dict:
     _build_derived(db)
     if "client" in roles:
         _import_clients(db, read_sheet(export_path, roles["client"]))
+    _build_roles(db)
     db.commit()
 
     counts = {
         t: db.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
-        for t in ("patient", "diagnosis", "note", "item", "consultation", "client")
+        for t in ("subject", "diagnosis", "note", "item", "consultation",
+                  "party", "subject_party_role")
     }
     db.close()
     return counts
 
 
+def _reference_date(db: sqlite3.Connection) -> str:
+    """'Today' for age maths — latest activity date, matching web.db.reference_date()."""
+    row = db.execute("SELECT MAX(consult_at) FROM consultation").fetchone()
+    return (row[0] or "")[:10] if row and row[0] else "2026-01-01"
+
+
 def _build_derived(db: sqlite3.Connection):
-    """Roll up consultations and clients from the imported line data."""
+    """Roll up consultations and parties from the imported line data."""
     visit_cats = ",".join(f"'{c}'" for c in sorted(VISIT_CATEGORIES))
 
     db.execute("DELETE FROM consultation")
     db.execute(
         f"""
-        INSERT INTO consultation (id, patient_id, consult_at, revenue_vat,
+        INSERT INTO consultation (id, subject_id, consult_at, revenue_vat,
                                   item_count, is_visit, clinician_id)
         SELECT
             consultation_id,
-            MAX(patient_id),
+            MAX(subject_id),
             MIN(item_at),
             ROUND(SUM(line_total_vat), 2),
             COUNT(*),
@@ -290,32 +320,55 @@ def _build_derived(db: sqlite3.Connection):
         """
     )
 
-    # Clients: distinct client_id from patients. Contact columns stay NULL until
-    # a clients/contacts export is ingested (see _import_clients()).
-    db.execute("DELETE FROM client")
+    # Parties: distinct party_id from subjects. Contact columns stay NULL until a
+    # clients/contacts export is ingested (see _import_clients()).
+    db.execute("DELETE FROM party")
     db.execute(
         """
-        INSERT INTO client (id, patient_count, city, zip_code)
-        SELECT client_id, COUNT(*), MAX(city), MAX(zip_code)
-        FROM patient
-        WHERE client_id IS NOT NULL
-        GROUP BY client_id
+        INSERT INTO party (id, subject_count, city, zip_code)
+        SELECT party_id, COUNT(*), MAX(city), MAX(zip_code)
+        FROM subject
+        WHERE party_id IS NOT NULL
+        GROUP BY party_id
         """
     )
 
 
+def _build_roles(db: sqlite3.Connection):
+    """Derive subject_party_role from each subject's party link + age.
+
+    A subject old enough to be their own contactable party is linked to that
+    party as `self`; a minor is linked as `guardian` (the party is a parent —
+    once the synthetic export gives minors a shared parent party, one party legit-
+    imately covers several sibling subjects). See docs/CLINIC_OS_PLAN.md §2.
+    """
+    ref = _reference_date(db)
+    db.execute("DELETE FROM subject_party_role")
+    db.execute(
+        """
+        INSERT INTO subject_party_role (subject_id, party_id, role, is_primary)
+        SELECT id, party_id,
+               CASE WHEN date_of_birth > date(?, ?) THEN 'guardian' ELSE 'self' END,
+               1
+        FROM subject
+        WHERE party_id IS NOT NULL
+        """,
+        (ref, f"-{GUARDIAN_AGE} years"),
+    )
+
+
 def _import_clients(db: sqlite3.Connection, rows: list[dict]):
-    """Merge patient-contact details (name/phone/email) onto the derived client rows.
+    """Merge contact details (name/phone/email) onto the derived party rows.
 
     Real PMS exports omit contacts; a synthetic or contacts export can supply a
-    `client` sheet keyed by client id to enable direct SMS/email campaigns.
+    `client` sheet keyed by party id to enable direct SMS/email campaigns.
     """
     for c in rows:
         cid = _int(c.get("id"))
         if cid is None:
             continue
         db.execute(
-            """INSERT INTO client (id, name, phone, email, marketing_opt_out)
+            """INSERT INTO party (id, name, phone, email, marketing_opt_out)
                VALUES (?,?,?,?,?)
                ON CONFLICT(id) DO UPDATE SET
                    name=excluded.name, phone=excluded.phone, email=excluded.email,
@@ -326,22 +379,31 @@ def _import_clients(db: sqlite3.Connection, rows: list[dict]):
 
 
 _SCHEMA = "\n".join([
-    _create_table("patient", PATIENT_FIELDS),
+    _create_table("subject", SUBJECT_FIELDS),
     _create_table("diagnosis", DIAGNOSIS_FIELDS),
     _create_table("note", NOTE_FIELDS),
     _create_table("item", ITEM_FIELDS, ITEM_COMPUTED),
     """
 CREATE TABLE IF NOT EXISTS consultation (
     id INTEGER PRIMARY KEY,
-    patient_id INTEGER, consult_at TEXT, revenue_vat REAL,
+    subject_id INTEGER, consult_at TEXT, revenue_vat REAL,
     item_count INTEGER, is_visit INTEGER, clinician_id INTEGER
 );
-CREATE TABLE IF NOT EXISTS client (
+CREATE TABLE IF NOT EXISTS party (
     id INTEGER PRIMARY KEY,
     name TEXT, phone TEXT, email TEXT,
-    patient_count INTEGER, city TEXT, zip_code TEXT,
+    subject_count INTEGER, city TEXT, zip_code TEXT,
     marketing_opt_out INTEGER DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS subject_party_role (
+    subject_id INTEGER,
+    party_id INTEGER,
+    role TEXT,
+    is_primary INTEGER DEFAULT 0,
+    PRIMARY KEY (subject_id, party_id, role)
+);
+CREATE INDEX IF NOT EXISTS idx_spr_subject ON subject_party_role (subject_id);
+CREATE INDEX IF NOT EXISTS idx_spr_party ON subject_party_role (party_id);
 """,
 ])
 

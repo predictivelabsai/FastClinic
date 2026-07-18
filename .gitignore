@@ -223,3 +223,6 @@ fastclinic.sqlite
 # Demo walkthrough: keep the GIF, ignore intermediate frames
 docs/demo/frames/
 !docs/demo/fastclinic-walkthrough.gif
+
+# operational activation-loop state (not the PMS replica)
+fastclinic_ops.sqlite

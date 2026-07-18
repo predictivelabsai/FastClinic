@@ -121,27 +121,51 @@ def generate(n_patients: int = 1000, seed: int = 42) -> dict:
     diag_id = item_id = note_id = consult_id = 1
     forced_today = False
 
-    # Each person is their own client record (1:1): patient.client_id == person id.
+    # Person → party model (docs/CLINIC_OS_PLAN.md §2). An adult is their own
+    # contactable party (the importer derives role=self). A minor is contacted
+    # through a *guardian* party (a parent), which siblings can share — so one
+    # party legitimately covers several subjects, exercising the 1-party:N-subject
+    # path. A toddler never gets their own phone.
+    guardian_families: list[dict] = []   # reusable parent parties: {id, last}
+
+    def _contact(fn: str, ln: str):
+        return (f"+447{rng.randint(100000000, 999999999)}",
+                f"{fn.lower()}.{ln.lower()}{rng.randint(1, 99)}@example.com")
+
     for idx in range(n_patients):
         pid = 1001 + idx
-        cid = 5001 + idx
         is_female = rng.random() < 0.51
         first = rng.choice(FEMALE_FIRST if is_female else MALE_FIRST)
         last = rng.choice(LAST)
         city, zips = rng.choice(CITIES)
         zip_code = rng.choice(zips)
-        email = f"{first.lower()}.{last.lower()}{rng.randint(1, 99)}@example.com"
-        phone = f"+447{rng.randint(100000000, 999999999)}"
-
-        clients.append({
-            "id": cid,
-            "name": f"{first} {last}",
-            "phone": phone,
-            "email": email,
-            "marketing_opt_out": 1 if rng.random() < 0.08 else 0,
-        })
 
         dob = TODAY - timedelta(days=rng.randint(365, 32000))   # ~1 to ~88 yrs
+        is_minor = (TODAY - dob).days < 16 * 365
+
+        if is_minor and guardian_families and rng.random() < 0.35:
+            # Join an existing sibling's guardian; share the family surname.
+            fam = rng.choice(guardian_families)
+            cid = fam["id"]
+            last = fam["last"]
+        else:
+            cid = 5001 + idx
+            if is_minor:
+                p_first = rng.choice(FEMALE_FIRST if rng.random() < 0.5 else MALE_FIRST)
+                phone, email = _contact(p_first, last)
+                clients.append({
+                    "id": cid, "name": f"{p_first} {last}",
+                    "phone": phone, "email": email,
+                    "marketing_opt_out": 1 if rng.random() < 0.08 else 0,
+                })
+                guardian_families.append({"id": cid, "last": last})
+            else:
+                phone, email = _contact(first, last)
+                clients.append({
+                    "id": cid, "name": f"{first} {last}",
+                    "phone": phone, "email": email,
+                    "marketing_opt_out": 1 if rng.random() < 0.08 else 0,
+                })
         # Registered within the practice's recent data window (~last 8 yrs), always after birth.
         reg = max(dob + timedelta(days=30), TODAY - timedelta(days=rng.randint(30, 3000)))
 
