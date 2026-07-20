@@ -147,11 +147,10 @@ def _no_data_view():
     return Div(
         _page_title("No data loaded"),
         Div(
-            Div(H3("Import a PMS export to begin"), cls="card-header"),
-            P("The cockpit database (fastclinic.sqlite) was not found."),
-            NotStr("<pre style='background:var(--surface-2);padding:12px;border-radius:6px;'>"
-                   "python -m pms.importer</pre>"),
-            P("This builds the database from the newest .xlsx export in data/.",
+            Div(H3("Import a practice-management export to begin"), cls="card-header"),
+            P("No clinic data has been loaded yet."),
+            P("Add a practice-management export to the clinic and refresh from "
+              "Admin → Data & Import.",
               style="color:var(--text-mute);font-size:13px;"),
             cls="card",
         ),
@@ -326,15 +325,24 @@ def revenue_view():
 
 # ---------- Admin: Data & Import ----------
 def data_admin_view():
-    from web.db import db_exists, DB_PATH, reference_date
+    from web.db import db_exists, reference_date
     import os
     exists = db_exists()
-    counts = {}
+    # Friendly record labels — never the internal table names.
+    ENTITY_LABELS = [
+        ("subject", "Patients"), ("party", "Contacts"),
+        ("consultation", "Consultations"), ("diagnosis", "Diagnoses"),
+        ("note", "Clinical notes"), ("item", "Billed items"),
+    ]
+    count_rows = []
     if exists:
         from web.db import query
-        for t in ("subject", "party", "subject_party_role", "consultation", "diagnosis", "note", "item"):
-            counts[t] = query(f"SELECT COUNT(*) AS n FROM {t}")[0]["n"]
-    count_rows = [[t, n] for t, n in counts.items()]
+        for tbl, label in ENTITY_LABELS:
+            try:
+                n = query(f"SELECT COUNT(*) AS n FROM {tbl}")[0]["n"]
+            except Exception:
+                continue
+            count_rows.append([label, f"{n:,}"])
 
     exports = []
     data_dir = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -342,28 +350,28 @@ def data_admin_view():
         exports = sorted(f for f in os.listdir(data_dir) if f.endswith(".xlsx"))
 
     return Div(
-        _page_title("Data & Import", "Local SQLite built from PMS exports"),
+        _page_title("Data & Import", "Clinic records built from practice-management exports"),
         Div(
-            Div(H3("Database"), cls="card-header"),
-            P(NotStr(f"Path: <code>{DB_PATH}</code>")),
-            P(f"Status: {'loaded' if exists else 'not found'} · reference date {reference_date() if exists else '—'}"),
-            _table(["Table", "Rows"], count_rows) if count_rows else P("No database yet."),
+            Div(H3("Clinic data"), cls="card-header"),
+            P(f"Status: {'loaded' if exists else 'not loaded'}"
+              + (f" · reference date {reference_date()}" if exists else "")),
+            _table(["Records", "Count"], count_rows) if count_rows
+            else P("No clinic data loaded yet."),
             cls="card",
         ),
         Div(
             Div(H3("Refresh from export"), cls="card-header"),
-            P("Drop a new PMS export into data/ and rebuild:"),
-            NotStr("<pre style='background:var(--surface-2);padding:12px;border-radius:6px;'>"
-                   "python -m pms.importer [export.xlsx]</pre>"),
-            P("Detected exports: " + (", ".join(f"{e}" for e in exports) or "none"),
+            P("Add a new practice-management export and refresh to update the "
+              "clinic records."),
+            P("Detected exports: " + (", ".join(exports) or "none"),
               style="color:var(--text-mute);font-size:13px;"),
             cls="card",
         ),
         Div(
-            Div(H3("Patient contacts (needed for outbound campaigns)"), cls="card-header"),
-            P("This export contains contact IDs but no name/phone/email. "
-              "Provide a contacts export to enable real SMS/email sends; until then "
-              "campaign lists key on Contact ID."),
+            Div(H3("Contacts for outbound campaigns"), cls="card-header"),
+            P("When an export includes contact names, phones and emails, campaign "
+              "lists are ready for SMS/email. Without them, lists identify patients "
+              "by reference only."),
             cls="card",
         ),
     )

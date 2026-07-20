@@ -224,5 +224,9 @@ fastclinic.sqlite
 docs/demo/frames/
 !docs/demo/fastclinic-walkthrough.gif
 
+# User-guide screenshots (committed so the guide PDF/PPTX build reproducibly)
+!docs/img/
+!docs/img/*.png
+
 # operational activation-loop state (not the PMS replica)
 fastclinic_ops.sqlite

@@ -395,10 +395,14 @@ def _loop_body():
                                  "hx-target": "#loop-body", "hx-swap": "outerHTML"}),
         style="margin:8px 0 16px;",
     )
-    p_rows = [[f"#{r['subject_id']}", r["category"], r.get("source_engine") or "—",
-               (r.get("due_date") or "—")[:10], r["status"]] for r in pending]
+    _src = {"reminders": "Immunisation & plan due", "lapsed": "Lapsed reactivation",
+            "followup": "Post-visit follow-up", "appointments": "Appointment", "manual": "Manual"}
+    p_rows = [[f"#{r['subject_id']}",
+               RECUR_LABELS.get(r["category"]) or category_label(r["category"]),
+               _src.get(r.get("source_engine"), r.get("source_engine") or "—"),
+               (r.get("due_date") or "—")[:10], r["status"].title()] for r in pending]
     c_rows = [[c["id"], f"#{c['subject_id']}" if c["subject_id"] else "—",
-               c["channel"], c["to_addr"], c["status"],
+               c["channel"].upper(), c["to_addr"], c["status"].title(),
                (c.get("provider_message_id") or c.get("error") or "")[:24],
                (c.get("sent_at") or "")[:16]] for c in comms]
     return Div(

@@ -1,11 +1,12 @@
 # FastClinic
 
-**FastClinic** is an open-source **GP / general-practice marketing & activation
-cockpit** — a FastHTML server-side web app that turns a clinic's own visit
-history into prioritised patient-outreach lists. It is a working demonstrator
-for a primary-care clinic's marketing and operations team: see who is due for an
-immunisation, who has lapsed, and who just visited — with the message already
-drafted.
+**FastClinic** is an open-source **GP / general-practice cockpit** — a FastHTML
+server-side web app that turns a clinic's own visit history into more booked
+appointments and revenue. It pairs a **patient-activation engine** (see who is
+due, lapsed, or just visited — with the message already drafted, sent, and its
+return visit measured) with the **operational core** a practice runs on:
+appointments with real availability, fee invoicing with a balanced ledger, and a
+patient/contact people model that reaches minors through a guardian.
 
 Clinical palette: primary blue `#1e6fb8`, dark `#1b2733`, accent green
 `#1f9d72`. Tagline *"Modern primary care, made personal."* Runs on port **5005**.
@@ -43,28 +44,43 @@ Login: `admin@fastclinic.example` / `FastClinic2026$` (override via
 ## Module tour
 
 - **Overview / Cockpit** — KPI cards (active / total patients, visits, revenue,
-  clients), visit & revenue trends, a searchable patient list with detail
+  contacts), visit & revenue trends, a searchable patient list with detail
   drilldown, clinical view (diagnoses & clinician activity), and revenue by
   category.
 - **Activation engines** — the core. Three engines that surface *exactly who to
   contact, why, and when*, each a reviewable list with an English message draft
   and CSV export (**no auto-send**):
   - **Immunisation & health-check reminders** — patients due/overdue for a
-    recurring service (immunisations, annual health checks, repeat
-    prescriptions).
+    recurring service, with **age/cohort-aware** recall intervals (childhood
+    immunisations, flu for over-65s, annual health checks, repeat-prescription
+    reviews).
   - **Lapsed reactivation** — patients with no visit in N months, ranked by
     lifetime value.
   - **Post-visit follow-up** — recent visits to check in on and rebook.
-- **Marketing** — an **SMS Broadcaster** (Twilio / VoodooSMS), an **Email
-  Broadcaster** (Postmark), and an **LLM SEO/GEO audit suite** (10 core + 5
-  generative-engine-optimisation components) that writes dated reports.
+- **Activation Loop** — closes the loop: queue reminders, send by SMS/email, and
+  every attempt is **logged (sent / failed / blocked-for-consent)** so nobody is
+  contacted twice or against their opt-out. Tracks the **return rate** — how many
+  contacted patients came back within 30 days.
+- **Appointments** — booking into **real availability** with conflict detection
+  (a clinician can't be double-booked), confirmation states, and an automatic
+  reminder the day before.
+- **Billing** — per-consultation **fee invoices**, part/full payments, and a live
+  **balanced double-entry ledger**. The payer is tracked separately from the
+  patient, so a parent's (or insurer's) invoice for a patient is handled naturally.
+- **Marketing** — an **SMS Broadcaster** (Twilio / VoodooSMS) and **Email
+  Broadcaster** (Postmark), both with automatic opted-out suppression, plus an
+  **LLM SEO/GEO audit suite** that writes dated reports.
 - **AI assistant** — a LangGraph agent over read-only clinic data with a
   configurable model provider, plus fast slash-commands: `/kpi`, `/due`,
   `/lapsed`, `/followup`, `/revenue`, `/patient`.
-- **Accounting agent** — a clinic-bookkeeping demo (`scripts/accounting_agent.py`)
-  that runs over **synthetic** supplier invoices.
-- **Eval pack** — an offline regression suite that rebuilds a fresh DB from the
-  synthetic export and runs command, chat, and HTTP-route checks.
+- **People model** — patients (the *subject* of care) and contacts (the
+  contactable/consenting/billing *party*) are modelled separately with a role
+  link, so a minor is reached through a **guardian**, not their own phone.
+- **Eval pack** — an offline regression suite (141 checks) that rebuilds a fresh
+  DB from the synthetic export and covers commands, chat, routes, consent, the
+  people model, the activation loop, appointments, and billing.
+- **User guide** — a landscape guide with a screenshot per feature, built to PDF
+  + PPTX by `scripts/build_user_guide.sh` (see `docs/`).
 
 ## Data
 

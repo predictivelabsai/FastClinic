@@ -1,40 +1,56 @@
 #!/usr/bin/env bash
-# Build the FastClinic user guide PDF (landscape slide deck) from markdown.
+# Build the FastClinic user guide as a landscape slide deck — PDF + PPTX.
 #
-#   bash scripts/build_user_guide.sh
+#   bash scripts/build_user_guide.sh                       # newest dated guide
+#   bash scripts/build_user_guide.sh docs/fastclinic_user_guide_2026-07-20.md
 #
-# Pipeline: pandoc (markdown -> standalone HTML linking docs/assets/guide.css)
-#           -> WeasyPrint (HTML -> PDF, A4 landscape, one slide per "---").
-# Each run stamps the current version (from VERSION) + generation date into the
-# guide's title slide and the PDF page footer, so the document is always dated.
-# Requires: pandoc, weasyprint. Run from the repo root.
+# Pipeline:
+#   PDF  — pandoc (md -> standalone HTML + assets/guide.css) -> WeasyPrint
+#          (A4 landscape, one slide per "---", screenshot floated per page).
+#   PPTX — python-pptx (md -> 16:9 deck with a branded cover, native tables,
+#          and one screenshot per slide), kept visually in sync with the PDF.
+# Screenshots come from docs/img/ — refresh them with:
+#   DEMO_BASE_URL=http://localhost:5005 python scripts/capture_guide_screenshots.py
+#
+# Requires: pandoc, weasyprint, python-pptx. Run from the repo root.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PY="${PYTHON:-$ROOT/.venv/bin/python}"
 cd "$ROOT/docs"
 
-SRC="fastclinic_user_guide.md"
-HTML="fastclinic_user_guide.html"
-PDF="fastclinic_user_guide.pdf"
+# Guide source: explicit arg, else the newest dated guide.
+if [ "${1:-}" != "" ]; then
+  SRC="$(basename "$1")"
+else
+  SRC="$(ls -1 fastclinic_user_guide_*.md 2>/dev/null | sort | tail -1)"
+fi
+[ -n "${SRC:-}" ] && [ -f "$SRC" ] || { echo "⚠ no guide markdown found (docs/fastclinic_user_guide_*.md)"; exit 1; }
 
-VERSION="$(awk '{print $1; exit}' "$ROOT/VERSION")"
+BASE="${SRC%.md}"
+HTML="${BASE}.html"
+PDF="${BASE}.pdf"
+PPTX="${BASE}.pptx"
+TITLE="FastClinic — User Guide"
+
+VERSION="$(awk '{print $1; exit}' "$ROOT/VERSION" 2>/dev/null || echo 0.1.0)"
 GEN_DATE="$(date +%Y-%m-%d)"
-echo "→ stamping version $VERSION · generated $GEN_DATE"
-
-# Stamp the title-slide line (in-place; the web guide reads the same file).
-sed -i -E "s|^Version .* Runs at \*\*fastclinic\.example\*\*|Version ${VERSION} · Generated ${GEN_DATE} · Runs at **fastclinic.example**|" "$SRC"
+echo "→ building ${SRC} · v${VERSION} · ${GEN_DATE}"
 
 # Stamp the PDF page footer (right-hand @page content in guide.css).
 sed -i -E "s|content: \"[^\"]*fastclinic\.example\"|content: \"v${VERSION} · ${GEN_DATE} · fastclinic.example\"|" assets/guide.css
 
-echo "→ pandoc: $SRC -> $HTML"
+# PDF
 pandoc "$SRC" -s -o "$HTML" \
   --from=markdown-implicit_figures \
   --css "assets/guide.css" \
-  --metadata pagetitle="FastClinic — User Guide (v${VERSION}, ${GEN_DATE})"
+  --metadata pagetitle="${TITLE} (v${VERSION}, ${GEN_DATE})"
+weasyprint "$HTML" "$PDF"           # base dir = docs/, so assets/ + img/ resolve
+rm -f "$HTML"
+echo "✓ PDF  docs/$PDF ($(du -h "$PDF" | cut -f1))"
 
-echo "→ weasyprint: $HTML -> $PDF"
-# base dir = docs/, so assets/ and img/ resolve relatively
-weasyprint "$HTML" "$PDF"
+# PPTX
+"$PY" "$ROOT/scripts/build_pptx.py" "$SRC" "$PPTX" "$TITLE"
+echo "✓ PPTX docs/$PPTX ($(du -h "$PPTX" | cut -f1))"
 
-echo "✓ Built docs/$PDF (v${VERSION}, ${GEN_DATE}, $(du -h "$PDF" | cut -f1))"
+echo "✓ FastClinic user guide built (v${VERSION}, ${GEN_DATE}): PDF + PPTX."
