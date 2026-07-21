@@ -79,19 +79,26 @@ Login: `admin@fastclinic.example` / `FastClinic2026$` (override via
 - **Eval pack** — an offline regression suite (141 checks) that rebuilds a fresh
   DB from the synthetic export and covers commands, chat, routes, consent, the
   people model, the activation loop, appointments, and billing.
-- **User guide** — a landscape guide with a screenshot per feature, built to PDF
-  + PPTX by `scripts/build_user_guide.sh` (see `docs/`).
+- **User guide** — a landscape guide with a screenshot per feature:
+  [PDF](docs/fastclinic_user_guide_2026-07-20.pdf) ·
+  [PPTX](docs/fastclinic_user_guide_2026-07-20.pptx), rebuilt any time with
+  `scripts/build_user_guide.sh`.
 
 ## Data
 
 `pms/synth.py` generates `data/synthetic_fastclinic.xlsx` (a structurally
 realistic, fully synthetic PMS export). `pms/importer.py` builds a **read-only**
-SQLite database (`fastclinic.sqlite`) from it; re-run either step to refresh.
-The cockpit shows a graceful "No data loaded" screen until a DB exists.
+clinic database from it, modelling patients (the *subject* of care) and contacts
+(the *party*) as separate entities linked by role; re-run either step to refresh.
+Operational state the cockpit writes — reminders, appointments, invoices — lives
+in a **separate store** so refreshing the clinic records never wipes it. The
+cockpit shows a graceful "No data loaded" screen until records exist.
 
-See **[SKILLS.md](SKILLS.md)** for the full capability reference and
-**[CLAUDE.md](CLAUDE.md)** for the architecture. `docs/` holds the user guide and
-the FastHTML audit.
+See **[SKILLS.md](SKILLS.md)** for the full capability reference,
+**[CLAUDE.md](CLAUDE.md)** for the architecture, and
+**[docs/CLINIC_OS_PLAN.md](docs/CLINIC_OS_PLAN.md)** for the Clinic OS design,
+roadmap, and interoperability plan. `docs/` also holds the user guide and the
+FastHTML audit.
 
 ## Deploy
 
