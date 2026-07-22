@@ -1,17 +1,17 @@
 {
-  "timestamp": "2026-07-20T13:56:40",
+  "timestamp": "2026-07-22T11:51:39",
   "db_row_counts": {
     "subject": 1000,
-    "diagnosis": 5401,
-    "note": 3864,
-    "item": 24540,
-    "consultation": 9738,
-    "party": 952,
+    "diagnosis": 5358,
+    "note": 3918,
+    "item": 22856,
+    "consultation": 9779,
+    "party": 953,
     "subject_party_role": 1000
   },
   "summary": {
-    "total": 141,
-    "passed": 141,
+    "total": 157,
+    "passed": 157,
     "failed": 0,
     "pass_rate": 1.0,
     "by_suite": {
@@ -24,8 +24,8 @@
         "total": 25
       },
       "routes": {
-        "passed": 23,
-        "total": 23
+        "passed": 25,
+        "total": 25
       },
       "coverage": {
         "passed": 4,
@@ -50,6 +50,10 @@
       "billing": {
         "passed": 6,
         "total": 6
+      },
+      "specialties": {
+        "passed": 14,
+        "total": 14
       }
     },
     "by_category": {
@@ -125,6 +129,10 @@
         "passed": 3,
         "total": 3
       },
+      "operations": {
+        "passed": 2,
+        "total": 2
+      },
       "field_coverage": {
         "passed": 4,
         "total": 4
@@ -148,6 +156,10 @@
       "revenue_cycle": {
         "passed": 6,
         "total": 6
+      },
+      "multi_specialty": {
+        "passed": 14,
+        "total": 14
       }
     }
   },
@@ -160,7 +172,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 463 - **Total patients**: 1,000 - **Visits (30d)**: 233 - **Revenue (90d)**: €71,459 - **Lifetime revenue**: €1,32"
+      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 458 - **Total patients**: 1,000 - **Visits (30d)**: 234 - **Revenue (90d)**: €414,806 - **Lifetime revenue**: €7,3"
     },
     {
       "suite": "shortcuts",
@@ -170,7 +182,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 463 - **Total patients**: 1,000 - **Visits (30d)**: 233 - **Revenue (90d)**: €71,459 - **Lifetime revenue**: €1,32"
+      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 458 - **Total patients**: 1,000 - **Visits (30d)**: 234 - **Revenue (90d)**: €414,806 - **Lifetime revenue**: €7,3"
     },
     {
       "suite": "shortcuts",
@@ -180,7 +192,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 463 - **Total patients**: 1,000 - **Visits (30d)**: 233 - **Revenue (90d)**: €71,459 - **Lifetime revenue**: €1,32"
+      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 458 - **Total patients**: 1,000 - **Visits (30d)**: 234 - **Revenue (90d)**: €414,806 - **Lifetime revenue**: €7,3"
     },
     {
       "suite": "shortcuts",
@@ -190,7 +202,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 463 - **Total patients**: 1,000 - **Visits (30d)**: 233 - **Revenue (90d)**: €71,459 - **Lifetime revenue**: €1,32"
+      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 458 - **Total patients**: 1,000 - **Visits (30d)**: 234 - **Revenue (90d)**: €414,806 - **Lifetime revenue**: €7,3"
     },
     {
       "suite": "shortcuts",
@@ -200,7 +212,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 463 - **Total patients**: 1,000 - **Visits (30d)**: 233 - **Revenue (90d)**: €71,459 - **Lifetime revenue**: €1,32"
+      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 458 - **Total patients**: 1,000 - **Visits (30d)**: 234 - **Revenue (90d)**: €414,806 - **Lifetime revenue**: €7,3"
     },
     {
       "suite": "shortcuts",
@@ -210,7 +222,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 463 - **Total patients**: 1,000 - **Visits (30d)**: 233 - **Revenue (90d)**: €71,459 - **Lifetime revenue**: €1,32"
+      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 458 - **Total patients**: 1,000 - **Visits (30d)**: 234 - **Revenue (90d)**: €414,806 - **Lifetime revenue**: €7,3"
     },
     {
       "suite": "shortcuts",
@@ -220,7 +232,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 463 - **Total patients**: 1,000 - **Visits (30d)**: 233 - **Revenue (90d)**: €71,459 - **Lifetime revenue**: €1,32"
+      "response_excerpt": "### Clinic KPIs  - **Active patients (90d)**: 458 - **Total patients**: 1,000 - **Visits (30d)**: 234 - **Revenue (90d)**: €414,806 - **Lifetime revenue**: €7,3"
     },
     {
       "suite": "shortcuts",
@@ -230,7 +242,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Immunisations & Care Plans Due (1632)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1987 | Repeat prescription | 2018-1"
+      "response_excerpt": "### Immunisations & Care Plans Due (1578)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1852 | Health check | 2019-09-07 | "
     },
     {
       "suite": "shortcuts",
@@ -240,7 +252,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Immunisations & Care Plans Due (1632)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1987 | Repeat prescription | 2018-1"
+      "response_excerpt": "### Immunisations & Care Plans Due (1578)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1852 | Health check | 2019-09-07 | "
     },
     {
       "suite": "shortcuts",
@@ -250,7 +262,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Immunisations & Care Plans Due (464)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1929 | Immunisation | 2021-05-21 | o"
+      "response_excerpt": "### Immunisations & Care Plans Due (499)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1852 | Immunisation | 2020-06-09 | o"
     },
     {
       "suite": "shortcuts",
@@ -260,7 +272,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Immunisations & Care Plans Due (464)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1639 | Health check | 2020-12-17 | o"
+      "response_excerpt": "### Immunisations & Care Plans Due (430)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1852 | Health check | 2019-09-07 | o"
     },
     {
       "suite": "shortcuts",
@@ -270,7 +282,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Immunisations & Care Plans Due (704)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1987 | Repeat prescription | 2018-11"
+      "response_excerpt": "### Immunisations & Care Plans Due (649)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1920 | Repeat prescription | 2019-09"
     },
     {
       "suite": "shortcuts",
@@ -280,7 +292,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Immunisations & Care Plans Due (1632)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1987 | Repeat prescription | 2018-1"
+      "response_excerpt": "### Immunisations & Care Plans Due (1578)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1852 | Health check | 2019-09-07 | "
     },
     {
       "suite": "shortcuts",
@@ -290,7 +302,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Immunisations & Care Plans Due (1632)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1987 | Repeat prescription | 2018-1"
+      "response_excerpt": "### Immunisations & Care Plans Due (1578)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1852 | Health check | 2019-09-07 | "
     },
     {
       "suite": "shortcuts",
@@ -300,7 +312,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Immunisations & Care Plans Due (464)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1929 | Immunisation | 2021-05-21 | o"
+      "response_excerpt": "### Immunisations & Care Plans Due (499)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1852 | Immunisation | 2020-06-09 | o"
     },
     {
       "suite": "shortcuts",
@@ -310,7 +322,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Immunisations & Care Plans Due (1632)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1987 | Repeat prescription | 2018-1"
+      "response_excerpt": "### Immunisations & Care Plans Due (1578)  | Patient | Service | Due | Status | Overdue | | --- | --- | --- | --- | --- | | #1852 | Health check | 2019-09-07 | "
     },
     {
       "suite": "shortcuts",
@@ -320,7 +332,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Lapsed Patients (>12mo) — 196, €234,761 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1019 | 2025-04-09 | 14mo | €2,6"
+      "response_excerpt": "### Lapsed Patients (>12mo) — 208, €1,377,540 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1505 | 2025-04-26 | 14mo | €3"
     },
     {
       "suite": "shortcuts",
@@ -330,7 +342,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Lapsed Patients (>12mo) — 196, €234,761 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1019 | 2025-04-09 | 14mo | €2,6"
+      "response_excerpt": "### Lapsed Patients (>12mo) — 208, €1,377,540 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1505 | 2025-04-26 | 14mo | €3"
     },
     {
       "suite": "shortcuts",
@@ -340,7 +352,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Lapsed Patients (>6mo) — 372, €453,696 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1046 | 2025-12-09 | 6mo | €3,374"
+      "response_excerpt": "### Lapsed Patients (>6mo) — 386, €2,725,543 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1505 | 2025-04-26 | 14mo | €33"
     },
     {
       "suite": "shortcuts",
@@ -350,7 +362,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Lapsed Patients (>9mo) — 286, €348,351 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1189 | 2025-06-24 | 12mo | €2,78"
+      "response_excerpt": "### Lapsed Patients (>9mo) — 287, €2,033,739 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1505 | 2025-04-26 | 14mo | €33"
     },
     {
       "suite": "shortcuts",
@@ -360,7 +372,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Lapsed Patients (>18mo) — 118, €144,213 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1447 | 2024-08-23 | 22mo | €2,6"
+      "response_excerpt": "### Lapsed Patients (>18mo) — 130, €847,338 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1373 | 2024-01-08 | 29mo | €27,"
     },
     {
       "suite": "shortcuts",
@@ -370,7 +382,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Lapsed Patients (>24mo) — 51, €65,748 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1375 | 2023-12-30 | 30mo | €2,534"
+      "response_excerpt": "### Lapsed Patients (>24mo) — 77, €525,863 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1373 | 2024-01-08 | 29mo | €27,4"
     },
     {
       "suite": "shortcuts",
@@ -380,7 +392,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Lapsed Patients (>12mo) — 196, €234,761 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1019 | 2025-04-09 | 14mo | €2,6"
+      "response_excerpt": "### Lapsed Patients (>12mo) — 208, €1,377,540 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1505 | 2025-04-26 | 14mo | €3"
     },
     {
       "suite": "shortcuts",
@@ -390,7 +402,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Lapsed Patients (>9mo) — 286, €348,351 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1189 | 2025-06-24 | 12mo | €2,78"
+      "response_excerpt": "### Lapsed Patients (>9mo) — 287, €2,033,739 at risk  | Patient | Last visit | Lapsed | Lifetime € | | --- | --- | --- | --- | | #1505 | 2025-04-26 | 14mo | €33"
     },
     {
       "suite": "shortcuts",
@@ -400,7 +412,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Post-Visit Follow-up (14d) — 143  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1845 | 2026-06-10 | medication,imaging | €131 | | #1384 "
+      "response_excerpt": "### Post-Visit Follow-up (14d) — 146  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1213 | 2026-06-10 | consultation,vaccine,health_plan,rep"
     },
     {
       "suite": "shortcuts",
@@ -410,7 +422,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Post-Visit Follow-up (7d) — 106  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1845 | 2026-06-10 | medication,imaging | €131 | | #1384 |"
+      "response_excerpt": "### Post-Visit Follow-up (7d) — 119  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1213 | 2026-06-10 | consultation,vaccine,health_plan,repe"
     },
     {
       "suite": "shortcuts",
@@ -420,7 +432,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Post-Visit Follow-up (30d) — 213  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1845 | 2026-06-10 | medication,imaging | €131 | | #1384 "
+      "response_excerpt": "### Post-Visit Follow-up (30d) — 211  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1213 | 2026-06-10 | consultation,vaccine,health_plan,rep"
     },
     {
       "suite": "shortcuts",
@@ -430,7 +442,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Post-Visit Follow-up (60d) — 311  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1845 | 2026-06-10 | medication,imaging | €131 | | #1384 "
+      "response_excerpt": "### Post-Visit Follow-up (60d) — 313  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1213 | 2026-06-10 | consultation,vaccine,health_plan,rep"
     },
     {
       "suite": "shortcuts",
@@ -440,7 +452,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Post-Visit Follow-up (14d) — 143  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1845 | 2026-06-10 | medication,imaging | €131 | | #1384 "
+      "response_excerpt": "### Post-Visit Follow-up (14d) — 146  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1213 | 2026-06-10 | consultation,vaccine,health_plan,rep"
     },
     {
       "suite": "shortcuts",
@@ -450,7 +462,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Post-Visit Follow-up (14d) — 143  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1845 | 2026-06-10 | medication,imaging | €131 | | #1384 "
+      "response_excerpt": "### Post-Visit Follow-up (14d) — 146  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1213 | 2026-06-10 | consultation,vaccine,health_plan,rep"
     },
     {
       "suite": "shortcuts",
@@ -460,7 +472,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Post-Visit Follow-up (14d) — 143  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1845 | 2026-06-10 | medication,imaging | €131 | | #1384 "
+      "response_excerpt": "### Post-Visit Follow-up (14d) — 146  | Patient | Visit | Done | Revenue | | --- | --- | --- | --- | | #1213 | 2026-06-10 | consultation,vaccine,health_plan,rep"
     },
     {
       "suite": "shortcuts",
@@ -470,7 +482,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Revenue by Category  | Category | Lines | Revenue | | --- | --- | --- | | Health check / care plan | 1628 | €264,476 | | Medication | 7333 | €254,114 | | Co"
+      "response_excerpt": "### Revenue by Category  | Category | Lines | Revenue | | --- | --- | --- | | Surgery | 641 | €3,963,662 | | Dental treatment | 2210 | €1,530,987 | | Specialist"
     },
     {
       "suite": "shortcuts",
@@ -480,7 +492,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Revenue by Category  | Category | Lines | Revenue | | --- | --- | --- | | Health check / care plan | 1628 | €264,476 | | Medication | 7333 | €254,114 | | Co"
+      "response_excerpt": "### Revenue by Category  | Category | Lines | Revenue | | --- | --- | --- | | Surgery | 641 | €3,963,662 | | Dental treatment | 2210 | €1,530,987 | | Specialist"
     },
     {
       "suite": "shortcuts",
@@ -490,7 +502,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Revenue by Category  | Category | Lines | Revenue | | --- | --- | --- | | Health check / care plan | 1628 | €264,476 | | Medication | 7333 | €254,114 | | Co"
+      "response_excerpt": "### Revenue by Category  | Category | Lines | Revenue | | --- | --- | --- | | Surgery | 641 | €3,963,662 | | Dental treatment | 2210 | €1,530,987 | | Specialist"
     },
     {
       "suite": "shortcuts",
@@ -500,7 +512,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Patients (20)  | ID | Name | Sex | City | Visits | Last visit | Lifetime € | | --- | --- | --- | --- | --- | --- | --- | | #1845 | Emily Evans | Female | Sh"
+      "response_excerpt": "### Patients (20)  | ID | Name | Sex | City | Visits | Last visit | Lifetime € | | --- | --- | --- | --- | --- | --- | --- | | #1213 | William Smith | Male | Br"
     },
     {
       "suite": "shortcuts",
@@ -510,7 +522,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Patients (20)  | ID | Name | Sex | City | Visits | Last visit | Lifetime € | | --- | --- | --- | --- | --- | --- | --- | | #1585 | Daniel Evans | Male | Lon"
+      "response_excerpt": "### Patients (20)  | ID | Name | Sex | City | Visits | Last visit | Lifetime € | | --- | --- | --- | --- | --- | --- | --- | | #1263 | Megan Hall | Female | Lon"
     },
     {
       "suite": "shortcuts",
@@ -520,7 +532,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Patients (20)  | ID | Name | Sex | City | Visits | Last visit | Lifetime € | | --- | --- | --- | --- | --- | --- | --- | | #1426 | Amelia Wright | Female | "
+      "response_excerpt": "### Patients (20)  | ID | Name | Sex | City | Visits | Last visit | Lifetime € | | --- | --- | --- | --- | --- | --- | --- | | #1001 | James Wright | Male | Man"
     },
     {
       "suite": "shortcuts",
@@ -530,7 +542,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Patients (20)  | ID | Name | Sex | City | Visits | Last visit | Lifetime € | | --- | --- | --- | --- | --- | --- | --- | | #1420 | James Smith | Male | Manc"
+      "response_excerpt": "### Patients (20)  | ID | Name | Sex | City | Visits | Last visit | Lifetime € | | --- | --- | --- | --- | --- | --- | --- | | #1213 | William Smith | Male | Br"
     },
     {
       "suite": "shortcuts",
@@ -540,7 +552,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Patients (20)  | ID | Name | Sex | City | Visits | Last visit | Lifetime € | | --- | --- | --- | --- | --- | --- | --- | | #1384 | Hannah Roberts | Female |"
+      "response_excerpt": "### Patients (20)  | ID | Name | Sex | City | Visits | Last visit | Lifetime € | | --- | --- | --- | --- | --- | --- | --- | | #1213 | William Smith | Male | Br"
     },
     {
       "suite": "shortcuts",
@@ -560,7 +572,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Patients (20)  | ID | Name | Sex | City | Visits | Last visit | Lifetime € | | --- | --- | --- | --- | --- | --- | --- | | #1558 | Megan Wright | Female | L"
+      "response_excerpt": "### Patients (20)  | ID | Name | Sex | City | Visits | Last visit | Lifetime € | | --- | --- | --- | --- | --- | --- | --- | | #1956 | James Wright | Male | Lee"
     },
     {
       "suite": "shortcuts",
@@ -580,7 +592,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Patient #1206  - **Name**: Freya Wilson - **Sex**: Female - **DOB**: 1987-12-22 - **City**: Bristol - **NHS number**: 520 968 8417 - **Critical notes**: Pen"
+      "response_excerpt": "### Patient #1206  - **Name**: Samuel Green - **Sex**: Male - **DOB**: 2010-05-15 - **City**: Sheffield - **NHS number**: 502 562 3781 - **Critical notes**: Chr"
     },
     {
       "suite": "shortcuts",
@@ -590,7 +602,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Patient #1500  - **Name**: Noah Brown - **Sex**: Male - **DOB**: 2013-12-03 - **City**: Manchester - **NHS number**: 544 590 4840 - **Critical notes**: — - "
+      "response_excerpt": "### Patient #1500  - **Name**: Samuel Hall - **Sex**: Male - **DOB**: 2005-12-31 - **City**: London - **NHS number**: 461 337 2948 - **Critical notes**: Anticoa"
     },
     {
       "suite": "shortcuts",
@@ -600,7 +612,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Patient #1800  - **Name**: George Wilson - **Sex**: Male - **DOB**: 2016-07-21 - **City**: Bristol - **NHS number**: 468 910 4096 - **Critical notes**: Late"
+      "response_excerpt": "### Patient #1800  - **Name**: Samuel Wright - **Sex**: Male - **DOB**: 1954-11-02 - **City**: Leeds - **NHS number**: 614 608 5579 - **Critical notes**: — - **"
     },
     {
       "suite": "shortcuts",
@@ -610,7 +622,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Patient #2000  - **Name**: Charlotte Wright - **Sex**: Female - **DOB**: 1974-01-06 - **City**: London - **NHS number**: 610 165 2873 - **Critical notes**: "
+      "response_excerpt": "### Patient #2000  - **Name**: George Jones - **Sex**: Male - **DOB**: 1996-12-21 - **City**: London - **NHS number**: 626 206 3679 - **Critical notes**: — - **"
     },
     {
       "suite": "shortcuts",
@@ -620,7 +632,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Patient #1206  - **Name**: Freya Wilson - **Sex**: Female - **DOB**: 1987-12-22 - **City**: Bristol - **NHS number**: 520 968 8417 - **Critical notes**: Pen"
+      "response_excerpt": "### Patient #1206  - **Name**: Samuel Green - **Sex**: Male - **DOB**: 2010-05-15 - **City**: Sheffield - **NHS number**: 502 562 3781 - **Critical notes**: Chr"
     },
     {
       "suite": "shortcuts",
@@ -630,7 +642,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Patient #1206  - **Name**: Freya Wilson - **Sex**: Female - **DOB**: 1987-12-22 - **City**: Bristol - **NHS number**: 520 968 8417 - **Critical notes**: Pen"
+      "response_excerpt": "### Patient #1206  - **Name**: Samuel Green - **Sex**: Male - **DOB**: 2010-05-15 - **City**: Sheffield - **NHS number**: 502 562 3781 - **Critical notes**: Chr"
     },
     {
       "suite": "shortcuts",
@@ -640,7 +652,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Patient #1300  - **Name**: James Patel - **Sex**: Male - **DOB**: 1999-01-09 - **City**: Manchester - **NHS number**: 571 558 2803 - **Critical notes**: Pen"
+      "response_excerpt": "### Patient #1300  - **Name**: Daniel Jones - **Sex**: Male - **DOB**: 2021-06-18 - **City**: Sheffield - **NHS number**: 491 795 2935 - **Critical notes**: Ant"
     },
     {
       "suite": "shortcuts",
@@ -950,7 +962,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Clinic KPIs\n\n- **Active patients (90d)**: 463\n- **Total patients**: 1,000\n- **Visits (30d)**: 233\n- **Revenue (90d)**: €71,459\n- **Lifetime revenue**: €1,32"
+      "response_excerpt": "### Clinic KPIs\n\n- **Active patients (90d)**: 458\n- **Total patients**: 1,000\n- **Visits (30d)**: 234\n- **Revenue (90d)**: €414,806\n- **Lifetime revenue**: €7,3"
     },
     {
       "suite": "chat",
@@ -960,7 +972,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Immunisations & Care Plans Due (1632)\n\n| Patient | Service | Due | Status | Overdue |\n| --- | --- | --- | --- | --- |\n| #1987 | Repeat prescription | 2018-1"
+      "response_excerpt": "### Immunisations & Care Plans Due (1578)\n\n| Patient | Service | Due | Status | Overdue |\n| --- | --- | --- | --- | --- |\n| #1852 | Health check | 2019-09-07 | "
     },
     {
       "suite": "chat",
@@ -970,7 +982,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### Lapsed Patients (>12mo) — 196, €234,761 at risk\n\n| Patient | Last visit | Lapsed | Lifetime € |\n| --- | --- | --- | --- |\n| #1019 | 2025-04-09 | 14mo | €2,6"
+      "response_excerpt": "### Lapsed Patients (>12mo) — 208, €1,377,540 at risk\n\n| Patient | Last visit | Lapsed | Lifetime € |\n| --- | --- | --- | --- |\n| #1505 | 2025-04-26 | 14mo | €3"
     },
     {
       "suite": "chat",
@@ -1200,6 +1212,24 @@
       "status": 200
     },
     {
+      "suite": "routes",
+      "path": "/treatments",
+      "category": "operations",
+      "expect_contains": "Specialties",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/treatments",
+      "category": "operations",
+      "expect_contains": "Orthopaedics",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
       "suite": "coverage",
       "question": "synthetic:patient",
       "category": "field_coverage",
@@ -1237,7 +1267,7 @@
       "category": "marketing_consent",
       "passed": true,
       "detail": "",
-      "response_excerpt": "1632 rows, 0 leaked"
+      "response_excerpt": "1578 rows, 0 leaked"
     },
     {
       "suite": "consent",
@@ -1245,7 +1275,7 @@
       "category": "marketing_consent",
       "passed": true,
       "detail": "",
-      "response_excerpt": "196 rows, 0 leaked"
+      "response_excerpt": "208 rows, 0 leaked"
     },
     {
       "suite": "consent",
@@ -1253,7 +1283,7 @@
       "category": "marketing_consent",
       "passed": true,
       "detail": "",
-      "response_excerpt": "143 rows, 0 leaked"
+      "response_excerpt": "146 rows, 0 leaked"
     },
     {
       "suite": "consent",
@@ -1317,7 +1347,7 @@
       "category": "generic_core",
       "passed": true,
       "detail": "",
-      "response_excerpt": "0 of 180 minors ungoverned"
+      "response_excerpt": "0 of 151 minors ungoverned"
     },
     {
       "suite": "model",
@@ -1341,7 +1371,7 @@
       "category": "activation_loop",
       "passed": true,
       "detail": "",
-      "response_excerpt": "enqueued 1632"
+      "response_excerpt": "enqueued 1578"
     },
     {
       "suite": "loop",
@@ -1349,7 +1379,7 @@
       "category": "activation_loop",
       "passed": true,
       "detail": "",
-      "response_excerpt": "second enqueue added 0, pending 1632->1632"
+      "response_excerpt": "second enqueue added 0, pending 1578->1578"
     },
     {
       "suite": "loop",
@@ -1365,7 +1395,7 @@
       "category": "activation_loop",
       "passed": true,
       "detail": "",
-      "response_excerpt": "pending 1632->1632, sent 1"
+      "response_excerpt": "pending 1578->1578, sent 1"
     },
     {
       "suite": "loop",
@@ -1470,6 +1500,118 @@
       "passed": true,
       "detail": "",
       "response_excerpt": "payer party 5001"
+    },
+    {
+      "suite": "specialties",
+      "question": "has-specialty:general_practice",
+      "category": "multi_specialty",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "missing general_practice; have ['cardiology', 'dental', 'dermatology', 'diagnostics', 'ent', 'gastroenterology', 'general_practice', 'general_surgery', 'gynaecology', 'ophthalmology', 'orthopaedics', 'plastic_surgery', 'urology']"
+    },
+    {
+      "suite": "specialties",
+      "question": "has-specialty:dental",
+      "category": "multi_specialty",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "missing dental; have ['cardiology', 'dental', 'dermatology', 'diagnostics', 'ent', 'gastroenterology', 'general_practice', 'general_surgery', 'gynaecology', 'ophthalmology', 'orthopaedics', 'plastic_surgery', 'urology']"
+    },
+    {
+      "suite": "specialties",
+      "question": "has-specialty:orthopaedics",
+      "category": "multi_specialty",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "missing orthopaedics; have ['cardiology', 'dental', 'dermatology', 'diagnostics', 'ent', 'gastroenterology', 'general_practice', 'general_surgery', 'gynaecology', 'ophthalmology', 'orthopaedics', 'plastic_surgery', 'urology']"
+    },
+    {
+      "suite": "specialties",
+      "question": "has-specialty:ophthalmology",
+      "category": "multi_specialty",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "missing ophthalmology; have ['cardiology', 'dental', 'dermatology', 'diagnostics', 'ent', 'gastroenterology', 'general_practice', 'general_surgery', 'gynaecology', 'ophthalmology', 'orthopaedics', 'plastic_surgery', 'urology']"
+    },
+    {
+      "suite": "specialties",
+      "question": "broad-specialty-coverage",
+      "category": "multi_specialty",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "only 13 specialties"
+    },
+    {
+      "suite": "specialties",
+      "question": "has-surgery",
+      "category": "multi_specialty",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "641 surgery lines"
+    },
+    {
+      "suite": "specialties",
+      "question": "has-dental",
+      "category": "multi_specialty",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "2210 dental lines"
+    },
+    {
+      "suite": "specialties",
+      "question": "no-unclassified-items",
+      "category": "multi_specialty",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "0 items fell to 'other'"
+    },
+    {
+      "suite": "specialties",
+      "question": "classify:Total knee replacement",
+      "category": "multi_specialty",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "got specialty=orthopaedics category=surgery, want orthopaedics/surgery"
+    },
+    {
+      "suite": "specialties",
+      "question": "classify:Cataract surgery",
+      "category": "multi_specialty",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "got specialty=ophthalmology category=surgery, want ophthalmology/surgery"
+    },
+    {
+      "suite": "specialties",
+      "question": "classify:Dental implant",
+      "category": "multi_specialty",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "got specialty=dental category=dental, want dental/dental"
+    },
+    {
+      "suite": "specialties",
+      "question": "classify:Root canal treatment",
+      "category": "multi_specialty",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "got specialty=dental category=dental, want dental/dental"
+    },
+    {
+      "suite": "specialties",
+      "question": "classify:GP consultation",
+      "category": "multi_specialty",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "got specialty=general_practice category=consultation, want general_practice/consultation"
+    },
+    {
+      "suite": "specialties",
+      "question": "no-ent-false-positive",
+      "category": "multi_specialty",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "'appointment' wrongly matched ENT"
     }
   ]
 }

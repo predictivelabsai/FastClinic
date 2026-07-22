@@ -150,6 +150,11 @@ def get(session, pid: int):
                 dash.patient_detail_view(pid))
 
 
+@rt("/treatments")
+def get(session):
+    return _guarded("treatments", dash.treatments_view)(session)
+
+
 @rt("/clinical")
 def get(session):
     return _guarded("clinical", dash.clinical_view)(session)

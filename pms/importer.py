@@ -42,7 +42,7 @@ import sqlite3
 import sys
 
 from pms.xlsx import read_sheet, sheet_names, excel_date, excel_datetime
-from pms.catalog import categorise, VISIT_CATEGORIES
+from pms.catalog import categorise, specialty_of, VISIT_CATEGORIES
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_OUT = os.path.join(ROOT, "fastclinic.sqlite")
@@ -191,7 +191,7 @@ ITEM_FIELDS = [
 ]
 
 # Extra computed item columns (not raw export fields).
-ITEM_COMPUTED = [("category", "TEXT"), ("line_total_vat", "REAL")]
+ITEM_COMPUTED = [("category", "TEXT"), ("specialty", "TEXT"), ("line_total_vat", "REAL")]
 
 # Kept as a module alias so external references (evals field-coverage) that map a
 # sheet to its field list keep working after the rename.
@@ -270,7 +270,9 @@ def build(export_path: str, out_path: str = DEFAULT_OUT) -> dict:
     def _item_computed(r):
         qty = _num(r.get("quantity")) or 0
         unit_vat = _num(r.get("price_with_vat")) or 0
-        return {"category": categorise(r.get("name")),
+        name = r.get("name")
+        cat = categorise(name)
+        return {"category": cat, "specialty": specialty_of(name, cat),
                 "line_total_vat": round(qty * unit_vat, 2)}
 
     _ingest(db, "item", ITEM_FIELDS, items, computed=_item_computed)

@@ -461,23 +461,24 @@ NAV_ITEMS = [
         ("dashboard", "Overview", "📊", "/"),
         ("chat-full", "AI Assistant", "🤖", "/ai"),
     ]),
-    ("ACTIVATION", [
-        ("act-reminders", "Immunisation & Plan Due", "💉", "/activation/reminders"),
-        ("act-lapsed", "Lapsed Reactivation", "🔁", "/activation/lapsed"),
-        ("act-followup", "Post-Visit Follow-up", "📨", "/activation/followup"),
-        ("act-loop", "Activation Loop", "🔄", "/activation/loop"),
-    ]),
-    ("CLINIC", [
+    ("OPERATIONS", [
         ("patients", "Patients", "🧑‍⚕️", "/patients"),
         ("appointments", "Appointments", "📅", "/appointments"),
+        ("treatments", "Treatments & Specialties", "🩹", "/treatments"),
         ("clinical", "Clinical", "🩺", "/clinical"),
-        ("revenue", "Revenue", "💶", "/revenue"),
         ("billing", "Billing", "🧾", "/billing"),
+        ("revenue", "Revenue", "💷", "/revenue"),
     ]),
-    ("MARKETING", [
-        ("sms", "SMS Broadcaster", "📱", "/ops/sms"),
-        ("email", "Email Broadcaster", "✉️", "/ops/email"),
-        ("seo", "SEO Audit", "🔍", "/seo"),
+    ("RECALL & SCHEDULING", [
+        ("act-reminders", "Recalls Due", "💉", "/activation/reminders"),
+        ("act-lapsed", "Lapsed Patients", "🔁", "/activation/lapsed"),
+        ("act-followup", "Post-Visit Follow-up", "📨", "/activation/followup"),
+        ("act-loop", "Recall Loop", "🔄", "/activation/loop"),
+    ]),
+    ("COMMUNICATIONS", [
+        ("sms", "SMS", "📱", "/ops/sms"),
+        ("email", "Email", "✉️", "/ops/email"),
+        ("seo", "Web Presence", "🔍", "/seo"),
     ]),
     ("HELP", [
         ("help-shortcuts", "Shortcuts", "⌨️", "/help/shortcuts"),
@@ -526,9 +527,9 @@ def left_pane(active: str):
 
 # Conversational starters shown below the chat — most people start by chatting.
 SAMPLE_QUESTIONS = [
-    "Which patients are overdue for immunisations?",
-    "Who should we win back this month?",
-    "How is the clinic performing?",
+    "Which specialties bring in the most revenue?",
+    "How many surgical cases this month?",
+    "Which patients are due for recall?",
 ]
 
 

@@ -46,7 +46,7 @@ def _escape(s: str) -> str:
 
 def _eur(v) -> str:
     try:
-        return f"€{float(v):,.0f}"
+        return f"£{float(v):,.0f}"
     except (ValueError, TypeError):
         return "—"
 
@@ -110,7 +110,7 @@ def overview_view():
     rev_chart = plot_div("ov-rev", _plot_spec(
         [{"type": "scatter", "mode": "lines+markers", "x": months,
           "y": [r["revenue"] for r in trend], "line": {"color": WARN, "width": 3}}],
-        _base_layout("Revenue per month (€, incl VAT)"),
+        _base_layout("Revenue per month (£, incl VAT)"),
     ))
 
     cat = q.revenue_by_category()
@@ -191,7 +191,7 @@ def patients_view(search: str = ""):
     return Div(
         _page_title("Patients", f"{len(rows)} shown", actions=search_form),
         Div(
-            _table(["Patient", "Name", "City", "Sex", "Age", "NHS no.", "Visits", "Last visit", "Lifetime €", "Notes"],
+            _table(["Patient", "Name", "City", "Sex", "Age", "NHS no.", "Visits", "Last visit", "Lifetime £", "Notes"],
                    table_rows) if table_rows else P("No patients match."),
             cls="card",
         ),
@@ -243,7 +243,7 @@ def patient_detail_view(pid: int):
                   _escape(i["name"]), _eur(i["line_total_vat"])] for i in items]
     spend = Div(
         Div(H3("Recent line items"), cls="card-header"),
-        _table(["Date", "Category", "Item", "€"], item_rows) if item_rows else P("No items."),
+        _table(["Date", "Category", "Item", "£"], item_rows) if item_rows else P("No items."),
         cls="card",
     )
 
@@ -309,7 +309,7 @@ def revenue_view():
     rev_chart = plot_div("rev-trend", _plot_spec(
         [{"type": "bar", "x": months, "y": [r["revenue"] for r in trend],
           "marker": {"color": ACCENT}}],
-        _base_layout("Monthly revenue (€, incl VAT)"),
+        _base_layout("Monthly revenue (£, incl VAT)"),
     ))
     cat_rows = [[Span(c["category"], cls=f"status-pill {c['category']}"), c["lines"],
                  _eur(c["revenue"]),
@@ -320,6 +320,48 @@ def revenue_view():
         Div(Div(H3("Monthly revenue"), cls="card-header"), *rev_chart, cls="card"),
         Div(Div(H3("Revenue by category"), cls="card-header"),
             _table(["Category", "Lines", "Revenue", "Share"], cat_rows), cls="card"),
+    )
+
+
+def treatments_view():
+    """Operations view: case mix, volume and revenue across clinical specialties."""
+    from web.db import db_exists
+    if not db_exists():
+        return _no_data_view()
+    spec = q.specialty_mix()
+    total = sum(r["revenue"] or 0 for r in spec)
+    k = q.surgical_kpis()
+    cards = Div(
+        kpi_card("Specialties", k.get("specialties", 0)),
+        kpi_card("Surgical cases", f"{(k.get('surgical_cases') or 0):,}"),
+        kpi_card("Surgical revenue", _eur(k.get("surgical_rev"))),
+        kpi_card("Dental revenue", _eur(k.get("dental_rev")), neutral=True),
+        cls="kpi-grid", style="grid-template-columns:repeat(4,1fr);",
+    )
+    labels = [r["label"] for r in spec]
+    spec_chart = plot_div("spec-rev", _plot_spec(
+        [{"type": "bar", "orientation": "h",
+          "x": [r["revenue"] for r in spec][::-1], "y": labels[::-1],
+          "marker": {"color": ACCENT}}],
+        _base_layout("Revenue by specialty (£, incl VAT)", height=360),
+    ))
+    spec_rows = [[r["label"], f"{r['cases']:,}", f"{r['lines']:,}", _eur(r["revenue"]),
+                  f"{(100*(r['revenue'] or 0)/total):.0f}%" if total else "—"] for r in spec]
+    from pms.catalog import category_label
+    top = q.top_procedures(limit=15)
+    top_rows = [[t["name"], t["specialty_label"], category_label(t["category"]),
+                 f"{t['n']:,}", _eur(t["revenue"])] for t in top]
+    return Div(
+        _page_title("Treatments & Specialties",
+                    "Case mix, volume and revenue across the clinic's departments"),
+        cards,
+        Div(Div(H3("Revenue by specialty"), cls="card-header"), *spec_chart, cls="card"),
+        Div(Div(H3("Specialty case mix"), cls="card-header"),
+            _table(["Specialty", "Cases", "Lines", "Revenue", "Share"], spec_rows),
+            cls="card"),
+        Div(Div(H3("Top procedures & treatments by revenue"), cls="card-header"),
+            _table(["Procedure / treatment", "Specialty", "Type", "Volume", "Revenue"],
+                   top_rows), cls="card"),
     )
 
 

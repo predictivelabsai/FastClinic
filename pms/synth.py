@@ -79,6 +79,67 @@ PROCEDURES = ["Minor surgery (skin lesion)", "Joint injection",
 MEDS = ["Antibiotic course", "Pain relief medication", "Steroid cream", "Nasal spray"]
 REFERRALS = ["Cardiology referral", "Dermatology referral", "Physiotherapy referral"]
 
+# --- specialty / surgical / dental catalogue (multi-specialty clinic) ----------
+# Names carry the anatomical/procedure cue that catalog.py classifies on.
+SPECIALIST_CONSULTS = [
+    "Orthopaedic consultation", "Ophthalmology consultation", "ENT consultation",
+    "Gynaecology consultation", "Urology consultation", "Dermatology consultation",
+    "Cardiology consultation", "General surgical consultation",
+]
+# (name, net_price_low, net_price_high) — day-case & inpatient surgery.
+SURGERIES = [
+    ("Total knee replacement", 10000, 13000),
+    ("Total hip replacement", 9000, 12000),
+    ("Knee arthroscopy", 3000, 4500),
+    ("Shoulder arthroscopy", 3500, 5000),
+    ("ACL ligament reconstruction", 5000, 7000),
+    ("Carpal tunnel decompression", 1500, 2500),
+    ("Bunion correction (Hallux Valgus repair)", 2800, 4200),
+    ("Lumbar discectomy", 7000, 9500),
+    ("Cataract surgery", 2200, 3200),
+    ("Glaucoma trabeculectomy", 3000, 4500),
+    ("Corneal keratoplasty (graft)", 4500, 6500),
+    ("Septoplasty", 2500, 3800),
+    ("Tonsillectomy", 2200, 3200),
+    ("Endoscopic sinus surgery", 3200, 4800),
+    ("Total thyroidectomy", 5000, 7000),
+    ("Laparoscopic hysterectomy", 6000, 8500),
+    ("Hysteroscopy", 1800, 2800),
+    ("Ovarian cystectomy", 4000, 6000),
+    ("Laparoscopic hernia repair", 3000, 4500),
+    ("Haemorrhoidectomy", 2500, 3800),
+    ("Laparoscopic cholecystectomy (gallbladder)", 4000, 6000),
+    ("Varicose vein surgery", 2500, 4000),
+    ("Transurethral resection of prostate (TURP)", 5500, 7500),
+    ("Bladder tumour resection (TURBT)", 4500, 6500),
+    ("Vasectomy", 500, 900),
+    ("Flexible ureteroscopy and laser (kidney stones)", 4000, 6000),
+    ("Coronary angioplasty and stent", 8000, 11000),
+    ("Pacemaker insertion", 7000, 9500),
+    ("Rhinoplasty", 4500, 6500),
+    ("Abdominoplasty (tummy tuck)", 6000, 8500),
+    ("Breast reduction (reduction mammoplasty)", 6500, 9000),
+]
+PREOP = ["Pre-operative assessment", "Pre-admission clinic", "Pre-op assessment (anaesthetic)"]
+FOLLOWUP = ["Post-operative review", "Surgical follow-up appointment",
+            "Wound review and suture removal"]
+# (name, net_price_low, net_price_high)
+DENTAL = [
+    ("Dental examination", 25, 60),
+    ("Scale and polish (hygienist)", 45, 90),
+    ("White filling", 90, 220),
+    ("Tooth extraction", 90, 300),
+    ("Root canal treatment", 300, 800),
+    ("Dental crown", 450, 950),
+    ("Dental bridge", 600, 1400),
+    ("Dental implant", 1800, 3000),
+    ("Teeth whitening", 250, 500),
+    ("Denture fitting", 400, 1200),
+    ("Orthodontic brace fitting", 1500, 3000),
+]
+IMAGING_SPECIALTY = ["Knee MRI scan", "Shoulder MRI scan", "CT scan (abdomen)",
+                     "Echocardiogram", "Colonoscopy", "Gastroscopy"]
+
 DIAGNOSES = [
     ("J06", "Upper respiratory tract infection"), ("I10", "Hypertension"),
     ("E11", "Type 2 diabetes"), ("M54", "Lower back pain"),
@@ -287,7 +348,38 @@ def generate(n_patients: int = 1000, seed: int = 42) -> dict:
 
 
 def _consult_lines(cdate: date, reg: date, rng: random.Random):
-    """Return [(item_name, net_price)] for one consultation, biased to recurring care."""
+    """Return [(item_name, net_price)] for one visit.
+
+    A multi-specialty clinic: most visits are general practice, with a healthy
+    share of dental, specialist-outpatient and surgical episodes so the operations
+    views show a real case mix across departments.
+    """
+    roll = rng.random()
+
+    if roll < 0.16:                                   # --- dental visit ---
+        name, lo, hi = rng.choice(DENTAL)
+        lines = [(name, rng.uniform(lo, hi))]
+        if rng.random() < 0.4:                        # exam/hygiene alongside treatment
+            n2, l2, h2 = rng.choice(DENTAL[:2])
+            lines.append((n2, rng.uniform(l2, h2)))
+        return lines
+
+    if roll < 0.30:                                   # --- specialist / surgical ---
+        lines = [(rng.choice(SPECIALIST_CONSULTS), rng.uniform(150, 350))]
+        if rng.random() < 0.45:                       # this episode reaches surgery
+            name, lo, hi = rng.choice(SURGERIES)
+            lines.append((name, rng.uniform(lo, hi)))
+            if rng.random() < 0.7:
+                lines.append((rng.choice(PREOP), rng.uniform(200, 450)))
+            if rng.random() < 0.5:
+                lines.append((rng.choice(IMAGING_SPECIALTY), rng.uniform(150, 450)))
+        elif rng.random() < 0.4:                      # or a diagnostic work-up
+            lines.append((rng.choice(IMAGING_SPECIALTY), rng.uniform(150, 450)))
+        if rng.random() < 0.25:
+            lines.append((rng.choice(FOLLOWUP), rng.uniform(80, 180)))
+        return lines
+
+    # --- general practice visit (the bulk) ---
     lines = [(rng.choice(CONSULTS), rng.uniform(20, 45))]
     r = rng.random()
     if r < 0.34:

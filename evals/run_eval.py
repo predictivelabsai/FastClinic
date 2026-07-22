@@ -432,6 +432,57 @@ def run_billing() -> list[dict]:
     return out
 
 
+def run_specialties() -> list[dict]:
+    """Assert the multi-specialty taxonomy: GP + surgical specialties + dental.
+
+    FastClinic is positioned as a multi-specialty clinic operations platform, not
+    GP-only. These gates prove the synthetic data and classifier actually produce
+    a broad case mix across departments with clean (no 'other') classification.
+    """
+    from web.db import query, scalar
+    from pms.catalog import specialty_of, categorise
+    out = []
+
+    def check(label, passed, detail=""):
+        out.append({"suite": "specialties", "question": label,
+                    "category": "multi_specialty", "passed": bool(passed),
+                    "detail": "" if passed else detail, "response_excerpt": detail or "ok"})
+
+    specs = {r["specialty"] for r in query("SELECT DISTINCT specialty FROM item")}
+    for needed in ("general_practice", "dental", "orthopaedics", "ophthalmology"):
+        check(f"has-specialty:{needed}", needed in specs, f"missing {needed}; have {sorted(specs)}")
+    check("broad-specialty-coverage", len(specs) >= 8, f"only {len(specs)} specialties")
+
+    # surgical and dental work is present and material
+    surg = scalar("SELECT COUNT(*) FROM item WHERE category='surgery'") or 0
+    dent = scalar("SELECT COUNT(*) FROM item WHERE category='dental'") or 0
+    check("has-surgery", surg > 50, f"{surg} surgery lines")
+    check("has-dental", dent > 50, f"{dent} dental lines")
+
+    # classification is clean — nothing dumped in 'other'
+    other = scalar("SELECT COUNT(*) FROM item WHERE category='other'") or 0
+    check("no-unclassified-items", other == 0, f"{other} items fell to 'other'")
+
+    # classifier sanity: a known procedure maps to the right specialty/category
+    cases = [
+        ("Total knee replacement", "orthopaedics", "surgery"),
+        ("Cataract surgery", "ophthalmology", "surgery"),
+        ("Dental implant", "dental", "dental"),
+        ("Root canal treatment", "dental", "dental"),
+        ("GP consultation", "general_practice", "consultation"),
+    ]
+    for name, want_spec, want_cat in cases:
+        gs, gc = specialty_of(name), categorise(name)
+        check(f"classify:{name}", gs == want_spec and gc == want_cat,
+              f"got specialty={gs} category={gc}, want {want_spec}/{want_cat}")
+
+    # the 'appointment' false-positive regression: must NOT be ENT
+    check("no-ent-false-positive",
+          specialty_of("Urgent same-day appointment") != "ent",
+          "'appointment' wrongly matched ENT")
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--quiet", action="store_true")
@@ -444,7 +495,7 @@ def main() -> int:
 
     cases = (run_shortcuts() + run_chat() + run_routes() + run_coverage()
              + run_consent() + run_model() + run_loop() + run_appointments()
-             + run_billing())
+             + run_billing() + run_specialties())
 
     passed = sum(c["passed"] for c in cases)
     total = len(cases)

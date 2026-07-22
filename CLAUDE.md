@@ -4,18 +4,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**FastClinic** — an open-source FastHTML **GP / general-practice marketing &
-activation cockpit**. It turns a primary-care clinic's own visit history into
-prioritised patient-outreach lists. Goal: **maximise patient activation** — bring
-patients back for immunisations, annual health-check renewals, lapsed-patient
-win-backs, and post-visit follow-ups.
+**FastClinic** — an open-source FastHTML **multi-specialty clinic operations
+platform**. It runs the back office of a modern clinic spanning **general
+practice, surgical specialties** (orthopaedics, ophthalmology, ENT, general
+surgery, gynaecology, urology, dermatology, plastics, cardiology,
+gastroenterology) **and dental care**: case mix & revenue by specialty,
+appointments with real availability, fee invoicing with a balanced ledger, and
+patient recall. Operations-first; recall/outreach is one part, not the focus.
+
+Every treatment line is classified on two axes in `pms/catalog.py`: **category**
+(what kind of activity — consultation, surgery, dental, diagnostic, procedure,
+preventive…) and **specialty** (which department delivered it). See
+`web/clinic_queries.py` (`specialty_mix`, `top_procedures`, `surgical_kpis`) and
+the **Treatments & Specialties** view (`/treatments`).
 
 Clinical palette: primary blue `#1e6fb8`, dark `#1b2733`, accent green `#1f9d72`.
-Tagline *"Modern primary care, made personal."* Port **5005**.
+Tagline *"Modern clinical care, made personal."* Port **5005**.
 
-The FastHTML shell (auth, 3-pane layout, AI chat, SEO module, SMS) is reused
-across the portfolio; the domain layer here is general practice. **All data is
-synthetic — there is no real patient data (PHI) anywhere in the repo.**
+The FastHTML shell (auth, 3-pane layout, AI chat, comms modules) is reused across
+the portfolio. **All data is synthetic — there is no real patient data (PHI)
+anywhere in the repo.**
 
 ## Commands
 

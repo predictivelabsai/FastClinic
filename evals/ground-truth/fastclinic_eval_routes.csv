@@ -22,3 +22,5 @@ path,expect_contains,expect_not_contains,category
 /activation/reminders/csv,patient_id,Traceback,export
 /activation/lapsed/csv,contact_phone,Traceback,export
 /activation/followup/csv,consult_at,Traceback,export
+/treatments,Specialties,Traceback,operations
+/treatments,Orthopaedics,No data loaded,operations

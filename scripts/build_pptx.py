@@ -33,7 +33,7 @@ WHITE = RGBColor(0xFF, 0xFF, 0xFF)
 ROW_ALT = RGBColor(0xEE, 0xF4, 0xFA)   # blue tint
 CREAM = RGBColor(0xD6, 0xE6, 0xF5)     # pale blue
 
-FOOTER = "FastClinic · Modern primary care, made personal · fastclinic.example"
+FOOTER = "FastClinic · Modern clinical care, made personal · fastclinic.example"
 
 IMG_RE = re.compile(r"!\[(?P<alt>[^\]]*)\]\((?P<path>[^)]+)\)")
 HEAD_RE = re.compile(r"^(#{1,6})\s+(.*)$")

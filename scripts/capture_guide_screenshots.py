@@ -30,6 +30,7 @@ SHOTS = [
     ("05-followup.png",    "goto",    "/activation/followup"),
     ("06-loop.png",        "loop",    "/activation/loop"),
     ("07-appointments.png","goto",    "/appointments"),
+    ("18-treatments.png",  "goto",    "/treatments"),
     ("08-patients.png",    "goto",    "/patients"),
     ("09-patient.png",     "goto",    "/patients/1206"),
     ("10-clinical.png",    "goto",    "/clinical"),

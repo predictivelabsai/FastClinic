@@ -39,22 +39,23 @@ VIEWPORT = {"width": 1440, "height": 900}
 FRAME_WIDTH = 1000          # downscale screenshots for a lighter GIF
 FRAME_MS = 1900             # ms per frame
 
-# (caption, path) — the key screens of the cockpit, in tour order.
+# (caption, path) — the key screens of the cockpit, operations-first tour order.
 SCREENS = [
-    ("Business Overview", "/"),
-    ("Activation — Immunisations & checks due", "/activation/reminders"),
-    ("Activation — Lapsed reactivation", "/activation/lapsed"),
-    ("Activation — Post-visit follow-up", "/activation/followup"),
-    ("Activation Loop — queue, send, measure", "/activation/loop"),
+    ("Clinic Overview", "/"),
+    ("Treatments & Specialties — case mix", "/treatments"),
     ("Appointments & booking", "/appointments"),
     ("Patients", "/patients"),
     ("Patient profile", "/patients/1206"),
     ("Clinical — diagnoses & clinician activity", "/clinical"),
-    ("Revenue by category", "/revenue"),
+    ("Revenue", "/revenue"),
     ("Billing & payments", "/billing"),
+    ("Recalls due", "/activation/reminders"),
+    ("Lapsed patients", "/activation/lapsed"),
+    ("Post-visit follow-up", "/activation/followup"),
+    ("Recall Loop — queue, send, measure", "/activation/loop"),
     ("AI assistant", "/ai"),
-    ("SMS broadcaster", "/ops/sms"),
-    ("SEO audit suite", "/seo"),
+    ("SMS", "/ops/sms"),
+    ("Web presence", "/seo"),
     ("Data & import", "/admin/data"),
 ]
 

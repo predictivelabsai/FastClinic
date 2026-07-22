@@ -5,8 +5,8 @@
 @page {
   size: A4 landscape;
   margin: 1.1cm 1.5cm 1.3cm 1.5cm;
-  @bottom-left  { content: "FastClinic · Modern primary care, made personal"; font-size: 8pt; color: #9aa6b2; }
-  @bottom-right { content: "v0.1.0 · 2026-07-20 · fastclinic.example"; font-size: 8pt; color: #9aa6b2; }
+  @bottom-left  { content: "FastClinic · Modern clinical care, made personal"; font-size: 8pt; color: #9aa6b2; }
+  @bottom-right { content: "v0.1.0 · 2026-07-22 · fastclinic.example"; font-size: 8pt; color: #9aa6b2; }
 }
 
 html { font-size: 11.5pt; }

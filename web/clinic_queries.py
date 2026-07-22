@@ -156,6 +156,68 @@ def diagnosis_frequency(limit: int = 20) -> list[dict]:
     )
 
 
+def specialty_mix() -> list[dict]:
+    """Case mix by clinical specialty — the operations lens across departments."""
+    rows = query(
+        """SELECT specialty,
+                  COUNT(DISTINCT consultation_id) AS cases,
+                  COUNT(*) AS lines,
+                  ROUND(SUM(line_total_vat), 2) AS revenue
+           FROM item WHERE specialty IS NOT NULL
+           GROUP BY specialty ORDER BY revenue DESC"""
+    )
+    from pms.catalog import specialty_label
+    for r in rows:
+        r["label"] = specialty_label(r["specialty"])
+    return rows
+
+
+def category_mix() -> list[dict]:
+    """Activity by type of work (surgery, dental, consultation, diagnostics …)."""
+    rows = query(
+        """SELECT category, COUNT(*) AS lines, ROUND(SUM(line_total_vat), 2) AS revenue
+           FROM item GROUP BY category ORDER BY revenue DESC"""
+    )
+    from pms.catalog import category_label
+    for r in rows:
+        r["label"] = category_label(r["category"])
+    return rows
+
+
+def top_procedures(limit: int = 15, specialty: str = "") -> list[dict]:
+    """Highest-revenue named procedures/treatments (excludes routine GP lines)."""
+    where = ("WHERE category IN "
+             "('surgery','dental','procedure','specialist_consult','imaging','pre_op')")
+    params: list = []
+    if specialty:
+        where += " AND specialty = ?"
+        params.append(specialty)
+    params.append(limit)
+    rows = query(
+        f"""SELECT name, specialty, category, COUNT(*) AS n,
+                   ROUND(SUM(line_total_vat), 2) AS revenue
+            FROM item {where}
+            GROUP BY name ORDER BY revenue DESC LIMIT ?""",
+        tuple(params),
+    )
+    from pms.catalog import specialty_label
+    for r in rows:
+        r["specialty_label"] = specialty_label(r["specialty"])
+    return rows
+
+
+def surgical_kpis() -> dict:
+    """Headline operational numbers for the surgical/specialty side of the clinic."""
+    row = query_one(
+        """SELECT COUNT(DISTINCT specialty) AS specialties,
+                  COUNT(DISTINCT CASE WHEN category='surgery' THEN consultation_id END) AS surgical_cases,
+                  ROUND(SUM(CASE WHEN category='surgery' THEN line_total_vat ELSE 0 END)) AS surgical_rev,
+                  ROUND(SUM(CASE WHEN specialty='dental' THEN line_total_vat ELSE 0 END)) AS dental_rev
+           FROM item WHERE specialty IS NOT NULL"""
+    ) or {}
+    return row
+
+
 def clinician_activity() -> list[dict]:
     return query(
         """SELECT clinician_id,
