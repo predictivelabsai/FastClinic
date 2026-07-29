@@ -24,4 +24,5 @@ did/output
 *.jpg
 *.jpeg
 *.gif
+!static/product-demo.gif
 !web/static/**

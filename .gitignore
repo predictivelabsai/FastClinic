@@ -191,6 +191,7 @@ secrets/
 *.jpg
 *.jpeg
 *.gif
+!static/product-demo.gif
 *.bmp
 *.tiff
 *.webp
