@@ -25,7 +25,7 @@ from starlette.responses import Response, StreamingResponse
 
 from web.layout import page, right_pane_reference, LAYOUT_CSS
 from web.landing import landing_page
-from web import google_auth
+from web import account_auth, google_auth
 from web import dashboards as dash
 from web import activation as act
 from web import commands as cmd
@@ -61,6 +61,9 @@ app, rt = fast_app(
 
 
 # --- helpers ---
+account_auth.register_fasthtml_routes(rt, app_name="FastClinic", session_key="user_email", success_path="/")
+
+
 def _auth(session) -> str | None:
     return session.get("user_email")
 
@@ -138,6 +141,7 @@ def google_callback(session, request, code: str = "", state: str = "", error: st
     identity = google_auth.exchange(request, code)
     if not identity:
         return RedirectResponse("/login?error=Google+account+is+not+authorised", status_code=303)
+    account_auth.accounts.link_google(identity["email"], identity["name"])
     session["user_email"] = identity["email"]
     return RedirectResponse("/", status_code=303)
 
