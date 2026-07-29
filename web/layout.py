@@ -483,6 +483,7 @@ NAV_ITEMS = [
     ("HELP", [
         ("help-shortcuts", "Shortcuts", "⌨️", "/help/shortcuts"),
         ("help-guide", "User Guide", "📖", "/help/guide"),
+        ("developers", "Developers", "⌘", "/developers"),
     ]),
     ("ADMIN", [
         ("data-admin", "Data & Import", "🗂️", "/admin/data"),

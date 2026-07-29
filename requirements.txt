@@ -2,6 +2,7 @@
 # The PMS importer + data layer are stdlib-only (sqlite3, zipfile). These cover
 # the web app, SEO module, SMS, and the lightweight AI assistant.
 python-fasthtml
+fastapi>=0.115
 python-dotenv
 requests
 PyYAML

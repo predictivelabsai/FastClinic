@@ -22,9 +22,11 @@ from fasthtml.common import (
     Titled, NotStr, RedirectResponse, Script, Style, Link, Title,
 )
 from starlette.responses import Response, StreamingResponse
+from starlette.responses import JSONResponse
 
 from web.layout import page, right_pane_reference, LAYOUT_CSS
 from web.landing import landing_page
+from web.developer import developer_page
 from web import account_auth, google_auth
 from web import dashboards as dash
 from web import activation as act
@@ -37,6 +39,7 @@ from web import billing
 from web import billing_views
 from web import seo, seo_views
 from web import help_views
+from web.api import api
 
 logger = logging.getLogger("fastclinic")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
@@ -58,6 +61,17 @@ app, rt = fast_app(
     secret_key=SECRET,
     hdrs=[Style(LAYOUT_CSS)],
 )
+app.mount("/api", api)
+
+
+@rt("/swagger.json", methods=["GET"])
+def swagger_schema():
+    return JSONResponse(api.openapi())
+
+
+@rt("/developers", methods=["GET"])
+def developers():
+    return developer_page()
 
 
 # --- helpers ---
