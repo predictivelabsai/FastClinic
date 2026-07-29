@@ -24,6 +24,8 @@ from fasthtml.common import (
 from starlette.responses import Response, StreamingResponse
 
 from web.layout import page, right_pane_reference, LAYOUT_CSS
+from web.landing import landing_page
+from web import google_auth
 from web import dashboards as dash
 from web import activation as act
 from web import commands as cmd
@@ -119,6 +121,27 @@ def post(session, email: str = "", password: str = ""):
     return _login_card(error="Invalid credentials", email=email)
 
 
+
+@rt("/auth/google")
+def google_start(session, request):
+    if not google_auth.enabled():
+        return RedirectResponse("/login?error=Google+sign-in+is+not+configured", status_code=303)
+    state = google_auth.new_state()
+    session["google_oauth_state"] = state
+    return RedirectResponse(google_auth.authorize_url(request, state), status_code=303)
+
+
+@rt("/auth/google/callback")
+def google_callback(session, request, code: str = "", state: str = "", error: str = ""):
+    if error or not code or state != session.pop("google_oauth_state", None):
+        return RedirectResponse("/login?error=Google+sign-in+failed", status_code=303)
+    identity = google_auth.exchange(request, code)
+    if not identity:
+        return RedirectResponse("/login?error=Google+account+is+not+authorised", status_code=303)
+    session["user_email"] = identity["email"]
+    return RedirectResponse("/", status_code=303)
+
+
 @rt("/logout")
 def get(session):
     session.pop("user_email", None)
@@ -133,6 +156,8 @@ def get(session):
 # --- overview ---
 @rt("/")
 def get(session):
+    if not _auth(session):
+        return landing_page()
     return _guarded("dashboard", dash.overview_view)(session)
 
 
