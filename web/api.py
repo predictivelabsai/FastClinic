@@ -1,13 +1,13 @@
 """FastClinic public synthetic reads and token-gated appointment writes."""
 
+import os
+import secrets
 from datetime import date
 
-from fastapi import Depends, Header, HTTPException, Query
+from fastapi import Depends, Header, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from web import appointments
-from web import activation_loop
-from web import db
+from web import activation_loop, appointments, db
 
 from .api_core import (
     Resource,
@@ -55,6 +55,34 @@ class ExternalAppointmentCreate(BaseModel):
     notes: str = Field(default="", max_length=2000)
 
 
+def require_fastbooking_token(
+    authorization: str | None = Header(default=None),
+) -> None:
+    """Restrict external scheduling operations to the FastBooking connector."""
+
+    configured = os.getenv("FASTBOOKING_API_TOKEN", "")
+    if not configured:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "integration_disabled",
+                "message": "FastBooking integration is not configured.",
+                "details": {},
+            },
+        )
+    scheme, _, supplied = (authorization or "").partition(" ")
+    if scheme.lower() != "bearer" or not secrets.compare_digest(configured, supplied):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "code": "invalid_token",
+                "message": "A valid FastBooking bearer token is required.",
+                "details": {},
+            },
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
 @api.get("/v1/appointments", tags=["Appointments"])
 def list_appointments(limit: int = 50, offset: int = 0):
     """List operational appointment records."""
@@ -96,7 +124,7 @@ def create_appointment(payload: AppointmentCreate):
 
 @api.get(
     "/v1/external/availability",
-    dependencies=[Depends(require_write_token)],
+    dependencies=[Depends(require_fastbooking_token)],
     tags=["External booking"],
 )
 def external_availability(
@@ -122,7 +150,7 @@ def external_availability(
 @api.post(
     "/v1/external/appointments",
     status_code=201,
-    dependencies=[Depends(require_write_token)],
+    dependencies=[Depends(require_fastbooking_token)],
     tags=["External booking"],
 )
 def create_external_appointment(
@@ -174,7 +202,7 @@ def create_external_appointment(
 
 @api.post(
     "/v1/external/appointments/{appointment_id}/cancel",
-    dependencies=[Depends(require_write_token)],
+    dependencies=[Depends(require_fastbooking_token)],
     tags=["External booking"],
 )
 def cancel_external_appointment(appointment_id: int):
