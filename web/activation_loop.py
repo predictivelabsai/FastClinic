@@ -73,6 +73,18 @@ CREATE TABLE IF NOT EXISTS appointment (
 );
 CREATE INDEX IF NOT EXISTS idx_appt_clinician ON appointment (clinician_id, start_at);
 CREATE INDEX IF NOT EXISTS idx_appt_subject ON appointment (subject_id);
+CREATE TABLE IF NOT EXISTS external_booking (
+    idempotency_key TEXT PRIMARY KEY,
+    appointment_id INTEGER NOT NULL,
+    guest_name TEXT NOT NULL,
+    guest_email TEXT NOT NULL,
+    guest_phone TEXT,
+    service_id TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'confirmed',
+    created_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_external_booking_appointment
+    ON external_booking (appointment_id);
 CREATE TABLE IF NOT EXISTS invoice (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     code TEXT,
@@ -119,6 +131,69 @@ def execute(sql: str, params: tuple = ()) -> int:
         cur = conn.execute(sql, params)
         conn.commit()
         return cur.lastrowid
+
+
+def external_booking(idempotency_key: str) -> dict | None:
+    rows = query(
+        """SELECT e.*, a.clinician_id, a.start_at, a.end_at, a.room
+           FROM external_booking e
+           JOIN appointment a ON a.id=e.appointment_id
+           WHERE e.idempotency_key=?""",
+        (idempotency_key,),
+    )
+    return rows[0] if rows else None
+
+
+def create_external_booking(
+    *,
+    idempotency_key: str,
+    appointment_id: int,
+    guest_name: str,
+    guest_email: str,
+    guest_phone: str,
+    service_id: str,
+) -> dict:
+    with _connect() as conn:
+        conn.execute(
+            """INSERT INTO external_booking
+               (idempotency_key,appointment_id,guest_name,guest_email,guest_phone,
+                service_id,status,created_at)
+               VALUES (?,?,?,?,?,?, 'confirmed', ?)""",
+            (
+                idempotency_key,
+                appointment_id,
+                guest_name[:160],
+                guest_email.lower()[:320],
+                guest_phone[:40],
+                service_id[:120],
+                _now(),
+            ),
+        )
+        conn.commit()
+    return external_booking(idempotency_key)
+
+
+def cancel_external_booking(appointment_id: int) -> dict | None:
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT appointment_id FROM external_booking WHERE appointment_id=?",
+            (appointment_id,),
+        ).fetchone()
+        if not row:
+            return None
+        conn.execute(
+            "UPDATE external_booking SET status='cancelled' WHERE appointment_id=?",
+            (appointment_id,),
+        )
+        conn.execute(
+            "UPDATE appointment SET status='cancelled' WHERE id=?",
+            (appointment_id,),
+        )
+        conn.commit()
+    rows = query(
+        "SELECT * FROM external_booking WHERE appointment_id=?", (appointment_id,)
+    )
+    return rows[0] if rows else None
 
 
 def _primary_subject(party_id) -> int | None:
