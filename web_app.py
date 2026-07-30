@@ -26,6 +26,7 @@ from starlette.responses import JSONResponse
 
 from web.layout import page, right_pane_reference, LAYOUT_CSS
 from web.landing import landing_page
+from web.seo import register_seo_routes
 from web.developer import developer_page
 from web import account_auth, google_auth
 from web import dashboards as dash
@@ -652,6 +653,9 @@ def _ensure_db():
 
 
 # --- boot ---
+
+register_seo_routes(app)
+
 if __name__ == "__main__":
     _ensure_db()
     logger.info(f"Starting FastClinic Cockpit on :{PORT}")
