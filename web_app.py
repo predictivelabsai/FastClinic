@@ -22,6 +22,7 @@ from fasthtml.common import (
     fast_app, serve, Div, H1, P, A, Form, Input, Button,
     Titled, NotStr, RedirectResponse, Script, Style, Link, Title,
 )
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response, StreamingResponse
 from starlette.responses import JSONResponse
 
@@ -69,7 +70,6 @@ app, rt = fast_app(
 app.mount("/api", api)
 
 
-@app.middleware("http")
 async def redirect_public_aliases(request, call_next):
     """Keep legacy and www traffic on the canonical OAuth/session host."""
     forwarded = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
@@ -81,6 +81,9 @@ async def redirect_public_aliases(request, call_next):
             destination += f"?{request.url.query}"
         return RedirectResponse(destination, status_code=308)
     return await call_next(request)
+
+
+app.add_middleware(BaseHTTPMiddleware, dispatch=redirect_public_aliases)
 
 
 @rt("/swagger.json", methods=["GET"])
