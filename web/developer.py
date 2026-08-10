@@ -2,12 +2,13 @@
 from fasthtml.common import *
 
 from .api import RESOURCES
-from .landing import FAVICON
+from .i18n import t
+from .landing import FAVICON, LANGUAGE_JS, language_switcher
 from .seo import seo_meta
 
 ACCENT = "#1e6fb8"
 TINT = "#eef7ff"
-BASE_URL = "https://clinic.fastsme.com"
+BASE_URL = "https://fastclinic.dev"
 REPOSITORY = "https://github.com/predictivelabsai/FastClinic"
 
 DEVELOPER_CSS = """
@@ -20,18 +21,20 @@ DEVELOPER_CSS = """
 .dev-note{background:var(--dev-tint);border:1px solid color-mix(in srgb,var(--dev-accent) 18%,white);border-radius:18px;padding:20px 22px;line-height:1.6;margin-bottom:42px} .dev-note strong{color:var(--dev-accent)}
 .dev-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:18px 0 46px} .dev-card{background:white;border:1px solid var(--dev-line);border-radius:18px;padding:22px;box-shadow:0 8px 24px rgba(17,24,39,.04)} .dev-card h2{font-size:19px;margin:0 0 8px} .dev-card p{color:var(--dev-muted);line-height:1.55;min-height:48px} .dev-route{display:block;background:#111827;color:#f8fafc;padding:9px 11px;border-radius:8px;margin-top:8px;font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;overflow:auto} .dev-method{color:#86efac;font-weight:800}
 .dev-example{background:#111827;color:#e5e7eb;border-radius:16px;padding:22px;overflow:auto;font:13px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace} .dev-docs h3{font-size:24px;margin:42px 0 14px} .dev-small{color:var(--dev-muted);font-size:13px;line-height:1.6}
-.dev-public-nav{height:68px;display:flex;align-items:center;justify-content:space-between;max-width:1120px;margin:auto;padding:0 24px;border-bottom:1px solid var(--dev-line)} .dev-brand{display:flex;align-items:center;gap:10px;color:var(--dev-ink);text-decoration:none;font-weight:750} .dev-diamond{width:28px;height:28px;border-radius:8px;background:var(--dev-accent);transform:rotate(45deg);display:inline-block}
+.dev-public-nav{height:68px;display:flex;align-items:center;justify-content:space-between;max-width:1120px;margin:auto;padding:0 24px;border-bottom:1px solid var(--dev-line)} .dev-brand{display:flex;align-items:center;gap:10px;color:var(--dev-ink);text-decoration:none;font-weight:750} .dev-diamond{width:28px;height:28px;border-radius:8px;background:var(--dev-accent);transform:rotate(45deg);display:inline-block}.dev-nav-actions{display:flex;align-items:center;gap:10px}
+.lp-lang{position:relative}.lp-lang-trigger{border:1px solid transparent;border-radius:6px;padding:4px 7px;font-size:16px;line-height:1;background:transparent;cursor:pointer}.lp-lang-trigger:hover{border-color:var(--dev-line)}.lp-lang-trigger:focus{outline:2px solid color-mix(in srgb,var(--dev-accent) 30%,white)}.lp-lang-menu{display:none;position:absolute;right:0;top:calc(100% + 7px);z-index:60;min-width:142px;padding:4px 0;background:#fff;border:1px solid var(--dev-line);border-radius:10px;box-shadow:0 18px 45px rgba(17,24,39,.14)}.lp-lang-menu.open{display:block}.lp-lang-item{display:flex;align-items:center;gap:9px;padding:7px 12px;color:var(--dev-muted);font-size:12px;text-decoration:none}.lp-lang-item:hover,.lp-lang-item:focus{background:var(--dev-tint);color:var(--dev-ink);outline:0}.lp-lang-item.active{background:var(--dev-tint);color:var(--dev-ink);font-weight:700}.lp-lang-flag{font-size:16px;line-height:1}
 @media(max-width:720px){.dev-grid{grid-template-columns:1fr}.dev-docs h1{font-size:42px}}
 """
 
 
-def developer_content():
+def developer_content(lang="en"):
+    T = lambda text: t(text, lang)
     cards = []
     for resource in RESOURCES:
         cards.append(
             Article(
-                H2(resource.title),
-                P(resource.description),
+                H2(T(resource.title)),
+                P(T(resource.description)),
                 Code(Span("GET", cls="dev-method"), f" /api/v1/{resource.slug}", cls="dev-route"),
                 Code(Span("GET", cls="dev-method"), f" /api/v1/{resource.slug}/{{id}}", cls="dev-route"),
                 cls="dev-card",
@@ -40,24 +43,25 @@ def developer_content():
     return Div(
         Style(DEVELOPER_CSS),
         Div(
-            Span("Developer platform · API v1", cls="dev-eyebrow"),
-            H1("Build with the FastClinic API."),
-            P("Read the live demo database through a typed, versioned API. Selected integration writes are implemented behind bearer-token authentication.", cls="dev-lede"),
+            Span(T("Developer platform · API v1"), cls="dev-eyebrow"),
+            H1(T("Build with the FastClinic API.")),
+            P(T("Read the live demo database through a typed, versioned API. Selected integration writes are implemented behind bearer-token authentication."), cls="dev-lede"),
             Div(
-                A("Open Swagger UI", href="/api/docs", cls="dev-btn primary"),
-                A("Open ReDoc", href="/api/redoc", cls="dev-btn"),
-                A("Download swagger.json", href="/swagger.json", cls="dev-btn"),
-                A("View on GitHub", href=REPOSITORY, target="_blank", rel="noreferrer", cls="dev-btn"),
+                A(T("Open Swagger UI"), href="/api/docs", cls="dev-btn primary"),
+                A(T("Open ReDoc"), href="/api/redoc", cls="dev-btn"),
+                A(T("Download swagger.json"), href="/swagger.json", cls="dev-btn"),
+                A(T("View on GitHub"), href=REPOSITORY, target="_blank", rel="noreferrer", cls="dev-btn"),
                 cls="dev-actions",
             ),
             Div(
-                Strong("Public preview access. "),
-                "GET endpoints require no authentication. Writes return 503 until FASTSME_API_TOKEN is configured; enabled clients send Authorization: Bearer <token>.",
+                Strong(T("Public preview access.") + " "),
+                T("GET endpoints require no authentication. Writes return 503 until FASTSME_API_TOKEN is configured. Enabled clients send"),
+                " ", Code("Authorization: Bearer <token>."),
                 cls="dev-note",
             ),
-            H3("Resources"),
+            H3(T("Resources")),
             Div(*cards, cls="dev-grid"),
-            H3("Quick start"),
+            H3(T("Quick start")),
             Pre(Code(f"""curl "{BASE_URL}/api/v1/{RESOURCES[0].slug}?limit=20"
 
 python - <<'PY'
@@ -65,24 +69,26 @@ import requests
 rows = requests.get("{BASE_URL}/api/v1/{RESOURCES[0].slug}", timeout=20).json()
 print(rows["data"])
 PY"""), cls="dev-example"),
-            P("Runtime OpenAPI: /api/openapi.json · Stable compatibility schema: /swagger.json · Interactive docs: /api/docs", cls="dev-small"),
+            P(T("Runtime OpenAPI: /api/openapi.json · Stable compatibility schema: /swagger.json · Interactive docs: /api/docs"), cls="dev-small"),
             cls="dev-wrap",
         ),
         cls="dev-docs",
     )
 
 
-def developer_page():
+def developer_page(lang="en"):
+    T = lambda text: t(text, lang)
+    description = T("Build integrations with the public FastClinic API, OpenAPI schemas, examples, and token-gated writes.")
     return Html(
         Head(
-            Title("FastClinic Developers · FastSME"),
+            Title(T("FastClinic Developers · FastSME")),
             Meta(charset="utf-8"),
             Meta(name="viewport", content="width=device-width, initial-scale=1"),
-            Meta(name="description", content="Developer API documentation for FastClinic."),
+            Meta(name="description", content=T("Developer API documentation for FastClinic.")),
             *seo_meta(
                 path="/developers",
-                title="FastClinic Developer API · FastSME",
-                description="Build integrations with the public FastClinic API, OpenAPI schemas, examples, and token-gated writes.",
+                title=T("FastClinic Developer API · FastSME"),
+                description=description,
             ),
             Link(rel="icon", type="image/svg+xml", href=FAVICON),
             Link(rel="preconnect", href="https://fonts.googleapis.com"),
@@ -91,10 +97,12 @@ def developer_page():
         Body(
             Nav(
                 A(Span(cls="dev-diamond"), Span("FastClinic Developers"), href="/developers", cls="dev-brand"),
-                A("Back to product", href="/", cls="dev-btn"),
+                Div(language_switcher(lang, "/developers"), A(T("Back to product"), href="/", cls="dev-btn"), cls="dev-nav-actions"),
                 cls="dev-public-nav dev-docs",
             ),
-            developer_content(),
+            developer_content(lang),
+            Script(LANGUAGE_JS),
             style="margin:0;background:#fff",
         ),
+        lang=lang,
     )

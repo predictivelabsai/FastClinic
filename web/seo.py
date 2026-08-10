@@ -7,7 +7,7 @@ from fasthtml.common import Link, Meta, NotStr, Script
 from starlette.responses import Response
 
 PRODUCT = 'FastClinic'
-BASE_URL = 'https://clinic.fastsme.com'
+BASE_URL = 'https://fastclinic.dev'
 DESCRIPTION = 'Run appointments, patient operations, billing, recall, revenue, and multi-specialty workflows from one clinical cockpit.'
 KEYWORDS = ('FastClinic', 'open source clinic operations', 'clinic operations software', 'SME clinic operations', 'Appointments and availability', 'Patient and treatment operations', 'Billing and balanced ledgers', 'FastSME', 'open source business software')
 FEATURES = ('Appointments and availability', 'Patient and treatment operations', 'Billing and balanced ledgers')

@@ -13,6 +13,7 @@ import os
 import secrets
 import uuid
 import logging
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -29,6 +30,7 @@ from web.landing import landing_page
 from web.seo import register_seo_routes
 from web.developer import developer_page
 from web import account_auth, google_auth
+from web.i18n import LANGUAGES, get_lang, safe_return_path, set_lang
 from web import dashboards as dash
 from web import activation as act
 from web import commands as cmd
@@ -51,6 +53,8 @@ VALID_PASSWORD = os.getenv("FASTCLINIC_ADMIN_PASSWORD", os.getenv("MMG_ADMIN_PAS
 CLINIC_ENV = os.getenv("FASTCLINIC_ENV_LABEL", "FastClinic")
 SECRET = os.getenv("FASTCLINIC_SECRET", os.getenv("MMG_COCKPIT_SECRET", secrets.token_hex(32)))
 PORT = int(os.getenv("FASTCLINIC_PORT", os.getenv("MMG_COCKPIT_PORT", "5005")))
+PUBLIC_URL = os.getenv("FASTSME_PUBLIC_URL", "https://fastclinic.dev").rstrip("/")
+PUBLIC_HOSTS = {"fastclinic.dev", "www.fastclinic.dev", "clinic.fastsme.com"}
 
 # FastClinic favicon — clinical blue mark (repo-root favicon.svg / favicon.ico,
 # served by FastHTML's static handler).
@@ -65,18 +69,39 @@ app, rt = fast_app(
 app.mount("/api", api)
 
 
+@app.middleware("http")
+async def redirect_public_aliases(request, call_next):
+    """Keep legacy and www traffic on the canonical OAuth/session host."""
+    forwarded = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
+    host = forwarded.split(",", 1)[0].strip().split(":", 1)[0].lower()
+    canonical_host = urlsplit(PUBLIC_URL).hostname
+    if host in PUBLIC_HOSTS and canonical_host and host != canonical_host:
+        destination = f"{PUBLIC_URL}{request.url.path}"
+        if request.url.query:
+            destination += f"?{request.url.query}"
+        return RedirectResponse(destination, status_code=308)
+    return await call_next(request)
+
+
 @rt("/swagger.json", methods=["GET"])
 def swagger_schema():
     return JSONResponse(api.openapi())
 
 
 @rt("/developers", methods=["GET"])
-def developers():
-    return developer_page()
+def developers(session, request):
+    return developer_page(get_lang(session, request))
 
 
 # --- helpers ---
 account_auth.register_fasthtml_routes(rt, app_name="FastClinic", session_key="user_email", success_path="/")
+
+
+@rt("/set-lang/{code}")
+def set_language(code: str, session, next: str = "/"):
+    if code in LANGUAGES:
+        set_lang(session, code)
+    return RedirectResponse(safe_return_path(next), status_code=303)
 
 
 def _auth(session) -> str | None:
@@ -174,9 +199,9 @@ def get(session):
 
 # --- overview ---
 @rt("/")
-def get(session):
+def get(session, request):
     if not _auth(session):
-        return landing_page()
+        return landing_page(get_lang(session, request))
     return _guarded("dashboard", dash.overview_view)(session)
 
 
@@ -425,8 +450,8 @@ def get(session):
     return _guarded("prompt", dash.prompt_view)(session)
 
 
-# --- SEO audit (retargeted to fastclinic.example) ---
-SEO_SITE = os.getenv("FASTCLINIC_SEO_SITE", "https://fastclinic.example")
+# --- SEO audit ---
+SEO_SITE = os.getenv("FASTCLINIC_SEO_SITE", "https://fastclinic.dev")
 
 
 @rt("/seo")

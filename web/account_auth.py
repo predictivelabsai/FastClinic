@@ -53,24 +53,25 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')authClose()});
 """
 
 
-def auth_modal(app_name: str):
+def auth_modal(app_name: str, translate=None):
+    T = translate or (lambda text: text)
     return Div(
         Div(
-            Button("×", type="button", aria_label="Close sign in", cls="auth-close", onclick="authClose()"),
+            Button("×", type="button", aria_label=T("Close sign in"), cls="auth-close", onclick="authClose()"),
             Div(
-                Button("Sign In", type="button", data_tab="login", cls="auth-tab active", onclick="authTab('login')"),
-                Button("Register", type="button", data_tab="register", cls="auth-tab", onclick="authTab('register')"),
+                Button(T("Sign In"), type="button", data_tab="login", cls="auth-tab active", onclick="authTab('login')"),
+                Button(T("Register"), type="button", data_tab="register", cls="auth-tab", onclick="authTab('register')"),
                 cls="auth-tabs",
             ),
             Div(
-                P(f"Sign in to your {app_name} account", cls="auth-title"),
-                A(NotStr(_GOOGLE_ICON), Span("Continue with Google"), href="/auth/google", cls="auth-google"),
-                Div("or", cls="auth-divider"),
+                P(T(f"Sign in to your {app_name} account"), cls="auth-title"),
+                A(NotStr(_GOOGLE_ICON), Span(T("Continue with Google")), href="/auth/google", cls="auth-google"),
+                Div(T("or"), cls="auth-divider"),
                 Form(
-                    Input(name="email", type="email", placeholder="Email", autocomplete="email", required=True, cls="auth-field"),
-                    Input(name="password", type="password", placeholder="Password", autocomplete="current-password", required=True, cls="auth-field"),
-                    Button("Forgot password?", type="button", cls="auth-link auth-forgot", onclick="authTab('forgot')"),
-                    Button("Sign In", type="submit", cls="auth-submit"),
+                    Input(name="email", type="email", placeholder=T("Email"), autocomplete="email", required=True, cls="auth-field"),
+                    Input(name="password", type="password", placeholder=T("Password"), autocomplete="current-password", required=True, cls="auth-field"),
+                    Button(T("Forgot password?"), type="button", cls="auth-link auth-forgot", onclick="authTab('forgot')"),
+                    Button(T("Sign In"), type="submit", cls="auth-submit"),
                     onsubmit="event.preventDefault();authPost('/auth/local/login',this.id,'auth-login-msg')",
                     id="auth-login-form",
                 ),
@@ -78,32 +79,32 @@ def auth_modal(app_name: str):
                 id="auth-login",
             ),
             Div(
-                P(f"Create your {app_name} account", cls="auth-title"),
+                P(T(f"Create your {app_name} account"), cls="auth-title"),
                 Form(
-                    Input(name="name", placeholder="Name", autocomplete="name", required=True, cls="auth-field"),
-                    Input(name="email", type="email", placeholder="Email", autocomplete="email", required=True, cls="auth-field"),
-                    Input(name="password", type="password", placeholder="Password (minimum 10 characters)", autocomplete="new-password", minlength="10", required=True, cls="auth-field"),
-                    Button("Register", type="submit", cls="auth-submit"),
+                    Input(name="name", placeholder=T("Name"), autocomplete="name", required=True, cls="auth-field"),
+                    Input(name="email", type="email", placeholder=T("Email"), autocomplete="email", required=True, cls="auth-field"),
+                    Input(name="password", type="password", placeholder=T("Password (minimum 10 characters)"), autocomplete="new-password", minlength="10", required=True, cls="auth-field"),
+                    Button(T("Register"), type="submit", cls="auth-submit"),
                     onsubmit="event.preventDefault();authPost('/auth/local/register',this.id,'auth-register-msg')",
                     id="auth-register-form",
                 ),
                 Div(id="auth-register-msg", cls="auth-msg", role="status"),
-                P("We will email you a verification link before the account can sign in.", cls="auth-help"),
+                P(T("We will email you a verification link before the account can sign in."), cls="auth-help"),
                 id="auth-register", hidden=True,
             ),
             Div(
-                P("Reset your password", cls="auth-title"),
+                P(T("Reset your password"), cls="auth-title"),
                 Form(
-                    Input(name="email", type="email", placeholder="Email", autocomplete="email", required=True, cls="auth-field"),
-                    Button("Send reset link", type="submit", cls="auth-submit"),
+                    Input(name="email", type="email", placeholder=T("Email"), autocomplete="email", required=True, cls="auth-field"),
+                    Button(T("Send reset link"), type="submit", cls="auth-submit"),
                     onsubmit="event.preventDefault();authPost('/auth/local/forgot',this.id,'auth-forgot-msg')",
                     id="auth-forgot-form",
                 ),
                 Div(id="auth-forgot-msg", cls="auth-msg", role="status"),
-                Button("Back to sign in", type="button", cls="auth-link", onclick="authTab('login')"),
+                Button(T("Back to sign in"), type="button", cls="auth-link", onclick="authTab('login')"),
                 id="auth-forgot", hidden=True,
             ),
-            cls="auth-dialog", role="dialog", aria_modal="true", aria_label=f"{app_name} account",
+            cls="auth-dialog", role="dialog", aria_modal="true", aria_label=T(f"{app_name} account"),
         ),
         id="auth-overlay", cls="auth-overlay", onclick="if(event.target===this)authClose()",
     )

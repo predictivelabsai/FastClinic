@@ -106,6 +106,22 @@ FastHTML audit.
 `fastclinic-data` volume at `/data` so the database lives outside the image.
 Configure via `.env` (see `.env.sample`).
 
+## Public landing translations
+
+The landing page, account modal, and developer documentation support English,
+Estonian, German, French, Swedish, Latvian, Norwegian, Danish, Polish, Dutch,
+Finnish, and Lithuanian. Browser language is detected on the first visit and a
+top-right language menu persists the visitor's choice in their session.
+
+Translations are checked-in JSON and production never calls a translation
+service. After changing public copy, check or explicitly refresh the catalogues:
+
+```bash
+python scripts/update_i18n.py
+python scripts/update_i18n.py --translate
+python -m unittest discover -s tests -v
+```
+
 ## Licence
 
 MIT. See `LICENSE`.

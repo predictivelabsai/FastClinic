@@ -177,6 +177,7 @@ secrets/
 
 # Playwright MCP session artifacts
 .playwright-mcp/
+.playwright-cli/
 
 # Claude Code local state
 .claude/

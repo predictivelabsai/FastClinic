@@ -1945,7 +1945,7 @@
   "servers": [
     {
       "description": "Production",
-      "url": "https://clinic.fastsme.com/api"
+      "url": "https://fastclinic.dev/api"
     }
   ]
 }

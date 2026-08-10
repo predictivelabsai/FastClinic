@@ -27,7 +27,7 @@ backend = SQLiteBackend(db.DB_PATH, RESOURCES)
 api = create_sqlite_api(
     product="FastClinic", version="1.0.0",
     description="Open integration access to FastClinic's entirely synthetic clinical demo data.",
-    base_url="https://clinic.fastsme.com", backend=backend, resources=RESOURCES,
+    base_url="https://fastclinic.dev", backend=backend, resources=RESOURCES,
 )
 
 

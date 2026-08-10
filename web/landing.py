@@ -1,9 +1,10 @@
 """Public FastClinic product landing page."""
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from fasthtml.common import *
 
 from .account_auth import AUTH_CSS, AUTH_JS, auth_modal
+from .i18n import LANGUAGES, t
 from .seo import seo_meta
 
 ACCENT = "#1e6fb8"
@@ -22,12 +23,20 @@ PARTNERS = (
     ("Manmouna Technologies", "https://manmouna.tech/", "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230B1E14'/%3E%3Cpath d='M32 12 52 32 32 52 12 32Z' fill='%2334D399'/%3E%3Cpath d='M32 22 42 32 32 42 22 32Z' fill='%230B1E14'/%3E%3C/svg%3E", "Auditable-by-design AI systems for European public services across health, defence, public management and mobility."),
 )
 
+FEATURES = (
+    ("Appointments and availability", "Real availability, conflict-safe booking, confirmations, and automatic reminders."),
+    ("Patient and treatment operations", "A connected view of patients, specialties, procedures, clinical activity, and recall."),
+    ("Billing and balanced ledgers", "Fee invoices, payer tracking, payments, revenue, and balanced double-entry accounting."),
+)
+
 CSS = """
 :root{--accent:#1e6fb8;--tint:#eef7ff;--ink:#111827;--muted:#667085;--line:#e7eaf0}
 *{box-sizing:border-box} body{margin:0;background:#fff;color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
 .lp-nav{height:68px;display:flex;align-items:center;justify-content:space-between;max-width:1180px;margin:auto;padding:0 24px;border-bottom:1px solid var(--line)}
 .lp-brand{display:flex;align-items:center;gap:10px;font-weight:750;color:var(--ink);text-decoration:none} .lp-mark{width:30px;height:30px;border-radius:10px;background:var(--accent);display:grid;place-items:center;color:white}
 .lp-nav-actions{display:flex;align-items:center;gap:18px} .lp-nav-link{color:var(--muted);text-decoration:none;font-size:14px;font-weight:650} .lp-nav-link:hover{color:var(--accent)}
+.lp-lang{position:relative}.lp-lang-trigger{border:1px solid transparent;border-radius:6px;padding:4px 7px;font-size:16px;line-height:1;background:transparent;cursor:pointer}.lp-lang-trigger:hover{border-color:var(--line)}.lp-lang-trigger:focus{outline:2px solid color-mix(in srgb,var(--accent) 30%,white)}
+.lp-lang-menu{display:none;position:absolute;right:0;top:calc(100% + 7px);z-index:60;min-width:142px;padding:4px 0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 18px 45px rgba(17,24,39,.14)}.lp-lang-menu.open{display:block}.lp-lang-item{display:flex;align-items:center;gap:9px;padding:7px 12px;color:var(--muted);font-size:12px;text-decoration:none}.lp-lang-item:hover,.lp-lang-item:focus{background:var(--tint);color:var(--ink);outline:0}.lp-lang-item.active{background:var(--tint);color:var(--ink);font-weight:700}.lp-lang-flag{font-size:16px;line-height:1}
 .lp-signin,.lp-primary{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:10px 17px;text-decoration:none;font-weight:650;font-size:14px;cursor:pointer} .lp-signin{border:1px solid var(--line);color:var(--ink);background:white} .lp-primary{background:var(--accent);color:white;border:0}
 .lp-hero{max-width:1180px;margin:auto;padding:104px 24px 76px} .lp-kicker{color:var(--accent);font-size:12px;font-weight:750;text-transform:uppercase;letter-spacing:.16em}
 .lp-hero h1{font-size:clamp(42px,7vw,78px);line-height:1.02;letter-spacing:-.055em;max-width:920px;margin:22px 0} .lp-lede{font-size:20px;line-height:1.65;color:var(--muted);max-width:720px}
@@ -42,22 +51,49 @@ CSS = """
 .lp-developers{max-width:1180px;margin:auto;padding:72px 24px;display:grid;grid-template-columns:1fr auto;align-items:center;gap:32px} .lp-developers h2{font-size:32px;letter-spacing:-.03em;margin:8px 0 12px} .lp-developers p{color:var(--muted);line-height:1.65;max-width:680px;margin:0}
 .lp-footer{max-width:1180px;margin:auto;padding:30px 24px 48px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;gap:20px}
 @media(max-width:980px){.lp-partner-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:760px){.lp-nav{height:60px}.lp-nav-actions{gap:10px}.lp-nav-actions .lp-nav-link:nth-child(2){display:none}.lp-nav-link{font-size:13px}.lp-hero{padding-top:72px}.lp-grid,.lp-partner-grid{grid-template-columns:1fr}.lp-developers{grid-template-columns:1fr}.lp-footer{flex-direction:column}}
+@media(max-width:760px){.lp-nav{height:60px}.lp-nav-actions{gap:8px}.lp-nav-actions .lp-nav-link{display:none}.lp-signin{padding:9px 13px;font-size:13px}.lp-hero{padding-top:72px}.lp-grid,.lp-partner-grid{grid-template-columns:1fr}.lp-developers{grid-template-columns:1fr}.lp-footer{flex-direction:column}}
+@media(max-width:350px){.lp-brand-name{display:none}}
 """
 
-def partner_section():
+
+LANGUAGE_JS = """
+function closeLanguageMenu(){const menu=document.getElementById('language-menu');const button=document.getElementById('language-menu-button');if(menu)menu.classList.remove('open');if(button)button.setAttribute('aria-expanded','false')}
+function toggleLanguageMenu(event){event.stopPropagation();const menu=document.getElementById('language-menu');const button=document.getElementById('language-menu-button');const opening=!menu.classList.contains('open');menu.classList.toggle('open');button.setAttribute('aria-expanded',opening?'true':'false');if(opening)menu.querySelector('a').focus()}
+document.addEventListener('click',closeLanguageMenu);document.addEventListener('keydown',event=>{if(event.key==='Escape'){closeLanguageMenu();const button=document.getElementById('language-menu-button');if(button)button.focus()}});
+"""
+
+
+def language_switcher(lang="en", current="/"):
+    current_language = LANGUAGES.get(lang, LANGUAGES["en"])
+    return Div(
+        Button(current_language["flag"], type="button", id="language-menu-button",
+               aria_label=t("Choose language", lang), aria_haspopup="true",
+               aria_expanded="false", onclick="toggleLanguageMenu(event)", cls="lp-lang-trigger"),
+        Div(*[
+            A(Span(info["flag"], cls="lp-lang-flag"), Span(info["native"]),
+              href=f"/set-lang/{code}?{urlencode({'next': current})}", lang=code,
+              role="menuitem", aria_current="true" if code == lang else None,
+              cls=f"lp-lang-item{' active' if code == lang else ''}")
+            for code, info in LANGUAGES.items()
+        ], id="language-menu", role="menu", cls="lp-lang-menu"),
+        cls="lp-lang",
+    )
+
+
+def partner_section(lang="en"):
+    T = lambda text: t(text, lang)
     return Section(
         Div(
-            Span("Partners", cls="lp-kicker"),
-            H2("Connect with trusted integration specialists."),
-            P("Identity, software delivery, data engineering and applied-AI expertise for FastSME implementations."),
+            Span(T("Partners"), cls="lp-kicker"),
+            H2(T("Connect with trusted integration specialists.")),
+            P(T("Identity, software delivery, data engineering and applied-AI expertise for FastSME implementations.")),
             cls="lp-partners-head",
         ),
         Div(*[
             A(
                 Div(Img(src=logo, alt=f"{name} logo", loading="lazy", cls="lp-partner-logo"),
-                    Span("Integration Partner", cls="lp-partner-type"), cls="lp-partner-top"),
-                H3(name), P(description), Span("Visit website ↗", cls="lp-partner-visit"),
+                    Span(T("Integration Partner"), cls="lp-partner-type"), cls="lp-partner-top"),
+                H3(name), P(T(description)), Span(T("Visit website ↗"), cls="lp-partner-visit"),
                 href=url, target="_blank", rel="noopener noreferrer", cls="lp-partner",
             )
             for name, url, logo, description in PARTNERS
@@ -65,48 +101,50 @@ def partner_section():
         id="partners", cls="lp-partners",
     )
 
-def landing_page():
-    features = ['Appointments and availability', 'Patient and treatment operations', 'Billing and balanced ledgers']
+def landing_page(lang="en"):
+    T = lambda text: t(text, lang)
+    description = T("Run appointments, patient operations, billing, recall, revenue, and multi-specialty workflows from one clinical cockpit.")
     return Html(
-        Head(Title("FastClinic · FastSME"), Meta(charset="utf-8"),
+        Head(Title(T("FastClinic · FastSME")), Meta(charset="utf-8"),
              Meta(name="viewport", content="width=device-width, initial-scale=1"),
-             Meta(name="description", content="Run appointments, patient operations, billing, recall, revenue, and multi-specialty workflows from one clinical cockpit."),
-             *seo_meta(),
+             Meta(name="description", content=description),
+             *seo_meta(title=T("FastClinic · Open-source Clinic Operations Software"), description=description),
              Link(rel="icon", type="image/svg+xml", href=FAVICON),
              Link(rel="preconnect", href="https://fonts.googleapis.com"),
              Link(rel="stylesheet", href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;750&display=swap"),
              Style(CSS + AUTH_CSS)),
         Body(
-            Nav(A(Span("F", cls="lp-mark"), Span("FastClinic"), href="/", cls="lp-brand"),
-                Div(A("Partners", href="#partners", cls="lp-nav-link"),
-                    A("Developers", href="/developers", cls="lp-nav-link"),
-                    Button("Sign In", type="button", onclick="authOpen('login')", cls="lp-signin"),
+            Nav(A(Span("F", cls="lp-mark"), Span("FastClinic", cls="lp-brand-name"), href="/", cls="lp-brand"),
+                Div(A(T("Partners"), href="#partners", cls="lp-nav-link"),
+                    A(T("Developers"), href="/developers", cls="lp-nav-link"),
+                    language_switcher(lang),
+                    Button(T("Sign In"), type="button", onclick="authOpen('login')", cls="lp-signin"),
                     cls="lp-nav-actions"), cls="lp-nav"),
             Main(
-                Section(Span("Clinic operations", cls="lp-kicker"), H1("Modern clinical care, made personal."),
-                        P("Run appointments, patient operations, billing, recall, revenue, and multi-specialty workflows from one clinical cockpit.", cls="lp-lede"),
-                        Div(Button("Sign In or Register", type="button", onclick="authOpen('login')", cls="lp-primary"),
-                            A("Explore the open-source suite →", href="https://fastsme.com/products", cls="lp-secondary"),
+                Section(Span(T("Clinic operations"), cls="lp-kicker"), H1(T("Modern clinical care, made personal.")),
+                        P(description, cls="lp-lede"),
+                        Div(Button(T("Sign In or Register"), type="button", onclick="authOpen('login')", cls="lp-primary"),
+                            A(T("Explore the open-source suite →"), href="https://fastsme.com/products", cls="lp-secondary"),
                             cls="lp-actions"), cls="lp-hero"),
                 Section(Div(Img(src="/static/product-demo.gif", alt="FastClinic product tour",
                                 loading="eager", width="1854", height="909"),
-                            P("Product tour · see the workspace in action"),
+                            P(T("Product tour · see the workspace in action")),
                             cls="lp-demo-frame"), cls="lp-demo", aria_label="FastClinic product tour"),
-                Section(Div(*[Article(Span(f"0{i}", cls="lp-num"), H2(title),
-                                      P("Everything you need for " + title.lower() + ", in one focused workspace."),
-                                      cls="lp-card") for i, title in enumerate(features, 1)],
+                Section(Div(*[Article(Span(f"0{i}", cls="lp-num"), H2(T(title)), P(T(body)),
+                                      cls="lp-card") for i, (title, body) in enumerate(FEATURES, 1)],
                             cls="lp-grid"), cls="lp-band"),
-                partner_section(),
-                Section(Div(Span("Developers", cls="lp-kicker"),
-                            H2("Build on FastClinic."),
-                            P("Explore the public read API, typed schemas, examples, and token-gated integration writes.")),
-                        A("Read the API documentation →", href="/developers", cls="lp-primary"),
+                partner_section(lang),
+                Section(Div(Span(T("Developers"), cls="lp-kicker"),
+                            H2(T("Build on FastClinic.")),
+                            P(T("Explore the public read API, typed schemas, examples, and token-gated integration writes."))),
+                        A(T("Read the API documentation →"), href="/developers", cls="lp-primary"),
                         cls="lp-developers"),
             ),
-            Footer(Span("FastClinic is part of the open-source FastSME suite."),
-                   A("View all products", href="https://fastsme.com/products", style="color:var(--accent)"),
+            Footer(Span(T("FastClinic is part of the open-source FastSME suite.")),
+                   A(T("View all products"), href="https://fastsme.com/products", style="color:var(--accent)"),
                    cls="lp-footer"),
-            auth_modal("FastClinic"),
-            Script(AUTH_JS),
+            auth_modal("FastClinic", T),
+            Script(AUTH_JS + LANGUAGE_JS),
         ),
+        lang=lang,
     )
