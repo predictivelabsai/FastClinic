@@ -12,10 +12,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, Security, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, Security, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.encoders import jsonable_encoder
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field, create_model
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import JSONResponse
 
 
@@ -59,8 +62,12 @@ class Resource:
     title: str
     description: str
     write_fields: tuple[str, ...] = ()
+    required_write_fields: tuple[str, ...] = ()
+    update_fields: tuple[str, ...] = ()
     search_fields: tuple[str, ...] = ()
     primary_key: str | None = None
+    soft_delete_field: str | None = None
+    soft_delete_value: Any = 1
 
 
 class SQLiteBackend:
@@ -152,14 +159,9 @@ class SQLiteBackend:
         ):
             clean[primary_key] = uuid.uuid4().hex
         timestamp = datetime.now(UTC).isoformat()
-        for field in ("created", "created_at", "updated_at"):
+        for field in ("created", "created_at", "modified", "updated_at"):
             column = columns.get(field)
-            if (
-                column
-                and field not in clean
-                and column["notnull"]
-                and column["dflt_value"] is None
-            ):
+            if column and field not in clean and column["dflt_value"] is None:
                 clean[field] = timestamp
         fields = tuple(clean)
         placeholders = ",".join("?" for _ in fields)
@@ -173,6 +175,57 @@ class SQLiteBackend:
             item_id = cursor.lastrowid
         created = self.get(resource, str(item_id))
         return created or clean
+
+    def update(
+        self,
+        resource: Resource,
+        item_id: str,
+        values: dict[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, Any]] | None:
+        before = self.get(resource, item_id)
+        if before is None:
+            return None
+        allowed = set(resource.update_fields or resource.write_fields)
+        clean = {key: value for key, value in values.items() if key in allowed}
+        if not clean:
+            raise ValueError("At least one writable field is required")
+        columns = {column["name"]: column for column in self.columns(resource)}
+        timestamp = datetime.now(UTC).isoformat()
+        for field in ("modified", "updated_at"):
+            if field in columns and field not in clean:
+                clean[field] = timestamp
+        assignments = ",".join(f'"{field}"=?' for field in clean)
+        primary_key = self.primary_key(resource)
+        with self.connection() as connection:
+            connection.execute(
+                f'UPDATE "{resource.table}" SET {assignments} WHERE "{primary_key}"=?',
+                (*clean.values(), item_id),
+            )
+            connection.commit()
+        return before, self.get(resource, item_id) or before
+
+    def delete(
+        self,
+        resource: Resource,
+        item_id: str,
+    ) -> tuple[dict[str, Any], dict[str, Any]] | None:
+        if not resource.soft_delete_field:
+            raise ValueError("This resource does not support deletion")
+        before = self.get(resource, item_id)
+        if before is None:
+            return None
+        value = resource.soft_delete_value
+        if value == "__timestamp__":
+            value = datetime.now(UTC).isoformat()
+        primary_key = self.primary_key(resource)
+        with self.connection() as connection:
+            connection.execute(
+                f'UPDATE "{resource.table}" SET "{resource.soft_delete_field}"=? '
+                f'WHERE "{primary_key}"=?',
+                (value, item_id),
+            )
+            connection.commit()
+        return before, self.get(resource, item_id) or before
 
 
 def _serialise_row(row: sqlite3.Row) -> dict[str, Any]:
@@ -199,7 +252,7 @@ def _python_type(sql_type: str) -> type[Any]:
 def _models_for(
     backend: SQLiteBackend,
     resource: Resource,
-) -> tuple[type[BaseModel], type[BaseModel], type[BaseModel] | None]:
+) -> tuple[type[BaseModel], type[BaseModel], type[BaseModel] | None, type[BaseModel] | None]:
     fields: dict[str, tuple[Any, Any]] = {}
     columns = backend.columns(resource)
     for column in columns:
@@ -224,7 +277,10 @@ def _models_for(
     for field in resource.write_fields:
         column = by_name[field]
         value_type = _python_type(column["type"])
-        required = bool(column["notnull"]) and column["dflt_value"] is None
+        required = (
+            field in resource.required_write_fields
+            or (bool(column["notnull"]) and column["dflt_value"] is None)
+        )
         create_fields[field] = (value_type if required else value_type | None, ... if required else None)
     create_model_type = (
         create_model(
@@ -235,15 +291,28 @@ def _models_for(
         if create_fields
         else None
     )
-    return item_model, list_model, create_model_type
+    update_fields: dict[str, tuple[Any, Any]] = {}
+    for field in (resource.update_fields or resource.write_fields):
+        column = by_name[field]
+        update_fields[field] = (_python_type(column["type"]) | None, None)
+    update_model_type = (
+        create_model(
+            f"{resource.title.replace(' ', '')}Update",
+            __config__=ConfigDict(extra="forbid"),
+            **update_fields,
+        )
+        if update_fields
+        else None
+    )
+    return item_model, list_model, create_model_type, update_model_type
 
 
 bearer = HTTPBearer(
     auto_error=False,
     scheme_name="FastSME API token",
     description=(
-        "Selected writes require `Authorization: Bearer <token>`. "
-        "Reads are public. Set FASTSME_API_TOKEN to enable writes."
+        "Operational reads and all writes require `Authorization: Bearer <token>`. "
+        "Synthetic clinical and aggregate reads are public."
     ),
 )
 
@@ -284,6 +353,7 @@ def create_sqlite_api(
     base_url: str,
     backend: SQLiteBackend,
     resources: tuple[Resource, ...],
+    on_mutation: Callable[[str, str, str, dict[str, Any] | None, dict[str, Any] | None], None] | None = None,
 ) -> FastAPI:
     """Create the product API and register its typed resource routes."""
 
@@ -292,9 +362,10 @@ def create_sqlite_api(
         version=version,
         description=(
             f"{description}\n\n"
-            "**Access model:** reads are public. Selected writes are implemented but "
-            "disabled unless the deployment configures `FASTSME_API_TOKEN`; write "
-            "clients then send it as a bearer token."
+            "**Access model:** synthetic clinical and aggregate reads are public. "
+            "Operational reads and every mutation require a bearer token. Those "
+            "operations remain disabled until the deployment configures "
+            "`FASTSME_API_TOKEN`."
         ),
         docs_url="/docs",
         redoc_url="/redoc",
@@ -307,12 +378,12 @@ def create_sqlite_api(
         CORSMiddleware,
         allow_origins=["*"],
         allow_credentials=False,
-        allow_methods=["GET", "HEAD", "OPTIONS"],
-        allow_headers=["Accept", "Content-Type"],
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "HEAD", "OPTIONS"],
+        allow_headers=["Accept", "Authorization", "Content-Type", "Idempotency-Key"],
     )
 
-    @api.exception_handler(HTTPException)
-    async def api_http_error(_request: Request, exc: HTTPException) -> JSONResponse:
+    @api.exception_handler(StarletteHTTPException)
+    async def api_http_error(_request: Request, exc: StarletteHTTPException) -> JSONResponse:
         detail = exc.detail if isinstance(exc.detail, dict) else {
             "code": "http_error",
             "message": str(exc.detail),
@@ -322,6 +393,19 @@ def create_sqlite_api(
             status_code=exc.status_code,
             content={"error": detail},
             headers=exc.headers,
+        )
+
+    @api.exception_handler(RequestValidationError)
+    async def api_validation_error(_request: Request, exc: RequestValidationError) -> JSONResponse:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": {
+                    "code": "validation_error",
+                    "message": "The request did not match the API schema.",
+                    "details": {"errors": jsonable_encoder(exc.errors())},
+                }
+            },
         )
 
     @api.get("/", tags=["System"])
@@ -344,7 +428,7 @@ def create_sqlite_api(
         )
 
     def register(resource: Resource) -> None:
-        item_model, list_model, create_model_type = _models_for(backend, resource)
+        item_model, list_model, create_model_type, update_model_type = _models_for(backend, resource)
 
         @api.get(
             f"/v1/{resource.slug}",
@@ -392,10 +476,14 @@ def create_sqlite_api(
 
             def create_item(payload):
                 try:
-                    return backend.create(
+                    created = backend.create(
                         resource,
                         payload.model_dump(exclude_none=True),
                     )
+                    item_id = str(created.get(backend.primary_key(resource), ""))
+                    if on_mutation:
+                        on_mutation("create", resource.slug, item_id, None, created)
+                    return created
                 except (sqlite3.IntegrityError, sqlite3.OperationalError, ValueError) as exc:
                     raise HTTPException(
                         status_code=422,
@@ -428,6 +516,91 @@ def create_sqlite_api(
                 ),
                 operation_id=f"create_{resource.slug.replace('-', '_')}",
             )(create_item)
+
+        if update_model_type is not None:
+
+            def update_item(item_id: str, payload):
+                try:
+                    changed = backend.update(
+                        resource,
+                        item_id,
+                        payload.model_dump(exclude_unset=True),
+                    )
+                except (sqlite3.IntegrityError, sqlite3.OperationalError, ValueError) as exc:
+                    raise HTTPException(
+                        status_code=422,
+                        detail={
+                            "code": "invalid_write",
+                            "message": "The record could not be updated.",
+                            "details": {"reason": str(exc)},
+                        },
+                    ) from exc
+                if changed is None:
+                    raise HTTPException(
+                        status_code=404,
+                        detail={
+                            "code": "not_found",
+                            "message": f"{resource.title} record not found.",
+                            "details": {"id": item_id},
+                        },
+                    )
+                before, after = changed
+                if on_mutation:
+                    on_mutation("update", resource.slug, item_id, before, after)
+                return after
+
+            update_item.__annotations__ = {
+                "item_id": str,
+                "payload": update_model_type,
+                "return": dict[str, Any],
+            }
+            api.patch(
+                f"/v1/{resource.slug}/{{item_id}}",
+                response_model=item_model,
+                responses={401: {"model": ErrorEnvelope}, 404: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}, 503: {"model": ErrorEnvelope}},
+                dependencies=[Depends(require_write_token)],
+                tags=[resource.title],
+                summary=f"Update a {resource.title.lower()} record",
+                operation_id=f"update_{resource.slug.replace('-', '_')}",
+            )(update_item)
+
+        if resource.soft_delete_field:
+
+            def delete_item(item_id: str) -> Response:
+                try:
+                    changed = backend.delete(resource, item_id)
+                except (sqlite3.IntegrityError, sqlite3.OperationalError, ValueError) as exc:
+                    raise HTTPException(
+                        status_code=422,
+                        detail={
+                            "code": "invalid_delete",
+                            "message": "The record could not be archived.",
+                            "details": {"reason": str(exc)},
+                        },
+                    ) from exc
+                if changed is None:
+                    raise HTTPException(
+                        status_code=404,
+                        detail={
+                            "code": "not_found",
+                            "message": f"{resource.title} record not found.",
+                            "details": {"id": item_id},
+                        },
+                    )
+                before, after = changed
+                if on_mutation:
+                    on_mutation("archive", resource.slug, item_id, before, after)
+                return Response(status_code=204)
+
+            api.delete(
+                f"/v1/{resource.slug}/{{item_id}}",
+                status_code=204,
+                responses={401: {"model": ErrorEnvelope}, 404: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}, 503: {"model": ErrorEnvelope}},
+                dependencies=[Depends(require_write_token)],
+                tags=[resource.title],
+                summary=f"Archive a {resource.title.lower()} record",
+                operation_id=f"archive_{resource.slug.replace('-', '_')}",
+            )(delete_item)
 
     for configured_resource in resources:
         register(configured_resource)

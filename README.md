@@ -106,6 +106,21 @@ FastHTML audit.
 `fastclinic-data` volume at `/data` so the database lives outside the image.
 Configure via `.env` (see `.env.sample`).
 
+## Integration API
+
+The typed API is mounted at `/api`, with human documentation at `/developers`,
+Swagger UI at `/api/docs`, ReDoc at `/api/redoc`, and OpenAPI JSON at
+`/api/openapi.json`. It covers clinical records, subject/party relationships,
+appointments and availability, activation and consent, immutable communication
+logs, balanced billing and payments, analytics, and the API audit trail.
+
+Public reads operate only over the synthetic demo surface. Operational reads and
+all mutations require `Authorization: Bearer <FASTSME_API_TOKEN>` and remain
+disabled when that variable is blank. FastBooking uses the separate
+least-privilege `FASTBOOKING_API_TOKEN`. Destructive HTTP methods use domain-safe
+semantics: clinical records are archived, bookings/reminders are cancelled,
+payments are refunded, and invoices are voided with reversing ledger entries.
+
 ## Public landing translations
 
 The landing page, account modal, and developer documentation support English,

@@ -42,12 +42,22 @@ def post_gl(lines, ref: str) -> bool:
     if not lines:
         return False
     with _connect() as conn:
-        for account, debit, credit in lines:
-            conn.execute(
-                "INSERT INTO gl_entry (entry_date, account, debit, credit, ref) "
-                "VALUES (?,?,?,?,?)", (_now()[:10], account, debit, credit, ref))
+        _insert_gl(conn, lines, ref)
         conn.commit()
     return True
+
+
+def _insert_gl(conn, lines, ref: str) -> None:
+    """Insert a balanced journal on an existing transaction."""
+    lines = [(a, round(d, 2), round(c, 2)) for a, d, c in lines if (d or c)]
+    if round(sum(d for _, d, _ in lines), 2) != round(sum(c for _, _, c in lines), 2):
+        raise ValueError("journal is not balanced")
+    for account, debit, credit in lines:
+        if account not in ACCOUNTS:
+            raise ValueError(f"unknown ledger account {account!r}")
+        conn.execute(
+            "INSERT INTO gl_entry (entry_date, account, debit, credit, ref) "
+            "VALUES (?,?,?,?,?)", (_now()[:10], account, debit, credit, ref))
 
 
 def raise_invoice(consultation_id: int) -> int | None:
@@ -64,6 +74,7 @@ def raise_invoice(consultation_id: int) -> int | None:
         return None
     c = con[0]
     with _connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
         if conn.execute("SELECT 1 FROM invoice WHERE consultation_id=?",
                         (consultation_id,)).fetchone():
             return None
@@ -77,28 +88,142 @@ def raise_invoice(consultation_id: int) -> int | None:
                VALUES (?,?,?,?, date('now'), date('now','+30 day'), ?, 0, 'Unpaid', ?)""",
             (code, consultation_id, c["subject_id"], party_id, total, _now()))
         inv_id = cur.lastrowid
+        _insert_gl(
+            conn,
+            [("Accounts Receivable", total, 0), ("Fee Income", 0, total)],
+            ref=code,
+        )
         conn.commit()
-    post_gl([("Accounts Receivable", total, 0), ("Fee Income", 0, total)], ref=code)
     return inv_id
 
 
-def record_payment(invoice_id: int, amount: float) -> bool:
+def record_payment(
+    invoice_id: int,
+    amount: float,
+    *,
+    method: str = "",
+    reference: str = "",
+    idempotency_key: str | None = None,
+) -> bool:
     """Apply a payment (partial or full). Posts Dr Cash / Cr Accounts Receivable."""
-    inv = query("SELECT * FROM invoice WHERE id=?", (invoice_id,))
-    if not inv or amount <= 0:
+    if amount <= 0:
         return False
-    inv = inv[0]
-    pay = min(inv["total"] - inv["paid"], amount)
-    if pay <= 0:
-        return False
-    paid = round(inv["paid"] + pay, 2)
-    status = "Paid" if paid >= inv["total"] - 0.01 else "Partly Paid"
     with _connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        if idempotency_key and conn.execute(
+            "SELECT 1 FROM payment WHERE idempotency_key=?", (idempotency_key,)
+        ).fetchone():
+            return True
+        row = conn.execute("SELECT * FROM invoice WHERE id=?", (invoice_id,)).fetchone()
+        if not row or row["status"] == "Void":
+            return False
+        inv = dict(row)
+        outstanding = round(inv["total"] - inv["paid"], 2)
+        if outstanding <= 0 or amount > outstanding + 0.005:
+            return False
+        pay = round(amount, 2)
+        paid = round(inv["paid"] + pay, 2)
+        status = "Paid" if paid >= inv["total"] - 0.01 else "Partly Paid"
         conn.execute("UPDATE invoice SET paid=?, status=? WHERE id=?",
                      (paid, status, invoice_id))
+        conn.execute(
+            """INSERT INTO payment
+               (invoice_id, amount, method, reference, status, idempotency_key,
+                received_at, created_at)
+               VALUES (?,?,?,?, 'received', ?,?,?)""",
+            (invoice_id, pay, method, reference, idempotency_key, _now(), _now()),
+        )
+        _insert_gl(
+            conn,
+            [("Cash", pay, 0), ("Accounts Receivable", 0, pay)],
+            ref=inv["code"],
+        )
         conn.commit()
-    post_gl([("Cash", pay, 0), ("Accounts Receivable", 0, pay)], ref=inv["code"])
     return True
+
+
+def payments(limit: int = 100, invoice_id: int | None = None) -> list[dict]:
+    if invoice_id is not None:
+        return query(
+            "SELECT * FROM payment WHERE invoice_id=? ORDER BY id DESC LIMIT ?",
+            (invoice_id, limit),
+        )
+    return query("SELECT * FROM payment ORDER BY id DESC LIMIT ?", (limit,))
+
+
+def payment(payment_id: int) -> dict | None:
+    rows = query("SELECT * FROM payment WHERE id=?", (payment_id,))
+    return rows[0] if rows else None
+
+
+def refund_payment(payment_id: int) -> bool:
+    """Reverse a received payment without deleting its audit history."""
+    pay = payment(payment_id)
+    if not pay or pay["status"] != "received":
+        return False
+    with _connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        pay = conn.execute("SELECT * FROM payment WHERE id=?", (payment_id,)).fetchone()
+        if not pay or pay["status"] != "received":
+            return False
+        inv = conn.execute("SELECT * FROM invoice WHERE id=?", (pay["invoice_id"],)).fetchone()
+        if not inv or inv["status"] == "Void":
+            return False
+        paid = max(0.0, round(inv["paid"] - pay["amount"], 2))
+        status = "Unpaid" if paid <= 0 else "Partly Paid"
+        conn.execute("UPDATE payment SET status='refunded' WHERE id=?", (payment_id,))
+        conn.execute("UPDATE invoice SET paid=?, status=? WHERE id=?", (paid, status, inv["id"]))
+        _insert_gl(
+            conn,
+            [("Accounts Receivable", pay["amount"], 0), ("Cash", 0, pay["amount"])],
+            ref=f"{inv['code']}:refund:{payment_id}",
+        )
+        conn.commit()
+    return True
+
+
+def void_invoice(invoice_id: int) -> bool:
+    """Void an invoice using reversing journal entries; never delete ledger history."""
+    with _connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        inv = conn.execute("SELECT * FROM invoice WHERE id=?", (invoice_id,)).fetchone()
+        if not inv or inv["status"] == "Void":
+            return False
+        if inv["paid"]:
+            _insert_gl(
+                conn,
+                [("Accounts Receivable", inv["paid"], 0), ("Cash", 0, inv["paid"])],
+                ref=f"{inv['code']}:void-payment",
+            )
+            conn.execute(
+                "UPDATE payment SET status='voided' WHERE invoice_id=? AND status='received'",
+                (invoice_id,),
+            )
+        _insert_gl(
+            conn,
+            [("Fee Income", inv["total"], 0), ("Accounts Receivable", 0, inv["total"])],
+            ref=f"{inv['code']}:void",
+        )
+        conn.execute("UPDATE invoice SET paid=0, status='Void' WHERE id=?", (invoice_id,))
+        conn.commit()
+    return True
+
+
+def invoice(invoice_id: int) -> dict | None:
+    rows = query("SELECT * FROM invoice WHERE id=?", (invoice_id,))
+    return rows[0] if rows else None
+
+
+def update_invoice_due_date(invoice_id: int, due_date: str) -> tuple[dict, dict] | None:
+    before = invoice(invoice_id)
+    if not before:
+        return None
+    if before["status"] in {"Paid", "Void"}:
+        raise ValueError("Paid or void invoices cannot be rescheduled")
+    with _connect() as conn:
+        conn.execute("UPDATE invoice SET due_date=? WHERE id=?", (due_date, invoice_id))
+        conn.commit()
+    return before, invoice(invoice_id) or before
 
 
 def trial_balance() -> list[dict]:
@@ -123,7 +248,7 @@ def invoices(limit: int = 100) -> list[dict]:
 
 def invoice_totals() -> dict:
     r = query("SELECT COUNT(*) AS n, COALESCE(SUM(total),0) AS billed, "
-              "COALESCE(SUM(paid),0) AS collected FROM invoice")[0]
+              "COALESCE(SUM(paid),0) AS collected FROM invoice WHERE status <> 'Void'")[0]
     return {"count": r["n"], "billed": round(r["billed"], 2),
             "collected": round(r["collected"], 2),
             "outstanding": round(r["billed"] - r["collected"], 2)}

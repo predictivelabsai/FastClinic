@@ -20,6 +20,11 @@ path,expect_contains,expect_not_contains,category
 /admin/data,Data,Traceback,admin
 /ai/prompt,Prompt,Traceback,admin
 /compliance,Compliance &amp; Trust for European Private Clinics,Traceback,page
+/developers,Complete API surface,Traceback,page
+/api/v1/health,1.1.0,Traceback,api
+/api/v1/analytics/overview,total_patients,Traceback,api
+/api/docs,Swagger UI,Traceback,api
+/api/openapi.json,FastClinic API,Traceback,api
 /activation/reminders/csv,patient_id,Traceback,export
 /activation/lapsed/csv,contact_phone,Traceback,export
 /activation/followup/csv,consult_at,Traceback,export

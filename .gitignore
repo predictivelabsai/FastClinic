@@ -56,6 +56,7 @@ cover/
 eval-results/fastclinic_agent_eval_*.csv
 eval-results/fastclinic_agent_eval_*.json
 eval-results/fastclinic_eval_*.json
+.deepeval/
 
 # Translations
 *.mo

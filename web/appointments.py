@@ -76,10 +76,23 @@ def day_schedule(clinician_id: int, d: date) -> list[dict]:
     return out
 
 
-def _overlaps(conn, clinician_id: int, start: datetime, end: datetime) -> bool:
-    rows = conn.execute(
-        f"SELECT start_at, end_at FROM appointment WHERE clinician_id=? "
-        f"AND status IN {ACTIVE_STATUSES}", (clinician_id,)).fetchall()
+def _overlaps(
+    conn,
+    clinician_id: int,
+    start: datetime,
+    end: datetime,
+    *,
+    exclude_id: int | None = None,
+) -> bool:
+    sql = (
+        f"SELECT id, start_at, end_at FROM appointment WHERE clinician_id=? "
+        f"AND status IN {ACTIVE_STATUSES}"
+    )
+    params: list = [clinician_id]
+    if exclude_id is not None:
+        sql += " AND id <> ?"
+        params.append(exclude_id)
+    rows = conn.execute(sql, tuple(params)).fetchall()
     for r in rows:
         if r["start_at"] and r["end_at"]:
             es, ee = _parse(r["start_at"]), _parse(r["end_at"])
@@ -92,7 +105,7 @@ class SlotTaken(Exception):
     """Raised when a booking would double-book a clinician."""
 
 
-def book(subject_id: int, clinician_id: int, start_at: str, *,
+def book(subject_id: int | None, clinician_id: int, start_at: str, *,
          duration_min: int = SLOT_MIN, reason: str = "", room: str = "",
          with_reminder: bool = True) -> int:
     """Book an appointment, refusing to double-book. Returns the appointment id."""
@@ -103,6 +116,9 @@ def book(subject_id: int, clinician_id: int, start_at: str, *,
         "ORDER BY is_primary DESC LIMIT 1", (subject_id,))
     party_id = rows[0]["party_id"] if rows else None
     with _connect() as conn:
+        # Serialize the overlap check and insert so concurrent clients cannot
+        # reserve the same clinician slot between those two operations.
+        conn.execute("BEGIN IMMEDIATE")
         if _overlaps(conn, clinician_id, start, end):
             raise SlotTaken(f"Clinician {clinician_id} is busy at {_fmt(start)}")
         cur = conn.execute(
@@ -134,6 +150,68 @@ def set_status(appt_id: int, status: str) -> None:
     with _connect() as conn:
         conn.execute("UPDATE appointment SET status=? WHERE id=?", (status, appt_id))
         conn.commit()
+
+
+def update(
+    appt_id: int,
+    *,
+    subject_id: int | None = None,
+    clinician_id: int | None = None,
+    start_at: str | None = None,
+    duration_min: int | None = None,
+    reason: str | None = None,
+    room: str | None = None,
+    status: str | None = None,
+) -> dict | None:
+    """Update an appointment atomically, preserving conflict detection."""
+    with _connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute("SELECT * FROM appointment WHERE id=?", (appt_id,)).fetchone()
+        if not row:
+            return None
+        current_start = _parse(row["start_at"])
+        current_end = _parse(row["end_at"])
+        next_start = _parse(start_at) if start_at is not None else current_start
+        current_duration = max(1, int((current_end - current_start).total_seconds() // 60))
+        next_duration = duration_min if duration_min is not None else current_duration
+        if next_duration < 10 or next_duration > 240:
+            raise ValueError("duration_min must be between 10 and 240")
+        next_end = next_start + timedelta(minutes=next_duration)
+        next_clinician = clinician_id if clinician_id is not None else row["clinician_id"]
+        next_status = status if status is not None else row["status"]
+        if next_status not in STATUSES:
+            raise ValueError(f"unknown status {next_status!r}")
+        if next_status in ACTIVE_STATUSES and _overlaps(
+            conn, next_clinician, next_start, next_end, exclude_id=appt_id
+        ):
+            raise SlotTaken(f"Clinician {next_clinician} is busy at {_fmt(next_start)}")
+        next_subject = subject_id if subject_id is not None else row["subject_id"]
+        party_id = row["party_id"]
+        if subject_id is not None:
+            parties = _main_query(
+                "SELECT party_id FROM subject_party_role WHERE subject_id=? "
+                "ORDER BY is_primary DESC LIMIT 1",
+                (subject_id,),
+            )
+            party_id = parties[0]["party_id"] if parties else None
+        conn.execute(
+            """UPDATE appointment
+               SET subject_id=?, party_id=?, clinician_id=?, start_at=?, end_at=?,
+                   status=?, reason=?, room=? WHERE id=?""",
+            (
+                next_subject,
+                party_id,
+                next_clinician,
+                _fmt(next_start),
+                _fmt(next_end),
+                next_status,
+                row["reason"] if reason is None else reason,
+                row["room"] if room is None else room,
+                appt_id,
+            ),
+        )
+        conn.commit()
+    return get(appt_id)
 
 
 def upcoming(limit: int = 100) -> list[dict]:

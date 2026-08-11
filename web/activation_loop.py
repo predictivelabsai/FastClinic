@@ -20,6 +20,7 @@ survive that. Path: FASTCLINIC_OPS_DB, else fastclinic_ops.sqlite beside the app
 from __future__ import annotations
 
 import os
+import json
 import sqlite3
 from datetime import datetime, timedelta
 
@@ -107,6 +108,31 @@ CREATE TABLE IF NOT EXISTS gl_entry (
     credit REAL,
     ref TEXT
 );
+CREATE TABLE IF NOT EXISTS payment (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    invoice_id INTEGER NOT NULL,
+    amount REAL NOT NULL,
+    method TEXT,
+    reference TEXT,
+    status TEXT NOT NULL DEFAULT 'received',
+    idempotency_key TEXT,
+    received_at TEXT,
+    created_at TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_payment_idempotency
+    ON payment (idempotency_key) WHERE idempotency_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_payment_invoice ON payment (invoice_id);
+CREATE TABLE IF NOT EXISTS api_audit (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    action TEXT NOT NULL,
+    resource TEXT NOT NULL,
+    item_id TEXT,
+    before_json TEXT,
+    after_json TEXT,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_api_audit_resource
+    ON api_audit (resource, item_id, created_at);
 """
 
 
@@ -131,6 +157,38 @@ def execute(sql: str, params: tuple = ()) -> int:
         cur = conn.execute(sql, params)
         conn.commit()
         return cur.lastrowid
+
+
+def log_api_audit(
+    action: str,
+    resource: str,
+    item_id: str,
+    before: dict | None,
+    after: dict | None,
+) -> None:
+    """Append a mutation record without storing credentials or request secrets."""
+    execute(
+        """INSERT INTO api_audit
+           (action, resource, item_id, before_json, after_json, created_at)
+           VALUES (?,?,?,?,?,?)""",
+        (
+            action,
+            resource,
+            str(item_id),
+            json.dumps(before, sort_keys=True, default=str) if before is not None else None,
+            json.dumps(after, sort_keys=True, default=str) if after is not None else None,
+            _now(),
+        ),
+    )
+
+
+def api_audit(limit: int = 100, resource: str = "") -> list[dict]:
+    if resource:
+        return query(
+            "SELECT * FROM api_audit WHERE resource=? ORDER BY id DESC LIMIT ?",
+            (resource, limit),
+        )
+    return query("SELECT * FROM api_audit ORDER BY id DESC LIMIT ?", (limit,))
 
 
 def external_booking(idempotency_key: str) -> dict | None:
@@ -300,6 +358,48 @@ def pending_reminders(limit: int = 200) -> list[dict]:
                  "ORDER BY due_date LIMIT ?", (limit,))
 
 
+def get_reminder(reminder_id: int) -> dict | None:
+    rows = query("SELECT * FROM reminder WHERE id=?", (reminder_id,))
+    return rows[0] if rows else None
+
+
+def update_reminder(reminder_id: int, values: dict) -> tuple[dict, dict] | None:
+    before = get_reminder(reminder_id)
+    if not before:
+        return None
+    allowed = {
+        "category", "due_date", "status", "sms_text", "email_subject",
+        "email_text", "recurring_interval_days",
+    }
+    clean = {key: value for key, value in values.items() if key in allowed}
+    if not clean:
+        raise ValueError("At least one reminder field is required")
+    if clean.get("status") not in {None, "pending", "sent", "cancelled", "failed"}:
+        raise ValueError("Invalid reminder status")
+    # ``mark_sent`` also creates the next recurring occurrence, so use it only
+    # for the actual transition.  Apply any accompanying content/date edits
+    # first so the rolled-forward reminder inherits the updated values.
+    transitions_to_sent = clean.get("status") == "sent" and before["status"] != "sent"
+    fields_to_update = dict(clean)
+    if transitions_to_sent:
+        fields_to_update.pop("status")
+    if fields_to_update:
+        assignments = ",".join(f"{field}=?" for field in fields_to_update)
+        with _connect() as conn:
+            conn.execute(
+                f"UPDATE reminder SET {assignments} WHERE id=?",
+                (*fields_to_update.values(), reminder_id),
+            )
+            conn.commit()
+    if transitions_to_sent:
+        mark_sent(reminder_id)
+    return before, get_reminder(reminder_id) or before
+
+
+def cancel_reminder(reminder_id: int) -> tuple[dict, dict] | None:
+    return update_reminder(reminder_id, {"status": "cancelled"})
+
+
 def reminder_counts() -> dict:
     rows = query("SELECT status, COUNT(*) AS n FROM reminder GROUP BY status")
     return {r["status"]: r["n"] for r in rows}
@@ -323,6 +423,11 @@ def log_communication(*, channel: str, to_addr: str, body: str,
 
 def recent_communications(limit: int = 100) -> list[dict]:
     return query("SELECT * FROM communication ORDER BY id DESC LIMIT ?", (limit,))
+
+
+def get_communication(communication_id: int) -> dict | None:
+    rows = query("SELECT * FROM communication WHERE id=?", (communication_id,))
+    return rows[0] if rows else None
 
 
 def communication_counts() -> dict:

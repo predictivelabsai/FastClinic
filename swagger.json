@@ -2,8 +2,10 @@
   "components": {
     "schemas": {
       "AppointmentCreate": {
+        "additionalProperties": false,
         "properties": {
           "clinician_id": {
+            "exclusiveMinimum": 0.0,
             "title": "Clinician Id",
             "type": "integer"
           },
@@ -16,11 +18,13 @@
           },
           "reason": {
             "default": "",
+            "maxLength": 500,
             "title": "Reason",
             "type": "string"
           },
           "room": {
             "default": "",
+            "maxLength": 120,
             "title": "Room",
             "type": "string"
           },
@@ -33,6 +37,7 @@
           },
           "subject_id": {
             "description": "Synthetic patient identifier",
+            "exclusiveMinimum": 0.0,
             "title": "Subject Id",
             "type": "integer"
           }
@@ -43,6 +48,441 @@
           "start_at"
         ],
         "title": "AppointmentCreate",
+        "type": "object"
+      },
+      "AppointmentUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "clinician_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clinician Id"
+          },
+          "duration_min": {
+            "anyOf": [
+              {
+                "maximum": 240.0,
+                "minimum": 10.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Min"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "room": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room"
+          },
+          "start_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start At"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "scheduled",
+                  "confirmed",
+                  "cancelled",
+                  "completed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "subject_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Id"
+          }
+        },
+        "title": "AppointmentUpdate",
+        "type": "object"
+      },
+      "ClinicalnotesCollection": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ClinicalnotesResource"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "ClinicalnotesCollection",
+        "type": "object"
+      },
+      "ClinicalnotesResource": {
+        "properties": {
+          "approved": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved"
+          },
+          "approved_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved Date"
+          },
+          "approved_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved User Id"
+          },
+          "archived_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived At"
+          },
+          "clinician_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clinician Id"
+          },
+          "consultation_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consultation Id"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created"
+          },
+          "custom_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Type"
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft"
+          },
+          "edit_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edit Reason"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "modified": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modified"
+          },
+          "modified_session": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modified Session"
+          },
+          "modified_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modified User Id"
+          },
+          "note_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note At"
+          },
+          "patient_group_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Group Id"
+          },
+          "responsible_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsible User Id"
+          },
+          "subject_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Id"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "text_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text Hash"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          }
+        },
+        "title": "ClinicalnotesResource",
+        "type": "object"
+      },
+      "CommunicationCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "allow_duplicate": {
+            "default": false,
+            "title": "Allow Duplicate",
+            "type": "boolean"
+          },
+          "body": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "channel": {
+            "enum": [
+              "sms",
+              "email"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "email_subject": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Subject"
+          },
+          "provider": {
+            "default": "",
+            "maxLength": 40,
+            "title": "Provider",
+            "type": "string"
+          },
+          "reminder_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reminder Id"
+          },
+          "to_addr": {
+            "maxLength": 320,
+            "minLength": 3,
+            "title": "To Addr",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel",
+          "to_addr",
+          "body"
+        ],
+        "title": "CommunicationCreate",
+        "type": "object"
+      },
+      "ConsentUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "marketing_opt_out": {
+            "title": "Marketing Opt Out",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "marketing_opt_out"
+        ],
+        "title": "ConsentUpdate",
         "type": "object"
       },
       "ConsultationsCollection": {
@@ -420,6 +860,76 @@
         "title": "ErrorEnvelope",
         "type": "object"
       },
+      "ExternalAppointmentCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "duration_min": {
+            "default": 20,
+            "maximum": 240.0,
+            "minimum": 10.0,
+            "title": "Duration Min",
+            "type": "integer"
+          },
+          "guest": {
+            "$ref": "#/components/schemas/ExternalGuest"
+          },
+          "notes": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Notes",
+            "type": "string"
+          },
+          "practitioner_id": {
+            "title": "Practitioner Id",
+            "type": "string"
+          },
+          "service_id": {
+            "title": "Service Id",
+            "type": "string"
+          },
+          "starts_at": {
+            "title": "Starts At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "practitioner_id",
+          "service_id",
+          "starts_at",
+          "guest"
+        ],
+        "title": "ExternalAppointmentCreate",
+        "type": "object"
+      },
+      "ExternalGuest": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "maxLength": 320,
+            "minLength": 3,
+            "title": "Email",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "default": "",
+            "maxLength": 40,
+            "title": "Phone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "email"
+        ],
+        "title": "ExternalGuest",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -462,6 +972,199 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "InvoiceCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "consultation_id": {
+            "exclusiveMinimum": 0.0,
+            "title": "Consultation Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "consultation_id"
+        ],
+        "title": "InvoiceCreate",
+        "type": "object"
+      },
+      "InvoiceUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "due_date": {
+            "format": "date",
+            "title": "Due Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "due_date"
+        ],
+        "title": "InvoiceUpdate",
+        "type": "object"
+      },
+      "NoteCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "clinician_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clinician Id"
+          },
+          "consultation_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consultation Id"
+          },
+          "custom_type": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Type"
+          },
+          "draft": {
+            "default": true,
+            "title": "Draft",
+            "type": "boolean"
+          },
+          "note_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note At"
+          },
+          "subject_id": {
+            "exclusiveMinimum": 0.0,
+            "title": "Subject Id",
+            "type": "integer"
+          },
+          "text": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          }
+        },
+        "required": [
+          "subject_id",
+          "text"
+        ],
+        "title": "NoteCreate",
+        "type": "object"
+      },
+      "NoteUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "clinician_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clinician Id"
+          },
+          "custom_type": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Type"
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft"
+          },
+          "edit_reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edit Reason"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          }
+        },
+        "title": "NoteUpdate",
+        "type": "object"
+      },
       "PaginationMeta": {
         "description": "Offset pagination metadata.",
         "properties": {
@@ -486,6 +1189,240 @@
         "title": "PaginationMeta",
         "type": "object"
       },
+      "PartiesCollection": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/PartiesResource"
+            },
+            "title": "Data",
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "PartiesCollection",
+        "type": "object"
+      },
+      "PartiesCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "zip_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zip Code"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "PartiesCreate",
+        "type": "object"
+      },
+      "PartiesResource": {
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "marketing_opt_out": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marketing Opt Out"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "subject_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Count"
+          },
+          "zip_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zip Code"
+          }
+        },
+        "title": "PartiesResource",
+        "type": "object"
+      },
+      "PartiesUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "zip_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zip Code"
+          }
+        },
+        "title": "PartiesUpdate",
+        "type": "object"
+      },
       "PatientsCollection": {
         "properties": {
           "data": {
@@ -504,6 +1441,229 @@
           "meta"
         ],
         "title": "PatientsCollection",
+        "type": "object"
+      },
+      "PatientsCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "blood_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blood Group"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "country_region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Region"
+          },
+          "critical_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Critical Notes"
+          },
+          "date_of_birth": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Of Birth"
+          },
+          "date_of_registration": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Of Registration"
+          },
+          "external": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External"
+          },
+          "gender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
+          },
+          "home_department_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Department Id"
+          },
+          "insurance": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insurance"
+          },
+          "insurance_company": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insurance Company"
+          },
+          "nhs_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nhs Number"
+          },
+          "official_name": {
+            "title": "Official Name",
+            "type": "string"
+          },
+          "private": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Private"
+          },
+          "registered_clinician_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registered Clinician Id"
+          },
+          "remarks": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remarks"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "street_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Street Address"
+          },
+          "street_address_2": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Street Address 2"
+          },
+          "zip_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zip Code"
+          }
+        },
+        "required": [
+          "official_name"
+        ],
+        "title": "PatientsCreate",
         "type": "object"
       },
       "PatientsResource": {
@@ -873,6 +2033,523 @@
           }
         },
         "title": "PatientsResource",
+        "type": "object"
+      },
+      "PatientsUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "blood_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blood Group"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "country_region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Region"
+          },
+          "critical_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Critical Notes"
+          },
+          "date_of_birth": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Of Birth"
+          },
+          "date_of_registration": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Of Registration"
+          },
+          "external": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External"
+          },
+          "gender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
+          },
+          "home_department_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home Department Id"
+          },
+          "insurance": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insurance"
+          },
+          "insurance_company": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insurance Company"
+          },
+          "nhs_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nhs Number"
+          },
+          "official_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Official Name"
+          },
+          "private": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Private"
+          },
+          "registered_clinician_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registered Clinician Id"
+          },
+          "remarks": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remarks"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "street_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Street Address"
+          },
+          "street_address_2": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Street Address 2"
+          },
+          "zip_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zip Code"
+          }
+        },
+        "title": "PatientsUpdate",
+        "type": "object"
+      },
+      "PaymentCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "exclusiveMinimum": 0.0,
+            "title": "Amount",
+            "type": "number"
+          },
+          "invoice_id": {
+            "exclusiveMinimum": 0.0,
+            "title": "Invoice Id",
+            "type": "integer"
+          },
+          "method": {
+            "default": "",
+            "maxLength": 80,
+            "title": "Method",
+            "type": "string"
+          },
+          "reference": {
+            "default": "",
+            "maxLength": 160,
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoice_id",
+          "amount"
+        ],
+        "title": "PaymentCreate",
+        "type": "object"
+      },
+      "RelationshipCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "is_primary": {
+            "default": false,
+            "title": "Is Primary",
+            "type": "boolean"
+          },
+          "party_id": {
+            "exclusiveMinimum": 0.0,
+            "title": "Party Id",
+            "type": "integer"
+          },
+          "role": {
+            "enum": [
+              "self",
+              "guardian",
+              "payer",
+              "emergency",
+              "family",
+              "other"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "subject_id": {
+            "exclusiveMinimum": 0.0,
+            "title": "Subject Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "subject_id",
+          "party_id",
+          "role"
+        ],
+        "title": "RelationshipCreate",
+        "type": "object"
+      },
+      "RelationshipUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "is_primary": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Primary"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "enum": [
+                  "self",
+                  "guardian",
+                  "payer",
+                  "emergency",
+                  "family",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          }
+        },
+        "title": "RelationshipUpdate",
+        "type": "object"
+      },
+      "ReminderCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Category",
+            "type": "string"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "email_subject": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Subject"
+          },
+          "email_text": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Text"
+          },
+          "recurring_interval_days": {
+            "anyOf": [
+              {
+                "maximum": 3650.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recurring Interval Days"
+          },
+          "sms_text": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sms Text"
+          },
+          "subject_id": {
+            "exclusiveMinimum": 0.0,
+            "title": "Subject Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "subject_id",
+          "category"
+        ],
+        "title": "ReminderCreate",
+        "type": "object"
+      },
+      "ReminderUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "email_subject": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Subject"
+          },
+          "email_text": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Text"
+          },
+          "recurring_interval_days": {
+            "anyOf": [
+              {
+                "maximum": 3650.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recurring Interval Days"
+          },
+          "sms_text": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sms Text"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pending",
+                  "sent",
+                  "cancelled",
+                  "failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "ReminderUpdate",
         "type": "object"
       },
       "TreatmentsCollection": {
@@ -1274,7 +2951,7 @@
     },
     "securitySchemes": {
       "FastSME API token": {
-        "description": "Selected writes require `Authorization: Bearer <token>`. Reads are public. Set FASTSME_API_TOKEN to enable writes.",
+        "description": "Operational reads and all writes require `Authorization: Bearer <token>`. Synthetic clinical and aggregate reads are public.",
         "scheme": "bearer",
         "type": "http"
       }
@@ -1285,12 +2962,12 @@
       "name": "FastSME",
       "url": "https://fastsme.com/"
     },
-    "description": "Open integration access to FastClinic's entirely synthetic clinical demo data.\n\n**Access model:** reads are public. Selected writes are implemented but disabled unless the deployment configures `FASTSME_API_TOKEN`; write clients then send it as a bearer token.",
+    "description": "Typed integration access across FastClinic's synthetic clinical model, scheduling, activation, consent, billing, and analytics.\n\n**Access model:** synthetic clinical and aggregate reads are public. Operational reads and every mutation require a bearer token. Those operations remain disabled until the deployment configures `FASTSME_API_TOKEN`.",
     "license": {
       "name": "MIT"
     },
     "title": "FastClinic API",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -1317,9 +2994,408 @@
         ]
       }
     },
+    "/v1/activation/attribution": {
+      "get": {
+        "operationId": "activation_attribution_v1_activation_attribution_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Activation Attribution",
+        "tags": [
+          "Activation"
+        ]
+      }
+    },
+    "/v1/activation/due": {
+      "get": {
+        "operationId": "due_activation_v1_activation_due_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "title": "Category",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Due Activation",
+        "tags": [
+          "Activation"
+        ]
+      }
+    },
+    "/v1/activation/followup": {
+      "get": {
+        "operationId": "followup_activation_v1_activation_followup_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 14,
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Followup Activation",
+        "tags": [
+          "Activation"
+        ]
+      }
+    },
+    "/v1/activation/lapsed": {
+      "get": {
+        "operationId": "lapsed_activation_v1_activation_lapsed_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "months",
+            "required": false,
+            "schema": {
+              "default": 12,
+              "maximum": 120,
+              "minimum": 1,
+              "title": "Months",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Lapsed Activation",
+        "tags": [
+          "Activation"
+        ]
+      }
+    },
+    "/v1/analytics/categories": {
+      "get": {
+        "operationId": "analytics_categories_v1_analytics_categories_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Analytics Categories",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/v1/analytics/clinicians": {
+      "get": {
+        "operationId": "analytics_clinicians_v1_analytics_clinicians_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Analytics Clinicians",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/v1/analytics/demographics": {
+      "get": {
+        "operationId": "analytics_demographics_v1_analytics_demographics_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Analytics Demographics",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/v1/analytics/monthly": {
+      "get": {
+        "operationId": "analytics_monthly_v1_analytics_monthly_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "months",
+            "required": false,
+            "schema": {
+              "default": 18,
+              "maximum": 120,
+              "minimum": 1,
+              "title": "Months",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analytics Monthly",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/v1/analytics/overview": {
+      "get": {
+        "operationId": "analytics_overview_v1_analytics_overview_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Analytics Overview",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/v1/analytics/procedures": {
+      "get": {
+        "operationId": "analytics_procedures_v1_analytics_procedures_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 15,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "specialty",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Specialty",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Analytics Procedures",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/v1/analytics/revenue-by-category": {
+      "get": {
+        "operationId": "analytics_revenue_by_category_v1_analytics_revenue_by_category_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Analytics Revenue By Category",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/v1/analytics/specialties": {
+      "get": {
+        "operationId": "analytics_specialties_v1_analytics_specialties_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Analytics Specialties",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
     "/v1/appointments": {
       "get": {
-        "description": "List operational appointment records.",
         "operationId": "list_appointments_v1_appointments_get",
         "parameters": [
           {
@@ -1328,6 +3404,8 @@
             "required": false,
             "schema": {
               "default": 50,
+              "maximum": 200,
+              "minimum": 1,
               "title": "Limit",
               "type": "integer"
             }
@@ -1338,8 +3416,82 @@
             "required": false,
             "schema": {
               "default": 0,
+              "minimum": 0,
               "title": "Offset",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "clinician_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Clinician Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "subject_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "day",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Day"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "scheduled",
+                    "confirmed",
+                    "cancelled",
+                    "completed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
             }
           }
         ],
@@ -1369,7 +3521,6 @@
         ]
       },
       "post": {
-        "description": "Book a synthetic appointment after bearer-token authentication.",
         "operationId": "create_appointment_v1_appointments_post",
         "requestBody": {
           "content": {
@@ -1412,9 +3563,403 @@
         ]
       }
     },
+    "/v1/appointments/{appointment_id}": {
+      "delete": {
+        "operationId": "cancel_appointment_v1_appointments__appointment_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "appointment_id",
+            "required": true,
+            "schema": {
+              "title": "Appointment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Cancel Appointment",
+        "tags": [
+          "Appointments"
+        ]
+      },
+      "get": {
+        "operationId": "get_appointment_v1_appointments__appointment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "appointment_id",
+            "required": true,
+            "schema": {
+              "title": "Appointment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Appointment",
+        "tags": [
+          "Appointments"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_appointment_v1_appointments__appointment_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "appointment_id",
+            "required": true,
+            "schema": {
+              "title": "Appointment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppointmentUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Patch Appointment",
+        "tags": [
+          "Appointments"
+        ]
+      }
+    },
+    "/v1/audit": {
+      "get": {
+        "operationId": "audit_log_v1_audit_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resource",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Resource",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Audit Log",
+        "tags": [
+          "Audit"
+        ]
+      }
+    },
+    "/v1/availability": {
+      "get": {
+        "operationId": "availability_v1_availability_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "clinician_id",
+            "required": true,
+            "schema": {
+              "exclusiveMinimum": 0,
+              "title": "Clinician Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "day",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Day",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Availability",
+        "tags": [
+          "Appointments"
+        ]
+      }
+    },
+    "/v1/clinicians": {
+      "get": {
+        "operationId": "list_clinicians_v1_clinicians_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Clinicians",
+        "tags": [
+          "Appointments"
+        ]
+      }
+    },
+    "/v1/communications": {
+      "get": {
+        "operationId": "list_communications_v1_communications_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "List Communications",
+        "tags": [
+          "Communications"
+        ]
+      },
+      "post": {
+        "operationId": "send_communication_v1_communications_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommunicationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Send Communication",
+        "tags": [
+          "Communications"
+        ]
+      }
+    },
+    "/v1/communications/{communication_id}": {
+      "get": {
+        "operationId": "get_communication_v1_communications__communication_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "communication_id",
+            "required": true,
+            "schema": {
+              "title": "Communication Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Get Communication",
+        "tags": [
+          "Communications"
+        ]
+      }
+    },
     "/v1/consultations": {
       "get": {
-        "description": "Synthetic consultation activity and revenue.",
+        "description": "Synthetic consultation activity and revenue. Derived/imported records are read-only.",
         "operationId": "list_consultations",
         "parameters": [
           {
@@ -1541,7 +4086,7 @@
     },
     "/v1/diagnoses": {
       "get": {
-        "description": "Synthetic diagnosis records linked to consultations.",
+        "description": "Synthetic diagnosis records linked to consultations. Imported clinical facts are read-only.",
         "operationId": "list_diagnoses",
         "parameters": [
           {
@@ -1666,6 +4211,195 @@
         ]
       }
     },
+    "/v1/external/appointments": {
+      "post": {
+        "operationId": "create_external_appointment_v1_external_appointments_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "minLength": 8,
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExternalAppointmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create External Appointment",
+        "tags": [
+          "External booking"
+        ]
+      }
+    },
+    "/v1/external/appointments/{appointment_id}/cancel": {
+      "post": {
+        "operationId": "cancel_external_appointment_v1_external_appointments__appointment_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "appointment_id",
+            "required": true,
+            "schema": {
+              "title": "Appointment Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel External Appointment",
+        "tags": [
+          "External booking"
+        ]
+      }
+    },
+    "/v1/external/availability": {
+      "get": {
+        "operationId": "external_availability_v1_external_availability_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "practitioner_id",
+            "required": true,
+            "schema": {
+              "title": "Practitioner Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "day",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Day",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "External Availability",
+        "tags": [
+          "External booking"
+        ]
+      }
+    },
     "/v1/health": {
       "get": {
         "operationId": "api_health_v1_health_get",
@@ -1687,9 +4421,978 @@
         ]
       }
     },
+    "/v1/invoices": {
+      "get": {
+        "operationId": "list_invoices_v1_invoices_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "List Invoices",
+        "tags": [
+          "Billing"
+        ]
+      },
+      "post": {
+        "operationId": "create_invoice_v1_invoices_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoiceCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Create Invoice",
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
+    "/v1/invoices/{invoice_id}": {
+      "delete": {
+        "operationId": "delete_invoice_v1_invoices__invoice_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "title": "Invoice Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Delete Invoice",
+        "tags": [
+          "Billing"
+        ]
+      },
+      "get": {
+        "operationId": "get_invoice_v1_invoices__invoice_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "title": "Invoice Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Get Invoice",
+        "tags": [
+          "Billing"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_invoice_v1_invoices__invoice_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "title": "Invoice Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoiceUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Patch Invoice",
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
+    "/v1/ledger": {
+      "get": {
+        "operationId": "ledger_v1_ledger_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Ledger",
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
+    "/v1/notes": {
+      "get": {
+        "description": "Synthetic clinical notes. Writes use dedicated validation and archive rather than hard delete.",
+        "operationId": "list_notes",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Case-insensitive text search",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive text search",
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClinicalnotesCollection"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List clinical notes",
+        "tags": [
+          "Clinical notes"
+        ]
+      },
+      "post": {
+        "operationId": "create_note_v1_notes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Create Note",
+        "tags": [
+          "Clinical notes"
+        ]
+      }
+    },
+    "/v1/notes/{item_id}": {
+      "delete": {
+        "operationId": "delete_note_v1_notes__item_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Delete Note",
+        "tags": [
+          "Clinical notes"
+        ]
+      },
+      "get": {
+        "operationId": "get_notes",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClinicalnotesResource"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get one clinical notes record",
+        "tags": [
+          "Clinical notes"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_note_v1_notes__item_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Patch Note",
+        "tags": [
+          "Clinical notes"
+        ]
+      }
+    },
+    "/v1/parties": {
+      "get": {
+        "description": "Contactable or billable parties, separated from subjects of care for guardianship, consent, and payer attribution.",
+        "operationId": "list_parties",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Case-insensitive text search",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive text search",
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartiesCollection"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List parties",
+        "tags": [
+          "Parties"
+        ]
+      },
+      "post": {
+        "description": "Implemented for token-authenticated integrations. Production writes remain disabled until FASTSME_API_TOKEN is configured.",
+        "operationId": "create_parties",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartiesCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartiesResource"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Create a parties record",
+        "tags": [
+          "Parties"
+        ]
+      }
+    },
+    "/v1/parties/{item_id}": {
+      "delete": {
+        "operationId": "delete_party_v1_parties__item_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Delete Party",
+        "tags": [
+          "Parties"
+        ]
+      },
+      "get": {
+        "operationId": "get_parties",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartiesResource"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get one parties record",
+        "tags": [
+          "Parties"
+        ]
+      },
+      "patch": {
+        "operationId": "update_parties",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartiesUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartiesResource"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Update a parties record",
+        "tags": [
+          "Parties"
+        ]
+      }
+    },
+    "/v1/parties/{party_id}/marketing-consent": {
+      "get": {
+        "operationId": "get_marketing_consent_v1_parties__party_id__marketing_consent_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "party_id",
+            "required": true,
+            "schema": {
+              "title": "Party Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Get Marketing Consent",
+        "tags": [
+          "Consent"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_marketing_consent_v1_parties__party_id__marketing_consent_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "party_id",
+            "required": true,
+            "schema": {
+              "title": "Party Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Patch Marketing Consent",
+        "tags": [
+          "Consent"
+        ]
+      }
+    },
     "/v1/patients": {
       "get": {
-        "description": "Synthetic patient demographic and registration records.",
+        "description": "Synthetic patient demographic and registration records. DELETE archives rather than erases a clinical subject.",
         "operationId": "list_patients",
         "parameters": [
           {
@@ -1760,9 +5463,142 @@
         "tags": [
           "Patients"
         ]
+      },
+      "post": {
+        "description": "Implemented for token-authenticated integrations. Production writes remain disabled until FASTSME_API_TOKEN is configured.",
+        "operationId": "create_patients",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatientsCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientsResource"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Create a patients record",
+        "tags": [
+          "Patients"
+        ]
       }
     },
     "/v1/patients/{item_id}": {
+      "delete": {
+        "operationId": "archive_patients",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Archive a patients record",
+        "tags": [
+          "Patients"
+        ]
+      },
       "get": {
         "operationId": "get_patients",
         "parameters": [
@@ -1812,11 +5648,870 @@
         "tags": [
           "Patients"
         ]
+      },
+      "patch": {
+        "operationId": "update_patients",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatientsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientsResource"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Update a patients record",
+        "tags": [
+          "Patients"
+        ]
+      }
+    },
+    "/v1/payments": {
+      "get": {
+        "operationId": "list_payments_v1_payments_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "invoice_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Invoice Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "List Payments",
+        "tags": [
+          "Billing"
+        ]
+      },
+      "post": {
+        "operationId": "create_payment_v1_payments_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 8,
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Create Payment",
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
+    "/v1/payments/{payment_id}": {
+      "delete": {
+        "operationId": "delete_payment_v1_payments__payment_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "title": "Payment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Delete Payment",
+        "tags": [
+          "Billing"
+        ]
+      },
+      "get": {
+        "operationId": "get_payment_v1_payments__payment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "title": "Payment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Get Payment",
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
+    "/v1/relationships": {
+      "get": {
+        "operationId": "list_relationships_v1_relationships_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "subject_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "party_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Party Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Relationships",
+        "tags": [
+          "Relationships"
+        ]
+      },
+      "post": {
+        "operationId": "create_relationship_v1_relationships_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RelationshipCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Create Relationship",
+        "tags": [
+          "Relationships"
+        ]
+      }
+    },
+    "/v1/relationships/{subject_id}/{party_id}/{role}": {
+      "delete": {
+        "operationId": "remove_relationship_v1_relationships__subject_id___party_id___role__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "title": "Subject Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "party_id",
+            "required": true,
+            "schema": {
+              "title": "Party Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "role",
+            "required": true,
+            "schema": {
+              "title": "Role",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Remove Relationship",
+        "tags": [
+          "Relationships"
+        ]
+      },
+      "get": {
+        "operationId": "get_relationship_v1_relationships__subject_id___party_id___role__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "title": "Subject Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "party_id",
+            "required": true,
+            "schema": {
+              "title": "Party Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "role",
+            "required": true,
+            "schema": {
+              "title": "Role",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Relationship",
+        "tags": [
+          "Relationships"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_relationship_v1_relationships__subject_id___party_id___role__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "title": "Subject Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "party_id",
+            "required": true,
+            "schema": {
+              "title": "Party Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "role",
+            "required": true,
+            "schema": {
+              "title": "Role",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RelationshipUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Patch Relationship",
+        "tags": [
+          "Relationships"
+        ]
+      }
+    },
+    "/v1/reminders": {
+      "get": {
+        "operationId": "list_reminders_v1_reminders_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "sent",
+                    "cancelled",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "subject_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "List Reminders",
+        "tags": [
+          "Reminders"
+        ]
+      },
+      "post": {
+        "operationId": "create_reminder_v1_reminders_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReminderCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Create Reminder",
+        "tags": [
+          "Reminders"
+        ]
+      }
+    },
+    "/v1/reminders/{reminder_id}": {
+      "delete": {
+        "operationId": "delete_reminder_v1_reminders__reminder_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reminder_id",
+            "required": true,
+            "schema": {
+              "title": "Reminder Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Delete Reminder",
+        "tags": [
+          "Reminders"
+        ]
+      },
+      "get": {
+        "operationId": "get_reminder_v1_reminders__reminder_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reminder_id",
+            "required": true,
+            "schema": {
+              "title": "Reminder Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Get Reminder",
+        "tags": [
+          "Reminders"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_reminder_v1_reminders__reminder_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reminder_id",
+            "required": true,
+            "schema": {
+              "title": "Reminder Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReminderUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Patch Reminder",
+        "tags": [
+          "Reminders"
+        ]
       }
     },
     "/v1/treatments": {
       "get": {
-        "description": "Billable treatment lines classified by category and specialty.",
+        "description": "Billable treatment lines classified by category and specialty. Derived/imported records are read-only.",
         "operationId": "list_treatments",
         "parameters": [
           {
@@ -1938,6 +6633,30 @@
         "summary": "Get one treatments record",
         "tags": [
           "Treatments"
+        ]
+      }
+    },
+    "/v1/trial-balance": {
+      "get": {
+        "operationId": "trial_balance_v1_trial_balance_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "FastSME API token": []
+          }
+        ],
+        "summary": "Trial Balance",
+        "tags": [
+          "Billing"
         ]
       }
     }

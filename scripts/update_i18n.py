@@ -25,7 +25,7 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from web.api import RESOURCES  # noqa: E402
+from web.api import API_GROUPS, RESOURCES  # noqa: E402
 from web.i18n import DEFAULT_LANG, LANGUAGES, LOCALES_DIR  # noqa: E402
 from web.landing import FEATURES, PARTNERS  # noqa: E402
 from web.layout import JS_I18N_KEYS, NAV_ITEMS, SAMPLE_QUESTIONS  # noqa: E402
@@ -123,6 +123,10 @@ def source_strings() -> set[str]:
     strings.update(description for _, _, _, description in PARTNERS)
     for resource in RESOURCES:
         strings.update((resource.title, resource.description))
+    for title, description, operations in API_GROUPS:
+        strings.update((title, description))
+        for _methods, _path, summary, access in operations:
+            strings.update((summary, access))
     strings.update(JS_I18N_KEYS)
     strings.update(SAMPLE_QUESTIONS)
     strings.update(RECUR_LABELS.values())
