@@ -10,6 +10,7 @@ Login: admin@fastclinic.example / FastClinic2026$  (override via env, see .env.s
 from __future__ import annotations
 
 import os
+import asyncio
 import secrets
 import uuid
 import logging
@@ -28,10 +29,13 @@ from starlette.responses import JSONResponse
 
 from web.layout import page, right_pane_reference, LAYOUT_CSS
 from web.landing import landing_page
+from web.compliance import compliance_page
 from web.seo import register_seo_routes
 from web.developer import developer_page
 from web import account_auth, google_auth
-from web.i18n import LANGUAGES, get_lang, safe_return_path, set_lang
+from web.i18n import (
+    LANGUAGES, get_lang, localize_tree, safe_return_path, set_lang, t, using_lang,
+)
 from web import dashboards as dash
 from web import activation as act
 from web import commands as cmd
@@ -96,6 +100,11 @@ def developers(session, request):
     return developer_page(get_lang(session, request))
 
 
+@rt("/compliance", methods=["GET"])
+def compliance(session, request):
+    return compliance_page(get_lang(session, request))
+
+
 # --- helpers ---
 account_auth.register_fasthtml_routes(rt, app_name="FastClinic", session_key="user_email", success_path="/")
 
@@ -124,12 +133,22 @@ def _guarded(active: str, builder):
         email = _auth(session)
         if not email:
             return RedirectResponse("/login", status_code=303)
-        return page(active, CLINIC_ENV, email, _thread(session), builder())
+        lang = get_lang(session)
+        with using_lang(lang):
+            return page(active, CLINIC_ENV, email, _thread(session), builder(), lang=lang)
     return handler
 
 
-def _login_card(error: str = "", email: str = ""):
-    return (
+def _localized(session, value):
+    """Localise full pages and HTMX fragments under the session language."""
+    lang = get_lang(session)
+    with using_lang(lang):
+        built = value() if callable(value) else value
+        return localize_tree(built, lang)
+
+
+def _login_card(error: str = "", email: str = "", lang: str = "en"):
+    result = (
         Title("FastClinic Cockpit"),
         Link(rel="icon", type="image/svg+xml", href=FAVICON_HREF),
         Style(LAYOUT_CSS),
@@ -149,6 +168,7 @@ def _login_card(error: str = "", email: str = ""):
             cls="login-wrap",
         ),
     )
+    return localize_tree(result, lang)
 
 
 # --- auth ---
@@ -156,7 +176,7 @@ def _login_card(error: str = "", email: str = ""):
 def get(session):
     if _auth(session):
         return RedirectResponse("/", status_code=303)
-    return _login_card()
+    return _login_card(lang=get_lang(session))
 
 
 @rt("/login")
@@ -164,7 +184,8 @@ def post(session, email: str = "", password: str = ""):
     if email.strip() == VALID_EMAIL and password == VALID_PASSWORD:
         session["user_email"] = email.strip()
         return RedirectResponse("/", status_code=303)
-    return _login_card(error="Invalid credentials", email=email)
+    return _login_card(error=t("Invalid credentials", get_lang(session)), email=email,
+                       lang=get_lang(session))
 
 
 
@@ -218,8 +239,10 @@ def get(session, q: str = ""):
 def get(session, pid: int):
     if not _auth(session):
         return RedirectResponse("/login", status_code=303)
-    return page("patients", CLINIC_ENV, _auth(session), _thread(session),
-                dash.patient_detail_view(pid))
+    lang = get_lang(session)
+    with using_lang(lang):
+        return page("patients", CLINIC_ENV, _auth(session), _thread(session),
+                    dash.patient_detail_view(pid), lang=lang)
 
 
 @rt("/treatments")
@@ -264,7 +287,7 @@ def post(session, consultation_id: int = 0):
         return ""
     if consultation_id:
         billing.raise_invoice(consultation_id)
-    return billing_views.body()
+    return _localized(session, billing_views.body)
 
 
 @rt("/billing/{invoice_id}/pay")
@@ -275,7 +298,7 @@ def post(session, invoice_id: int, amount: float = 0.0):
     pay = amount if amount > 0 else (inv[0]["total"] - inv[0]["paid"] if inv else 0)
     if pay > 0:
         billing.record_payment(invoice_id, pay)
-    return billing_views.body()
+    return _localized(session, billing_views.body)
 
 
 @rt("/activation/loop")
@@ -289,7 +312,7 @@ def post(session):
         return ""
     n = aloop.enqueue_due_reminders()
     logger.info("Enqueued %s reminders", n)
-    return act._loop_body()
+    return _localized(session, act._loop_body)
 
 
 @rt("/appointments")
@@ -309,7 +332,7 @@ def post(session, subject_id: int = 0, clinician_id: int = 0, start_at: str = ""
             appt.book(subject_id, clinician_id, start_at, reason=reason.strip())
         except appt.SlotTaken as e:
             logger.warning("Booking refused: %s", e)
-    return appt_views.body(clinician_id or 1, day)
+    return _localized(session, lambda: appt_views.body(clinician_id or 1, day))
 
 
 @rt("/appointments/{appt_id}/status")
@@ -324,14 +347,15 @@ def post(session, appt_id: int, to: str = "", clinician_id: int = 0, day: str = 
             pass
     cid = clinician_id or (row["clinician_id"] if row else 1)
     d = day or (row["start_at"][:10] if row and row.get("start_at") else act.reference_date()[:10])
-    return appt_views.body(cid, d)
+    return _localized(session, lambda: appt_views.body(cid, d))
 
 
 @rt("/activation/{engine}/csv")
 def get(session, engine: str, cat: str = "all", months: int = 12, days: int = 14):
     if not _auth(session):
         return RedirectResponse("/login", status_code=303)
-    body, fname = act.campaign_csv(engine, cat=cat, months=months, days=days)
+    with using_lang(get_lang(session)):
+        body, fname = act.campaign_csv(engine, cat=cat, months=months, days=days)
     if body is None:
         return Response("Unknown engine", status_code=404, media_type="text/plain")
     return Response(body, media_type="text/csv; charset=utf-8",
@@ -342,7 +366,8 @@ def get(session, engine: str, cat: str = "all", months: int = 12, days: int = 14
 def get(session, engine: str, cat: str = "all", months: int = 12, days: int = 14):
     if not _auth(session):
         return RedirectResponse("/login", status_code=303)
-    body, fname = act.campaign_xlsx(engine, cat=cat, months=months, days=days)
+    with using_lang(get_lang(session)):
+        body, fname = act.campaign_xlsx(engine, cat=cat, months=months, days=days)
     if body is None:
         return Response("Unknown engine", status_code=404, media_type="text/plain")
     from web.exports import XLSX_MIME
@@ -362,9 +387,11 @@ def post(session, provider: str = "", phone: str = "", message: str = ""):
         return ""
     phone, message = phone.strip(), message.strip()
     if not phone or not message:
-        return dash.sms_send_result(False, provider or "—", error="Phone number and message are required.")
+        return _localized(session, lambda: dash.sms_send_result(
+            False, provider or "—", error=t("Phone number and message are required.")))
     if not provider:
-        return dash.sms_send_result(False, "—", error="No SMS provider selected.")
+        return _localized(session, lambda: dash.sms_send_result(
+            False, "—", error=t("No SMS provider selected.")))
     party_id, subject_id = aloop.resolve_by_phone(phone)
     blocked = consent.check_phone(phone)
     if blocked:
@@ -373,7 +400,7 @@ def post(session, provider: str = "", phone: str = "", message: str = ""):
                                 subject_id=subject_id, provider=provider,
                                 error="opted_out")
         logger.warning("SMS send BLOCKED — recipient opted out: to=%s", phone)
-        return dash.sms_send_result(False, provider, error=blocked)
+        return _localized(session, lambda: dash.sms_send_result(False, provider, error=blocked))
     from util.sms import send
     result = send(phone, message, provider)
     aloop.log_communication(channel="sms", to_addr=phone, body=message,
@@ -383,7 +410,8 @@ def post(session, provider: str = "", phone: str = "", message: str = ""):
                             provider_message_id=result.message_id or "",
                             error=result.error or "")
     logger.info("SMS send: provider=%s to=%s ok=%s", provider, phone, result.ok)
-    return dash.sms_send_result(result.ok, result.provider, result.message_id, result.error)
+    return _localized(session, lambda: dash.sms_send_result(
+        result.ok, result.provider, result.message_id, result.error))
 
 
 @rt("/ops/email")
@@ -397,7 +425,8 @@ def post(session, to: str = "", subject: str = "", body: str = ""):
         return ""
     to, subject, body = to.strip(), subject.strip(), body.strip()
     if not to or not subject or not body:
-        return dash.email_send_result(False, error="Recipient, subject, and message are required.")
+        return _localized(session, lambda: dash.email_send_result(
+            False, error=t("Recipient, subject, and message are required.")))
     party_id, subject_id = aloop.resolve_by_email(to)
     blocked = consent.check_email(to)
     if blocked:
@@ -405,7 +434,7 @@ def post(session, to: str = "", subject: str = "", body: str = ""):
                                 status="blocked", party_id=party_id,
                                 subject_id=subject_id, error="opted_out")
         logger.warning("Email send BLOCKED — recipient opted out: to=%s", to)
-        return dash.email_send_result(False, error=blocked)
+        return _localized(session, lambda: dash.email_send_result(False, error=blocked))
     from util.email import send as send_email
     result = send_email(to, subject, body)
     aloop.log_communication(channel="email", to_addr=to, body=body,
@@ -415,7 +444,8 @@ def post(session, to: str = "", subject: str = "", body: str = ""):
                             provider_message_id=result.message_id or "",
                             error=result.error or "")
     logger.info("Email send: to=%s ok=%s", to, result.ok)
-    return dash.email_send_result(result.ok, result.message_id, result.error)
+    return _localized(session, lambda: dash.email_send_result(
+        result.ok, result.message_id, result.error))
 
 
 # --- help ---
@@ -444,8 +474,10 @@ def get(session):
     if not email:
         return RedirectResponse("/login", status_code=303)
     tid = _thread(session)
-    return page("chat-full", CLINIC_ENV, email, tid,
-                dash.ai_full_view(tid), right_override=right_pane_reference())
+    lang = get_lang(session)
+    with using_lang(lang):
+        return page("chat-full", CLINIC_ENV, email, tid,
+                    dash.ai_full_view(tid), right_override=right_pane_reference(), lang=lang)
 
 
 @rt("/ai/prompt")
@@ -482,7 +514,10 @@ def get(session, slug: str):
         return RedirectResponse("/login", status_code=303)
     if not seo.component(slug):
         return RedirectResponse("/seo", status_code=303)
-    return page(slug, CLINIC_ENV, _auth(session), _thread(session), seo_views.component_view(slug))
+    lang = get_lang(session)
+    with using_lang(lang):
+        return page(slug, CLINIC_ENV, _auth(session), _thread(session),
+                    seo_views.component_view(slug), lang=lang)
 
 
 @rt("/seo/{slug}/prompt")
@@ -491,7 +526,10 @@ def get(session, slug: str):
         return RedirectResponse("/login", status_code=303)
     if not seo.component(slug):
         return RedirectResponse("/seo", status_code=303)
-    return page(slug, CLINIC_ENV, _auth(session), _thread(session), seo_views.prompt_editor_view(slug))
+    lang = get_lang(session)
+    with using_lang(lang):
+        return page(slug, CLINIC_ENV, _auth(session), _thread(session),
+                    seo_views.prompt_editor_view(slug), lang=lang)
 
 
 @rt("/seo/{slug}/prompt")
@@ -501,15 +539,20 @@ def post(session, slug: str, prompt: str = ""):
     if not seo.component(slug):
         return RedirectResponse("/seo", status_code=303)
     seo.write_prompt(slug, prompt)
-    return page(slug, CLINIC_ENV, _auth(session), _thread(session), seo_views.prompt_editor_view(slug, saved=True))
+    lang = get_lang(session)
+    with using_lang(lang):
+        return page(slug, CLINIC_ENV, _auth(session), _thread(session),
+                    seo_views.prompt_editor_view(slug, saved=True), lang=lang)
 
 
 @rt("/seo/{slug}/run-confirm")
 def get(session, slug: str, site_url: str | None = None):
     if not _auth(session):
         return RedirectResponse("/login", status_code=303)
-    return page(slug, CLINIC_ENV, _auth(session), _thread(session),
-                seo_views.run_confirm_view(slug, site_url or SEO_SITE))
+    lang = get_lang(session)
+    with using_lang(lang):
+        return page(slug, CLINIC_ENV, _auth(session), _thread(session),
+                    seo_views.run_confirm_view(slug, site_url or SEO_SITE), lang=lang)
 
 
 @rt("/seo/{slug}/run")
@@ -552,11 +595,11 @@ def get(session, slug: str):
 @rt("/chat/new")
 def get(session):
     session["thread_id"] = f"fastclinic_{uuid.uuid4().hex[:12]}"
-    return Div(
+    return _localized(session, lambda: Div(
         Div(NotStr("New conversation started. Ask the AI anything or type <code>/help</code>."),
             cls="msg system"),
         id="chat-body", cls="chat-body", hx_swap_oob="outerHTML",
-    )
+    ))
 
 
 @rt("/chat/stream")
@@ -567,13 +610,19 @@ async def post(session, message: str = "", thread_id: str = ""):
         return Response("unauthorized", status_code=401)
     from web.sse import sse
     msg = (message or "").strip()
+    lang = get_lang(session)
+    tid = _thread(session)
+    owner_id = _auth(session)
 
     async def gen():
         if not msg:
             yield sse("done", {})
             return
-        kind, payload = cmd.dispatch(msg)
+        with using_lang(lang):
+            kind, payload = cmd.dispatch(msg)
         if kind == "local":
+            from web.chat_history import append_turn
+            await asyncio.to_thread(append_turn, owner_id, tid, msg, payload, lang)
             yield sse("token", {"text": payload})
             yield sse("done", {"local": True})
             return
@@ -581,7 +630,9 @@ async def post(session, message: str = "", thread_id: str = ""):
         prompt = payload if payload is not None else msg
         got = False
         try:
-            async for ev, data in answer_stream(prompt):
+            async for ev, data in answer_stream(
+                prompt, thread_id=tid, lang=lang, owner_id=owner_id,
+            ):
                 if ev == "token":
                     got = True
                     yield sse("token", {"text": data})
@@ -595,7 +646,7 @@ async def post(session, message: str = "", thread_id: str = ""):
             logger.exception("chat stream failed")
             yield sse("error", {"message": str(e)})
         if not got:
-            yield sse("token", {"text": "*(no response)*"})
+            yield sse("token", {"text": t("*(no response)*", lang)})
         yield sse("done", {})
 
     return StreamingResponse(
@@ -608,16 +659,22 @@ async def post(session, message: str = "", thread_id: str = ""):
 @rt("/chat/send")
 def post(session, message: str = "", thread_id: str = ""):
     if not _auth(session):
-        return Div("Unauthorized", cls="msg system")
-    tid = thread_id or _thread(session)
+        return _localized(session, lambda: Div("Unauthorized", cls="msg system"))
+    # The session owns the thread. Never let a forged hidden-field value attach
+    # one signed-in user to another user's persisted clinical conversation.
+    tid = _thread(session)
     msg = (message or "").strip()
     if not msg:
         return ""
 
     user_bubble = Div(msg, cls="msg user")
-    kind, payload = cmd.dispatch(msg)
+    lang = get_lang(session)
+    with using_lang(lang):
+        kind, payload = cmd.dispatch(msg)
 
     if kind == "local":
+        from web.chat_history import append_turn
+        append_turn(_auth(session), tid, msg, payload, lang)
         bubble_id = f"a-{uuid.uuid4().hex[:8]}"
         return (
             user_bubble,
@@ -634,7 +691,9 @@ def post(session, message: str = "", thread_id: str = ""):
     agent_prompt = payload if payload is not None else msg
     try:
         from graph.clinic_assistant import answer
-        content = answer(agent_prompt) or "*(no response)*"
+        content = answer(
+            agent_prompt, thread_id=tid, lang=lang, owner_id=_auth(session),
+        ) or t("*(no response)*", lang)
     except Exception as e:
         logger.exception("Assistant failed")
         content = f"⚠ assistant error: `{e}`"

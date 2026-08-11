@@ -51,6 +51,12 @@ coverage.xml
 .pytest_cache/
 cover/
 
+# Timestamped local evaluation artifacts (the deterministic runner maintains
+# the tracked eval-results/latest.json summary separately).
+eval-results/fastclinic_agent_eval_*.csv
+eval-results/fastclinic_agent_eval_*.json
+eval-results/fastclinic_eval_*.json
+
 # Translations
 *.mo
 *.pot

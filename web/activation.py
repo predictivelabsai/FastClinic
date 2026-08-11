@@ -22,6 +22,7 @@ from fasthtml.common import (
 )
 
 from web.db import query, reference_date, db_exists
+from web.i18n import format_currency, format_date, format_number, preserve, t
 from web.layout import kpi_card
 from web.consent import sql_filter, opted_out_count
 from pms.catalog import (
@@ -43,7 +44,7 @@ def _ref() -> date:
 
 
 def _date(s) -> str:
-    return (s or "")[:10] or "—"
+    return format_date(s)
 
 
 def _status(due: date, today: date) -> str:
@@ -109,7 +110,7 @@ def due_rows(cat_filter: str = "all") -> list[dict]:
             "due_date": due.isoformat(),
             "days_overdue": (today - due).days,
             "status": status,
-            "service": RECUR_LABELS.get(r["category"], category_label(r["category"])),
+            "service": t(RECUR_LABELS.get(r["category"], category_label(r["category"]))),
         })
     out.sort(key=lambda x: -x["days_overdue"])
     return out
@@ -165,31 +166,28 @@ def followup_rows(days: int = 14) -> list[dict]:
 
 # ====================================================== message drafts =========
 def draft_reminder(r: dict) -> str:
-    return (
-        f"Hi {_name(r)}, our records at {CLINIC_NAME} show your "
-        f"{r['service'].lower()} is due (last seen {r['last_date']}). "
-        f"Please book an appointment: {CLINIC_PHONE}."
-    )
+    return t("Hi {name}, our records at {clinic} show your {service} is due "
+             "(last seen {date}). Please book an appointment: {phone}.",
+             name=_name(r), clinic=CLINIC_NAME, service=t(r["service"]).lower(),
+             date=format_date(r["last_date"]), phone=CLINIC_PHONE)
 
 
 def draft_lapsed(r: dict) -> str:
-    return (
-        f"Hi {_name(r)}, we miss you at {CLINIC_NAME}! It's been ~{r['months_since']} "
-        f"months since your last visit. We'd love to see you for a health check — "
-        f"book or re-register any time: {CLINIC_PHONE}."
-    )
+    return t("Hi {name}, we miss you at {clinic}! It's been about {months} months since "
+             "your last visit. We'd love to see you for a health check — book or "
+             "re-register any time: {phone}.", name=_name(r), clinic=CLINIC_NAME,
+             months=format_number(r["months_since"]), phone=CLINIC_PHONE)
 
 
 def draft_followup(r: dict) -> str:
-    return (
-        f"Hi {_name(r)}, thank you for visiting {CLINIC_NAME} on {_date(r['consult_at'])}. "
-        f"How are you feeling? Reply or call {CLINIC_PHONE} if you have any concerns."
-    )
+    return t("Hi {name}, thank you for visiting {clinic} on {date}. How are you feeling? "
+             "Reply or call {phone} if you have any concerns.", name=_name(r),
+             clinic=CLINIC_NAME, date=_date(r["consult_at"]), phone=CLINIC_PHONE)
 
 
 # ============================================================ views ============
 def _table(headers, rows):
-    return Table(Thead(Tr(*[Th(h) for h in headers])),
+    return Table(Thead(Tr(*[Th(t(h)) for h in headers])),
                  Tbody(*[Tr(*[Td(c) for c in r]) for r in rows]), cls="tbl")
 
 
@@ -197,7 +195,7 @@ def _dl_btns(csv_href: str, n: int):
     """CSV + XLS download buttons (xlsx route mirrors the csv one)."""
     xls_href = csv_href.replace("/csv", "/xlsx", 1)
     return Div(
-        A(f"⬇ CSV ({n})", href=csv_href, cls="btn"),
+        A(t("⬇ CSV ({count})", count=format_number(n)), href=csv_href, cls="btn"),
         A("⬇ XLS", href=xls_href, cls="btn primary"),
         style="display:flex; gap:8px;",
     )
@@ -214,8 +212,8 @@ def _suppressed_note():
     if not n:
         return None
     return P(NotStr(
-        f"<strong>{n}</strong> contacts have opted out of marketing and are excluded "
-        "from every list, export and send below."),
+        t("<strong>{count}</strong> contacts have opted out of marketing and are excluded "
+          "from every list, export and send below.", count=format_number(n))),
         style="color:var(--text-mute);font-size:12px;margin:0 0 14px;")
 
 
@@ -224,8 +222,9 @@ def _contacts_note():
         row = query("SELECT COUNT(*) AS n FROM party WHERE phone IS NOT NULL AND phone <> ''")
         return Div(
             P(NotStr(
-                f"<strong>{row[0]['n']}</strong> patients have a phone on file — lists below "
-                "include name &amp; phone, ready for the SMS Broadcaster or CSV export."),
+                t("<strong>{count}</strong> patients have a phone on file — lists below "
+                  "include name &amp; phone, ready for the SMS Broadcaster or CSV export.",
+                  count=format_number(row[0]["n"]))),
               style="color:var(--text-mute);font-size:12px;margin:0 0 4px;"),
             _suppressed_note() or "",
         )
@@ -259,15 +258,15 @@ def reminders_view(cat: str = "all"):
     )
     table_rows = [[
         A(f"#{r['patient_id']}", href=f"/patients/{r['patient_id']}", style="font-weight:600;"),
-        r.get("patient_name") or "—",
-        r.get("contact_phone") or "—",
-        gender_label(r.get("gender")),
+        preserve(r.get("patient_name") or "—"),
+        preserve(r.get("contact_phone") or "—"),
+        t(gender_label(r.get("gender"))),
         Span(r["service"], cls=f"status-pill {r['category']}"),
         _date(r["last_date"]),
         _date(r["due_date"]),
-        Span("overdue" if r["status"] == "overdue" else "due soon",
+        Span(t("overdue" if r["status"] == "overdue" else "due soon"),
              cls=f"status-pill {r['status']}"),
-        f"{r['days_overdue']}d" if r["days_overdue"] > 0 else "—",
+        t("{count}d", count=format_number(r["days_overdue"])) if r["days_overdue"] > 0 else "—",
     ] for r in rows]
 
     sample = rows[0] if rows else None
@@ -277,7 +276,7 @@ def reminders_view(cat: str = "all"):
             _dl_btns(f"/activation/reminders/csv?cat={cat}", len(rows)),
             cls="page-title"),
         cards, seg, _contacts_note(),
-        Div(Div(H3(f"{len(rows)} patients to contact"), cls="card-header"),
+        Div(Div(H3(t("{count} patients to contact", count=format_number(len(rows)))), cls="card-header"),
             _table(["Patient", "Name", "Phone", "Gender", "Service", "Last", "Due", "Status", "Overdue"],
                    table_rows) if table_rows else P("Nothing due — all caught up. 🎉"),
             cls="card"),
@@ -295,25 +294,25 @@ def lapsed_view(months: int = 12):
     value_at_risk = sum(r["lifetime_value"] or 0 for r in rows)
     cards = Div(
         kpi_card("Lapsed patients", len(rows), warn=True),
-        kpi_card("Value at risk", f"£{value_at_risk:,.0f}", warn=True),
-        kpi_card("Threshold", f"{months} months", neutral=True),
+        kpi_card("Value at risk", format_currency(value_at_risk, "GBP"), warn=True),
+        kpi_card("Threshold", t("{count} months", count=format_number(months)), neutral=True),
         cls="kpi-grid", style="grid-template-columns:repeat(3,1fr);",
     )
     seg = Div(
-        *[A(f"{m} mo", href=f"/activation/lapsed?months={m}",
+        *[A(t("{count} mo", count=format_number(m)), href=f"/activation/lapsed?months={m}",
             cls="active" if months == m else "")
           for m in (6, 9, 12, 18, 24)],
         cls="seg",
     )
     table_rows = [[
         A(f"#{r['patient_id']}", href=f"/patients/{r['patient_id']}", style="font-weight:600;"),
-        r.get("patient_name") or "—",
-        r.get("contact_phone") or "—",
-        gender_label(r.get("gender")),
+        preserve(r.get("patient_name") or "—"),
+        preserve(r.get("contact_phone") or "—"),
+        t(gender_label(r.get("gender"))),
         _date(r["last_visit"]),
-        f"{r['months_since']} mo",
+        t("{count} mo", count=format_number(r["months_since"])),
         r["visits"],
-        f"£{(r['lifetime_value'] or 0):,.0f}",
+        format_currency(r["lifetime_value"], "GBP"),
     ] for r in rows]
     sample = rows[0] if rows else None
     return Div(
@@ -322,7 +321,7 @@ def lapsed_view(months: int = 12):
             _dl_btns(f"/activation/lapsed/csv?months={months}", len(rows)),
             cls="page-title"),
         cards, seg, _contacts_note(),
-        Div(Div(H3(f"{len(rows)} lapsed patients"), cls="card-header"),
+        Div(Div(H3(t("{count} lapsed patients", count=format_number(len(rows)))), cls="card-header"),
             _table(["Patient", "Name", "Phone", "Gender", "Last visit", "Lapsed", "Visits", "Lifetime £"],
                    table_rows) if table_rows else P("No lapsed patients at this threshold. 🎉"),
             cls="card"),
@@ -338,23 +337,23 @@ def followup_view(days: int = 14):
     rows = followup_rows(days)
     cards = Div(
         kpi_card("Recent visits", len(rows)),
-        kpi_card("Window", f"{days} days", neutral=True),
+        kpi_card("Window", t("{count} days", count=format_number(days)), neutral=True),
         cls="kpi-grid", style="grid-template-columns:repeat(2,1fr);",
     )
     seg = Div(
-        *[A(f"{d} days", href=f"/activation/followup?days={d}",
+        *[A(t("{count} days", count=format_number(d)), href=f"/activation/followup?days={d}",
             cls="active" if days == d else "")
           for d in (7, 14, 30, 60)],
         cls="seg",
     )
     table_rows = [[
         A(f"#{r['patient_id']}", href=f"/patients/{r['patient_id']}", style="font-weight:600;"),
-        r.get("patient_name") or "—",
-        r.get("contact_phone") or "—",
+        preserve(r.get("patient_name") or "—"),
+        preserve(r.get("contact_phone") or "—"),
         _date(r["consult_at"]),
-        (r["categories"] or "—").replace(",", ", "),
-        ((r["diagnoses"] or "—")[:80]),
-        f"£{(r['revenue_vat'] or 0):,.0f}",
+        ", ".join(t(category_label(value)) for value in (r["categories"] or "").split(",") if value) or "—",
+        preserve((r["diagnoses"] or "—")[:80]),
+        format_currency(r["revenue_vat"], "GBP"),
     ] for r in rows]
     sample = rows[0] if rows else None
     return Div(
@@ -363,7 +362,7 @@ def followup_view(days: int = 14):
             _dl_btns(f"/activation/followup/csv?days={days}", len(rows)),
             cls="page-title"),
         cards, seg, _contacts_note(),
-        Div(Div(H3(f"{len(rows)} recent visits"), cls="card-header"),
+        Div(Div(H3(t("{count} recent visits", count=format_number(len(rows)))), cls="card-header"),
             _table(["Patient", "Name", "Phone", "Visit date", "Done", "Diagnoses", "Revenue"],
                    table_rows) if table_rows else P("No visits in this window."),
             cls="card"),
@@ -384,7 +383,7 @@ def _loop_body():
         kpi_card("Pending reminders", rc.get("pending", 0), warn=bool(rc.get("pending"))),
         kpi_card("Messages sent", cc.get("sent", 0)),
         kpi_card("Blocked (opted out)", cc.get("blocked", 0), neutral=True),
-        kpi_card(f"Return rate ({attr['within_days']}d)",
+        kpi_card(t("Return rate ({days}d)", days=format_number(attr["within_days"])),
                  f"{attr['rate']*100:.0f}%" if attr["sent"] else "—",
                  neutral=True),
         cls="kpi-grid", style="grid-template-columns:repeat(4,1fr);",
@@ -399,19 +398,19 @@ def _loop_body():
             "followup": "Post-visit follow-up", "appointments": "Appointment", "manual": "Manual"}
     p_rows = [[f"#{r['subject_id']}",
                RECUR_LABELS.get(r["category"]) or category_label(r["category"]),
-               _src.get(r.get("source_engine"), r.get("source_engine") or "—"),
-               (r.get("due_date") or "—")[:10], r["status"].title()] for r in pending]
+               t(_src.get(r.get("source_engine"), r.get("source_engine") or "—")),
+               _date(r.get("due_date")), t(r["status"].title())] for r in pending]
     c_rows = [[c["id"], f"#{c['subject_id']}" if c["subject_id"] else "—",
-               c["channel"].upper(), c["to_addr"], c["status"].title(),
-               (c.get("provider_message_id") or c.get("error") or "")[:24],
+               c["channel"].upper(), preserve(c["to_addr"]), t(c["status"].title()),
+               preserve((c.get("provider_message_id") or c.get("error") or "")[:24]),
                (c.get("sent_at") or "")[:16]] for c in comms]
     return Div(
         cards, enqueue,
-        Div(Div(H3(f"Pending reminders ({len(pending)})"), cls="card-header"),
+        Div(Div(H3(t("Pending reminders ({count})", count=format_number(len(pending)))), cls="card-header"),
             _table(["Subject", "Category", "Source", "Due", "Status"], p_rows)
             if p_rows else P("No pending reminders — queue due reminders above."),
             cls="card"),
-        Div(Div(H3(f"Communication log ({len(comms)})"), cls="card-header"),
+        Div(Div(H3(t("Communication log ({count})", count=format_number(len(comms)))), cls="card-header"),
             _table(["#", "Subject", "Channel", "To", "Status", "Ref / error", "Sent"], c_rows)
             if c_rows else P("Nothing sent yet. Blocked and failed sends are logged here too."),
             cls="card"),

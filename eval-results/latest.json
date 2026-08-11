@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-07-22T11:51:39",
+  "timestamp": "2026-08-10T23:45:36",
   "db_row_counts": {
     "subject": 1000,
     "diagnosis": 5358,
@@ -10,8 +10,8 @@
     "subject_party_role": 1000
   },
   "summary": {
-    "total": 157,
-    "passed": 157,
+    "total": 158,
+    "passed": 158,
     "failed": 0,
     "pass_rate": 1.0,
     "by_suite": {
@@ -24,8 +24,8 @@
         "total": 25
       },
       "routes": {
-        "passed": 25,
-        "total": 25
+        "passed": 26,
+        "total": 26
       },
       "coverage": {
         "passed": 4,
@@ -106,8 +106,8 @@
         "total": 2
       },
       "page": {
-        "passed": 3,
-        "total": 3
+        "passed": 4,
+        "total": 4
       },
       "activation": {
         "passed": 8,
@@ -692,7 +692,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### FastClinic Cockpit Commands  | Command | What it does | | --- | --- | | `/kpi` | Clinic KPIs snapshot | | `/due [vaccine\\|health_plan\\|repeat_prescription]`"
+      "response_excerpt": "### FastClinic Cockpit Commands  | Command | What it does | | --- | --- | | `/kpi` | Clinic KPIs snapshot | | `/due [vaccine|health_plan|repeat_prescription]` |"
     },
     {
       "suite": "shortcuts",
@@ -702,7 +702,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### FastClinic Cockpit Commands  | Command | What it does | | --- | --- | | `/kpi` | Clinic KPIs snapshot | | `/due [vaccine\\|health_plan\\|repeat_prescription]`"
+      "response_excerpt": "### FastClinic Cockpit Commands  | Command | What it does | | --- | --- | | `/kpi` | Clinic KPIs snapshot | | `/due [vaccine|health_plan|repeat_prescription]` |"
     },
     {
       "suite": "shortcuts",
@@ -712,7 +712,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### FastClinic Cockpit Commands  | Command | What it does | | --- | --- | | `/kpi` | Clinic KPIs snapshot | | `/due [vaccine\\|health_plan\\|repeat_prescription]`"
+      "response_excerpt": "### FastClinic Cockpit Commands  | Command | What it does | | --- | --- | | `/kpi` | Clinic KPIs snapshot | | `/due [vaccine|health_plan|repeat_prescription]` |"
     },
     {
       "suite": "shortcuts",
@@ -722,7 +722,7 @@
       "kind": "local",
       "passed": true,
       "detail": "",
-      "response_excerpt": "### FastClinic Cockpit Commands  | Command | What it does | | --- | --- | | `/kpi` | Clinic KPIs snapshot | | `/due [vaccine\\|health_plan\\|repeat_prescription]`"
+      "response_excerpt": "### FastClinic Cockpit Commands  | Command | What it does | | --- | --- | | `/kpi` | Clinic KPIs snapshot | | `/due [vaccine|health_plan|repeat_prescription]` |"
     },
     {
       "suite": "shortcuts",
@@ -1180,6 +1180,15 @@
       "path": "/ai/prompt",
       "category": "admin",
       "expect_contains": "Prompt",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/compliance",
+      "category": "page",
+      "expect_contains": "Compliance &amp; Trust for European Private Clinics",
       "passed": true,
       "detail": "",
       "status": 200

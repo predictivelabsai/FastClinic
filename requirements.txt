@@ -14,6 +14,8 @@ openai
 langgraph
 langchain-core
 langchain-openai
+# Agent/chat evaluation harness and LLM-as-judge metrics.
+deepeval==4.0.2
 # Optional extra providers (uncomment if MODEL_PROVIDER is set to them):
 # langchain-anthropic
 # langchain-google-genai

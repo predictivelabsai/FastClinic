@@ -11,12 +11,26 @@ import re
 import secrets
 import sqlite3
 import time
+from contextlib import contextmanager
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request as UrlRequest, urlopen
 
 from fasthtml.common import *
 from starlette.responses import JSONResponse, RedirectResponse
+
+from web.i18n import get_lang, localize_tree, t
+
+AUTH_MESSAGES = (
+    "Use a valid email and a password of at least 10 characters.",
+    "Too many attempts. Please try again later.",
+    "If this address can be registered, a verification email is on its way.",
+    "Verification email could not be sent. Please try again shortly.",
+    "Check your email to verify your account.",
+    "Invalid email, password, or unverified account.", "Signed in.",
+    "If an account exists, a reset link has been sent.",
+    "Invalid or expired link, or password too short.",
+)
 
 AUTH_CSS = """
 .auth-overlay{position:fixed;inset:0;z-index:1000;background:rgba(17,24,39,.46);display:none;align-items:center;justify-content:center;padding:20px}
@@ -117,12 +131,20 @@ class AccountStore:
         self.path = path
         self._setup()
 
+    @contextmanager
     def _db(self):
         db = sqlite3.connect(self.path, timeout=10)
         db.row_factory = sqlite3.Row
         db.execute("PRAGMA journal_mode=WAL")
         db.execute("PRAGMA foreign_keys=ON")
-        return db
+        try:
+            yield db
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
 
     def _setup(self):
         with self._db() as db:
@@ -324,8 +346,8 @@ def _send_email(to, subject, html_body):
 accounts = AccountStore()
 
 
-def reset_page(token, error=""):
-    return Html(
+def reset_page(token, error="", lang="en"):
+    result = Html(
         Head(Title("Reset password"), Meta(name="viewport", content="width=device-width, initial-scale=1"), Style(AUTH_CSS)),
         Body(Div(
             H2("Choose a new password"), P(error, cls="auth-msg") if error else None,
@@ -335,6 +357,7 @@ def reset_page(token, error=""):
                  method="post", action="/auth/local/reset"),
             cls="auth-dialog"), style="min-height:100vh;display:grid;place-items:center;background:#f8fafc"),
     )
+    return localize_tree(result, lang)
 
 
 def register_fasthtml_routes(rt, *, app_name, session_key=None, success_path="/", on_login=None):
@@ -347,25 +370,25 @@ def register_fasthtml_routes(rt, *, app_name, session_key=None, success_path="/"
             raise RuntimeError("session_key or on_login is required")
 
     @rt("/auth/local/register", methods=["POST"])
-    async def local_register(request):
+    async def local_register(request, sess):
         form = await request.form()
         ok, message = accounts.register(form.get("email"), form.get("password"), form.get("name"))
-        return JSONResponse({"message": message}, status_code=200 if ok else 400)
+        return JSONResponse({"message": t(message, get_lang(sess))}, status_code=200 if ok else 400)
 
     @rt("/auth/local/login", methods=["POST"])
     async def local_login(request, sess):
         form = await request.form()
         account = accounts.login(form.get("email"), form.get("password"))
         if not account:
-            return JSONResponse({"error": "Invalid email, password, or unverified account."}, status_code=401)
+            return JSONResponse({"error": t("Invalid email, password, or unverified account.", get_lang(sess))}, status_code=401)
         establish_session(sess, account)
-        return JSONResponse({"message": "Signed in.", "redirect": success_path})
+        return JSONResponse({"message": t("Signed in.", get_lang(sess)), "redirect": success_path})
 
     @rt("/auth/local/forgot", methods=["POST"])
-    async def local_forgot(request):
+    async def local_forgot(request, sess):
         form = await request.form()
         accounts.forgot(form.get("email"))
-        return JSONResponse({"message": "If an account exists, a reset link has been sent."})
+        return JSONResponse({"message": t("If an account exists, a reset link has been sent.", get_lang(sess))})
 
     @rt("/auth/local/verify/{token}", methods=["GET"])
     def local_verify(token: str, sess):
@@ -376,14 +399,16 @@ def register_fasthtml_routes(rt, *, app_name, session_key=None, success_path="/"
         return RedirectResponse(success_path, status_code=303)
 
     @rt("/auth/local/reset/{token}", methods=["GET"])
-    def local_reset_page(token: str):
-        return reset_page(token)
+    def local_reset_page(token: str, sess):
+        return reset_page(token, lang=get_lang(sess))
 
     @rt("/auth/local/reset", methods=["POST"])
-    async def local_reset_submit(request):
+    async def local_reset_submit(request, sess):
         form = await request.form()
         if not accounts.reset(form.get("token", ""), form.get("password", "")):
-            return reset_page(form.get("token", ""), "Invalid or expired link, or password too short.")
+            lang = get_lang(sess)
+            return reset_page(form.get("token", ""),
+                              t("Invalid or expired link, or password too short.", lang), lang)
         return RedirectResponse("/?auth=password-reset", status_code=303)
 
 

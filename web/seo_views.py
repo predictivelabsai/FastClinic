@@ -9,6 +9,7 @@ from fasthtml.common import (
 )
 
 from web import seo
+from web.i18n import format_number, preserve, t
 
 # Site to audit — overridable via env (matches web_app's SEO_SITE).
 SEO_SITE = os.getenv("FASTCLINIC_SEO_SITE", "https://fastclinic.dev")
@@ -18,7 +19,7 @@ SEO_SITE_LABEL = SEO_SITE.replace("https://", "").replace("http://", "").rstrip(
 # ---------- nav items consumed by layout ----------
 def nav_items() -> list[tuple[str, str, str, str]]:
     """Return (key, label, icon, href) entries for the left-nav drilldowns."""
-    return [(c["slug"], c["title"], c["icon"], f"/seo/{c['slug']}") for c in seo.load_config()]
+    return [(c["slug"], t(c["title"]), c["icon"], f"/seo/{c['slug']}") for c in seo.load_config()]
 
 
 # ---------- index ----------
@@ -30,7 +31,7 @@ def index_view(default_url: str = SEO_SITE):
                   else Span("no data", cls="status-pill pending"))
         data_rows.append(Tr(
             Td(Span(r["icon"], style="margin-right:6px;"),
-               A(r["title"], href=f"/seo/{r['slug']}")),
+               A(t(r["title"]), href=f"/seo/{r['slug']}")),
             Td(status),
             Td(f"{r['rows']:,}" if r["rows"] else "—"),
             Td(r.get("run_date") or "—", style="font-size:12px;"),
@@ -44,7 +45,7 @@ def index_view(default_url: str = SEO_SITE):
     return Div(
         Div(
             Div(H1("SEO Audit"),
-                Div("Editable prompts + LLM-driven audits for " + SEO_SITE_LABEL,
+                Div(t("Editable prompts + LLM-driven audits for {site}", site=SEO_SITE_LABEL),
                     cls="sub")),
             cls="page-title",
         ),
@@ -55,7 +56,8 @@ def index_view(default_url: str = SEO_SITE):
                     Label("Site URL: ", style="font-size:12px; color:var(--text-dim);"),
                     Input(type="url", name="site_url", value=default_url,
                           style="flex:1; padding:6px 10px; border:1px solid var(--border); border-radius:6px;"),
-                    Button("Run all 10", cls="btn primary", type="submit"),
+                    Button(t("Run all {count}", count=len(seo.load_config())),
+                           cls="btn primary", type="submit"),
                     style="display:flex; gap:10px; align-items:center;",
                 ),
                 method="post", action="/seo/run-all",
@@ -89,9 +91,9 @@ def component_view(slug: str):
     meta = seo.load_meta(slug) or {}
 
     meta_bar = Div(
-        Span(f"Rows: {len(rows)}", style="margin-right:16px;") if rows else
+        Span(t("Rows: {count}", count=format_number(len(rows))), style="margin-right:16px;") if rows else
             Span("No data yet.", style="color:var(--text-mute);"),
-        Span(f"Run date: {meta.get('run_date', '—')}", style="color:var(--text-mute);")
+        Span(t("Run date: {date}", date=meta.get("run_date", "—")), style="color:var(--text-mute);")
             if meta.get("run_date") else None,
         style="font-size:12px; margin-bottom:8px;",
     )
@@ -103,7 +105,7 @@ def component_view(slug: str):
         )
     else:
         table = Table(
-            Thead(Tr(*[Th(h.replace("_", " ").title()) for h in header])),
+            Thead(Tr(*[Th(t(h.replace("_", " ").title())) for h in header])),
             Tbody(*[Tr(*[Td(_cell(c)) for c in r]) for r in rows]),
             cls="tbl",
         )
@@ -126,8 +128,8 @@ def component_view(slug: str):
 
     return Div(
         Div(
-            Div(H1(f"{comp['icon']} {comp['title']}"),
-                Div(meta.get("site_url", ""), cls="sub") if meta.get("site_url") else None),
+            Div(H1(f"{comp['icon']} {t(comp['title'])}"),
+                Div(preserve(meta.get("site_url", "")), cls="sub") if meta.get("site_url") else None),
             cls="page-title",
         ),
         Div(Div(H3("Run"), cls="card-header"), actions, cls="card"),
@@ -140,12 +142,12 @@ def _cell(value: str):
     v = (value or "").strip()
     low = v.lower()
     if low in ("yes", "pass", "good", "excellent", "high"):
-        return Span(v, cls="status-pill completed")
+        return Span(t(v), cls="status-pill completed")
     if low in ("no", "fail", "poor", "missing"):
-        return Span(v, cls="status-pill cancelled")
+        return Span(t(v), cls="status-pill cancelled")
     if low in ("partial", "warn", "ok", "fair", "medium", "pending"):
-        return Span(v, cls="status-pill pending")
-    return v
+        return Span(t(v), cls="status-pill pending")
+    return preserve(v)
 
 
 # ---------- prompt editor ----------
@@ -157,7 +159,7 @@ def prompt_editor_view(slug: str, saved: bool = False):
 
     return Div(
         Div(
-            Div(H1(f"Prompt — {comp['title']}"),
+            Div(H1(t("Prompt — {title}", title=t(comp["title"]))),
                 Div(f"prompts/seo/{slug}.md · placeholders: {{site_url}}, {{site_content}}",
                     cls="sub")),
             cls="page-title",
@@ -170,7 +172,7 @@ def prompt_editor_view(slug: str, saved: bool = False):
                   style="padding:4px 10px;font-size:12px;"),
                 cls="card-header"),
             Form(
-                Textarea(prompt_text, name="prompt", rows=24,
+                Textarea(preserve(prompt_text), name="prompt", rows=24,
                          style="width:100%; font-family:ui-monospace,monospace; "
                                "font-size:12px; padding:12px; border:1px solid var(--border); "
                                "border-radius:6px; resize:vertical;"),
@@ -191,7 +193,7 @@ def run_confirm_view(slug: str, site_url: str | None = None):
     comp = seo.component(slug)
     url = site_url or SEO_SITE
     return Div(
-        Div(Div(H1(f"Running — {comp['title']}"),
+        Div(Div(H1(t("Running — {title}", title=t(comp["title"]))),
                 Div("Fetching site + calling LLM…", cls="sub")),
             cls="page-title"),
         Div(

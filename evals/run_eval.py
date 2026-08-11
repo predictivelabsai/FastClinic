@@ -34,9 +34,12 @@ SYNTH = ROOT / "data" / "synthetic_fastclinic.xlsx"
 # importing any web module (web.db reads FASTCLINIC_DB at import time) ----------
 DB_PATH = Path(tempfile.gettempdir()) / "fastclinic_eval.sqlite"
 OPS_DB_PATH = Path(tempfile.gettempdir()) / "fastclinic_eval_ops.sqlite"
+AUTH_DB_PATH = Path(tempfile.gettempdir()) / "fastclinic_eval_accounts.sqlite"
 OPS_DB_PATH.unlink(missing_ok=True)  # start the activation loop from empty
+AUTH_DB_PATH.unlink(missing_ok=True)  # never touch the configured account store
 os.environ["FASTCLINIC_DB"] = str(DB_PATH)
 os.environ["FASTCLINIC_OPS_DB"] = str(OPS_DB_PATH)
+os.environ["FASTSME_AUTH_DB"] = str(AUTH_DB_PATH)
 os.environ["FASTCLINIC_ADMIN_EMAIL"] = "admin@fastclinic.example"
 os.environ["FASTCLINIC_ADMIN_PASSWORD"] = "FastClinic2026$"
 os.environ.setdefault("FASTCLINIC_SECRET", "eval-secret")

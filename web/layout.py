@@ -1,11 +1,15 @@
 """3-pane cockpit layout, CSS, and shared components."""
 from __future__ import annotations
 
+import json
+
 from fasthtml.common import (
     Div, H1, H2, H3, H4, P, Span, A, Button, Form, Input, Label,
     Script, Style, Link, Table, Thead, Tbody, Tr, Th, Td, Title,
-    NotStr, Nav, Aside, Main, Section, Ul, Li, Strong,
+    NotStr, Nav, Aside, Main, Section, Ul, Li, Strong, Select, Option,
 )
+
+from web.i18n import LANGUAGES, current_lang, js_translations, localize_tree, t
 
 
 # ---------- palette ----------
@@ -69,6 +73,8 @@ a:hover { text-decoration: underline; }
   text-transform: uppercase; letter-spacing: 0.5px;
 }
 .topbar .actions { display: flex; gap: 10px; align-items: center; }
+.app-lang-select { width:auto; max-width:150px; margin:0; padding:5px 26px 5px 8px;
+  font-size:12px; border:1px solid var(--border); border-radius:6px; background-color:var(--surface); }
 
 /* left nav */
 .left-pane {
@@ -435,11 +441,24 @@ def _read_version() -> str:
         return ""
 
 
-def topbar(env: str, user_email: str | None):
+def _language_selector(lang: str):
+    return Select(
+        *[Option(f"{info['flag']} {info['native']}", value=code, selected=code == lang)
+          for code, info in LANGUAGES.items()],
+        aria_label=t("Choose language", lang),
+        cls="app-lang-select",
+        onchange=("window.location='/set-lang/'+this.value+'?next='+"
+                  "encodeURIComponent(location.pathname+location.search)"),
+    )
+
+
+def topbar(env: str, user_email: str | None, lang: str | None = None):
+    lang = lang or current_lang()
     ver = _read_version()
     right = Div(
         Button(NotStr("&laquo; Chat"), id="copilot-topbar-toggle", cls="btn copilot-toggle",
                onclick="toggleCopilot()", title="Show / hide the AI assistant") if user_email else None,
+        _language_selector(lang),
         Span(env, cls="env-pill"),
         Span(user_email or "", style="color:var(--text-mute); font-size:12px;") if user_email else None,
         A("Logout", href="/logout", cls="btn") if user_email else None,
@@ -506,7 +525,7 @@ def left_pane(active: str):
     for section_name, items in NAV_ITEMS:
         links = [
             A(
-                Span(icon, cls="nav-icon"), Span(label),
+                Span(icon, cls="nav-icon"), Span(t(label)),
                 href=href,
                 cls=f"nav-item {'active' if active == key else ''}",
             )
@@ -522,7 +541,7 @@ def left_pane(active: str):
                     cls=f"nav-item {'active' if active == key else ''}",
                     style="padding-left:26px;",  # indent drilldowns
                 ))
-        sections.append(Div(H4(section_name), *links, cls="nav-section"))
+        sections.append(Div(H4(t(section_name)), *links, cls="nav-section"))
     return Div(*sections, cls="left-pane")
 
 
@@ -536,14 +555,15 @@ SAMPLE_QUESTIONS = [
 
 def _sample_cards():
     """Free-form example questions below the chat input. Shortcuts live in /help."""
+    translated = [(q, t(q)) for q in SAMPLE_QUESTIONS]
     cards = [
         Button(
-            Span(q, cls="sample-card-text"),
+            Span(label, cls="sample-card-text"),
             cls="sample-card",
-            onclick=f"fillChat({q!r}); sendMessage(null);",
-            title=q,
+            onclick=f"fillChat({label!r}); sendMessage(null);",
+            title=label,
         )
-        for q in SAMPLE_QUESTIONS
+        for _, label in translated
     ]
     return Div(
         Div(Span("Try asking:", cls="sample-cards-label"), id="sample-cards-label"),
@@ -585,7 +605,7 @@ def right_pane_chat(thread_id: str):
                 Div(
                     Input(
                         type="text", name="message", id="chat-input",
-                        placeholder="Ask a question or type /due /lapsed /help …",
+                        placeholder=t("Ask a question or type /due /lapsed /help …"),
                         autocomplete="off",
                     ),
                     Button("Send", type="submit", cls="chat-send-btn", id="chat-send-btn"),
@@ -659,15 +679,16 @@ def right_pane_reference():
 
 
 LAYOUT_JS = """
+function _tr(key){ return (window.FASTCLINIC_I18N||{})[key]||key; }
 function _syncCopilotBtns(){
   var app=document.querySelector('.app'); if(!app) return;
   var ex=app.classList.contains('right-expanded');
   var collapsed=app.classList.contains('right-collapsed');
   var eb=document.getElementById('copilot-exp-btn');
-  if(eb){ eb.innerHTML = ex ? '\\u00BB' : '\\u00AB'; eb.title = ex ? 'Shrink assistant' : 'Expand assistant'; }
+  if(eb){ eb.innerHTML = ex ? '\\u00BB' : '\\u00AB'; eb.title = ex ? _tr('Shrink assistant') : _tr('Expand assistant'); }
   var tb=document.getElementById('copilot-topbar-toggle');
-  if(tb){ tb.innerHTML = collapsed ? '\\u00AB Chat' : 'Chat \\u203A';
-          tb.title = collapsed ? 'Show the AI assistant' : 'Hide the AI assistant'; }
+  if(tb){ tb.innerHTML = collapsed ? '\\u00AB '+_tr('Chat') : _tr('Chat')+' \\u203A';
+          tb.title = collapsed ? _tr('Show the AI assistant') : _tr('Hide the AI assistant'); }
 }
 var _syncExpandBtn=_syncCopilotBtns;  // back-compat alias
 function toggleCopilot(){
@@ -707,13 +728,13 @@ function fillChat(text){
 
 // ---- streaming chat (SSE: token / tool_start / tool_end / done / error) ----
 var TOOL_LABELS = {
-  clinic_kpis: 'Reading clinic KPIs',
-  services_due: "Checking what's due",
-  lapsed_clients: 'Finding lapsed clients',
-  recent_visits: 'Reviewing recent visits',
-  revenue_breakdown: 'Breaking down revenue',
-  find_patients: 'Searching patients',
-  patient_summary: 'Pulling patient history'
+  clinic_kpis: _tr('Reading clinic KPIs'),
+  services_due: _tr("Checking what's due"),
+  lapsed_clients: _tr('Finding lapsed clients'),
+  recent_visits: _tr('Reviewing recent visits'),
+  revenue_breakdown: _tr('Breaking down revenue'),
+  find_patients: _tr('Searching patients'),
+  patient_summary: _tr('Pulling patient history')
 };
 var _streaming=false, _thinker=null;
 function _esc(s){ var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
@@ -729,14 +750,14 @@ function showThinking(){
   var cb=document.getElementById('chat-body'); if(!cb) return;
   _thinker={started:Date.now(), tool:null, el:document.createElement('div')};
   _thinker.el.className='thinking-indicator';
-  _thinker.el.innerHTML='<span class="dot"></span><span class="tlabel">Thinking…</span> <span class="secs">0s</span>';
+  _thinker.el.innerHTML='<span class="dot"></span><span class="tlabel">'+_esc(_tr('Thinking…'))+'</span> <span class="secs">0s</span>';
   cb.appendChild(_thinker.el); _chatScroll();
   _thinker.timer=setInterval(_updThinking, 400);
 }
 function _updThinking(){
   if(!_thinker) return;
   var s=Math.floor((Date.now()-_thinker.started)/1000);
-  var lbl=_thinker.tool ? (TOOL_LABELS[_thinker.tool]||_thinker.tool) : 'Thinking…';
+  var lbl=_thinker.tool ? (TOOL_LABELS[_thinker.tool]||_thinker.tool) : _tr('Thinking…');
   var L=_thinker.el.querySelector('.tlabel'); if(L) L.textContent=lbl;
   var S=_thinker.el.querySelector('.secs'); if(S) S.textContent=s+'s';
 }
@@ -768,7 +789,7 @@ async function streamChat(ev){
     var resp=await fetch('/chat/stream', {method:'POST',
       headers:{'Content-Type':'application/x-www-form-urlencoded'},
       body:new URLSearchParams({message:msg, thread_id:tid})});
-    if(!resp.ok){ hideThinking(); addBubble('assistant','Error: '+resp.status);
+    if(!resp.ok){ hideThinking(); addBubble('assistant',_tr('Error')+': '+resp.status);
       _streaming=false; if(sendBtn) sendBtn.disabled=false; return false; }
     var reader=resp.body.getReader(), dec=new TextDecoder(), buf='';
     while(true){
@@ -793,7 +814,7 @@ async function streamChat(ev){
           setThinkingTool(payload.name); addToolChip(trace, payload.name);
         } else if(type==='error'){
           hideThinking(); if(!bubble) bubble=addBubble('assistant','');
-          bubble.innerHTML=_md('⚠ '+(payload.message||'error'));
+          bubble.innerHTML=_md('⚠ '+(payload.message||_tr('error')));
         } else if(type==='done'){
           hideThinking(); if(bubble) enhanceTables(bubble);
         }
@@ -835,22 +856,22 @@ function enhanceTables(container){
     var toolbar=document.createElement('div');
     toolbar.className='table-toolbar';
     var copyBtn=document.createElement('button');
-    copyBtn.textContent='Copy CSV';
+    copyBtn.textContent=_tr('Copy CSV');
     copyBtn.className='table-action-btn';
     copyBtn.onclick=function(){
       navigator.clipboard.writeText(tableToCSV(table)).then(function(){
-        copyBtn.textContent='Copied!';
-        setTimeout(function(){copyBtn.textContent='Copy CSV';},1500);
+        copyBtn.textContent=_tr('Copied!');
+        setTimeout(function(){copyBtn.textContent=_tr('Copy CSV');},1500);
       });
     };
     var dlBtn=document.createElement('button');
-    dlBtn.textContent='Download CSV';
+    dlBtn.textContent=_tr('Download CSV');
     dlBtn.className='table-action-btn';
     dlBtn.onclick=function(){
       _download(tableToCSV(table),'text/csv','fastclinic-data.csv');
     };
     var xlsBtn=document.createElement('button');
-    xlsBtn.textContent='Download XLS';
+    xlsBtn.textContent=_tr('Download XLS');
     xlsBtn.className='table-action-btn';
     xlsBtn.onclick=function(){
       // Excel opens an HTML table served with the xls MIME type.
@@ -873,13 +894,13 @@ function copyChat(){
   var msgs=cb.querySelectorAll('.msg');
   var lines=[];
   msgs.forEach(function(m){
-    var role=m.classList.contains('user')?'You':m.classList.contains('system')?'System':'Assistant';
+    var role=m.classList.contains('user')?_tr('You'):m.classList.contains('system')?_tr('System'):_tr('Assistant');
     lines.push(role+': '+m.textContent.trim());
   });
   var text=lines.join('\\n\\n');
   navigator.clipboard.writeText(text).then(function(){
     var btn=document.getElementById('copy-chat-btn');
-    if(btn){btn.textContent='Copied!'; setTimeout(function(){btn.textContent='Copy Chat';},1500);}
+    if(btn){btn.textContent=_tr('Copied!'); setTimeout(function(){btn.textContent=_tr('Copy Chat');},1500);}
   });
 }
 // Share chat — copy current URL with thread_id to clipboard
@@ -888,29 +909,43 @@ function shareChat(){
   var url=window.location.origin+'/ai'+(tid?'?thread='+tid.value:'');
   navigator.clipboard.writeText(url).then(function(){
     var btn=document.getElementById('share-chat-btn');
-    if(btn){btn.textContent='Link copied!'; setTimeout(function(){btn.textContent='Share';},1500);}
+    if(btn){btn.textContent=_tr('Link copied!'); setTimeout(function(){btn.textContent=_tr('Share');},1500);}
   });
 }
 // SMS character counter
 function updateCharCount(el){
   var n=el.value.length, parts=Math.ceil(n/160)||1;
-  var lbl=n+' / 160 chars ('+parts+' SMS'+(parts>1?'es':'')+')';
+  var lbl=n+' / 160 '+_tr('characters')+' ('+parts+' SMS)';
   var c=document.getElementById('sms-chars'); if(c) c.textContent=lbl;
 }
 """
 
 
-def page(active: str, env: str, user_email: str, thread_id: str, *content, right_override=None):
+JS_I18N_KEYS = (
+    "Shrink assistant", "Expand assistant", "Chat", "Show the AI assistant",
+    "Hide the AI assistant", "Reading clinic KPIs", "Checking what's due",
+    "Finding lapsed clients", "Reviewing recent visits", "Breaking down revenue",
+    "Searching patients", "Pulling patient history", "Thinking…", "Error", "error",
+    "Copy CSV", "Copied!", "Download CSV", "Download XLS", "You", "System",
+    "Assistant", "Copy Chat", "Link copied!", "Share", "characters",
+)
+
+
+def page(active: str, env: str, user_email: str, thread_id: str, *content,
+         right_override=None, lang: str | None = None):
+    lang = lang or current_lang()
     right = right_override if right_override is not None else right_pane_chat(thread_id)
-    return (
+    result = (
         Title("FastClinic Cockpit"),
         Link(rel="icon", type="image/svg+xml", href="/favicon.svg"),
         # htmx is already provided by fast_app's default headers — don't double-load it.
         Script(src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"),
         Script(src="https://cdn.plot.ly/plotly-2.35.2.min.js"),
         Style(LAYOUT_CSS),
+        Script(NotStr("window.FASTCLINIC_I18N=" +
+                      json.dumps(js_translations(lang, JS_I18N_KEYS), ensure_ascii=False) + ";")),
         Div(
-            topbar(env, user_email),
+            topbar(env, user_email, lang),
             left_pane(active),
             Div(*content, cls="center-pane"),
             right,
@@ -920,6 +955,7 @@ def page(active: str, env: str, user_email: str, thread_id: str, *content, right
         ),
         Script(LAYOUT_JS),
     )
+    return localize_tree(result, lang)
 
 
 def kpi_card(label: str, value, trend: str = "", warn: bool = False, neutral: bool = False):
@@ -927,9 +963,9 @@ def kpi_card(label: str, value, trend: str = "", warn: bool = False, neutral: bo
     if warn: cls += " warn"
     if neutral: cls += " neutral"
     return Div(
-        Div(label, cls="label"),
+        Div(t(label), cls="label"),
         Div(f"{value:,}" if isinstance(value, (int, float)) else str(value), cls="value"),
-        Div(trend, cls="trend") if trend else None,
+        Div(t(trend), cls="trend") if trend else None,
         cls=cls,
     )
 

@@ -9,12 +9,13 @@ import json
 from datetime import date
 from fasthtml.common import (
     Div, H1, H3, P, Span, A, Button, Table, Thead, Tbody, Tr, Th, Td, NotStr,
-    Select, Option, Label, Form, Input,
+    Select, Option, Label, Form, Input, Textarea, Strong,
 )
 
 from web import clinic_queries as q
+from web.i18n import format_currency, format_date, format_number, preserve, t
 from web.layout import kpi_card, plot_div
-from pms.catalog import gender_label
+from pms.catalog import category_label, gender_label
 
 ACCENT = "#1e6fb8"
 ACCENT2 = "#1b2733"
@@ -32,7 +33,7 @@ def _base_layout(title=None, height=280):
         "paper_bgcolor": "white",
         "plot_bgcolor": "white",
         "font": {"family": "ui-sans-serif, system-ui, sans-serif", "size": 12, "color": "#1b2733"},
-        "title": {"text": title, "font": {"size": 14}} if title else None,
+        "title": {"text": t(title), "font": {"size": 14}} if title else None,
         # automargin grows the plot margins to fit tick labels — without it the
         # category labels on horizontal bar charts get clipped.
         "xaxis": {"gridcolor": "#dbe6e6", "automargin": True},
@@ -46,13 +47,13 @@ def _escape(s: str) -> str:
 
 def _eur(v) -> str:
     try:
-        return f"£{float(v):,.0f}"
+        return format_currency(float(v), "GBP")
     except (ValueError, TypeError):
         return "—"
 
 
 def _date(s) -> str:
-    return (s or "")[:10] or "—"
+    return format_date(s)
 
 
 def _age(dob) -> str:
@@ -69,7 +70,7 @@ def _age(dob) -> str:
 
 def _page_title(title: str, sub: str = "", actions=None):
     return Div(
-        Div(H1(title), Div(sub, cls="sub") if sub else None),
+        Div(H1(t(title)), Div(t(sub), cls="sub") if sub else None),
         actions if actions is not None else None,
         cls="page-title",
     )
@@ -78,7 +79,7 @@ def _page_title(title: str, sub: str = "", actions=None):
 def _table(headers, rows):
     """rows: list of lists of cell content (str or FT component)."""
     return Table(
-        Thead(Tr(*[Th(h) for h in headers])),
+        Thead(Tr(*[Th(t(h)) for h in headers])),
         Tbody(*[Tr(*[Td(c) for c in r]) for r in rows]),
         cls="tbl",
     )
@@ -105,29 +106,30 @@ def overview_view():
     visits_chart = plot_div("ov-visits", _plot_spec(
         [{"type": "bar", "x": months, "y": [r["visits"] for r in trend],
           "marker": {"color": ACCENT}}],
-        _base_layout("Visits per month"),
+        _base_layout(t("Visits per month")),
     ))
     rev_chart = plot_div("ov-rev", _plot_spec(
         [{"type": "scatter", "mode": "lines+markers", "x": months,
           "y": [r["revenue"] for r in trend], "line": {"color": WARN, "width": 3}}],
-        _base_layout("Revenue per month (£, incl VAT)"),
+        _base_layout(t("Revenue per month (£, incl VAT)")),
     ))
 
     cat = q.revenue_by_category()
     cat_chart = plot_div("ov-cat", _plot_spec(
         [{"type": "bar", "orientation": "h",
-          "y": [r["category"] for r in cat][::-1],
+          "y": [t(category_label(r["category"])) for r in cat][::-1],
           "x": [r["revenue"] for r in cat][::-1],
           "marker": {"color": ACCENT2}}],
         _base_layout(height=300),
     ))
 
     top = q.top_services(8)
-    top_rows = [[s["name"], Span(s["category"], cls=f"status-pill {s['category']}"),
+    top_rows = [[preserve(s["name"]), Span(t(category_label(s["category"])), cls=f"status-pill {s['category']}"),
                  s["times"], _eur(s["revenue"])] for s in top]
 
     return Div(
-        _page_title("Clinic Overview", f"Activation cockpit · data through {k['reference_date']}"),
+        _page_title("Clinic Overview", t("Activation cockpit · data through {date}",
+                                         date=format_date(k["reference_date"]))),
         cards,
         Div(
             Div(Div(H3("Visits"), cls="card-header"), *visits_chart, cls="card"),
@@ -178,18 +180,18 @@ def patients_view(search: str = ""):
             status = Span("deceased", cls="status-pill cancelled")
         table_rows.append([
             A(f"#{pid}", href=f"/patients/{pid}", style="font-weight:600;"),
-            p["official_name"] or "—",
-            p["city"] or "—",
-            gender_label(p["gender"]),
+            preserve(p["official_name"] or "—"),
+            preserve(p["city"] or "—"),
+            t(gender_label(p["gender"])),
             _age(p["date_of_birth"]),
-            p["nhs_number"] or "—",
+            preserve(p["nhs_number"] or "—"),
             p["visits"] or 0,
             _date(p["last_visit"]),
             _eur(p["lifetime_value"]),
-            p["critical_notes"] or status,
+            preserve(p["critical_notes"]) if p["critical_notes"] else status,
         ])
     return Div(
-        _page_title("Patients", f"{len(rows)} shown", actions=search_form),
+        _page_title("Patients", t("{count} shown", count=format_number(len(rows))), actions=search_form),
         Div(
             _table(["Patient", "Name", "City", "Sex", "Age", "NHS no.", "Visits", "Last visit", "Lifetime £", "Notes"],
                    table_rows) if table_rows else P("No patients match."),
@@ -202,7 +204,7 @@ def patient_detail_view(pid: int):
     p = q.patient_detail(pid)
     if not p:
         return Div(_page_title("Patient not found"),
-                   Div(P(f"No patient #{pid}."), A("← Back to patients", href="/patients"), cls="card"))
+                   Div(P(t("No patient #{id}.", id=pid)), A("← Back to patients", href="/patients"), cls="card"))
     val = q.patient_value(pid)
     cards = Div(
         kpi_card("Lifetime value", _eur(val.get("lifetime_value"))),
@@ -216,14 +218,14 @@ def patient_detail_view(pid: int):
         Div(H3("Profile"), cls="card-header"),
         NotStr(
             "<table class='tbl'>"
-            f"<tr><th>Patient ID</th><td>#{pid}</td></tr>"
-            f"<tr><th>Contact ID</th><td>{p['party_id'] or '—'}</td></tr>"
-            f"<tr><th>Name</th><td>{_escape(p['official_name'] or '—')}</td></tr>"
-            f"<tr><th>Sex</th><td>{gender_label(p['gender'])}</td></tr>"
-            f"<tr><th>City</th><td>{_escape(p['city'] or '—')}</td></tr>"
-            f"<tr><th>Date of birth</th><td>{_date(p['date_of_birth'])} (age {_age(p['date_of_birth'])})</td></tr>"
-            f"<tr><th>NHS number</th><td>{_escape(p['nhs_number'] or '—')}</td></tr>"
-            f"<tr><th>Critical notes</th><td>{_escape(p['critical_notes'] or '—')}</td></tr>"
+            f"<tr><th>{t('Patient ID')}</th><td>#{pid}</td></tr>"
+            f"<tr><th>{t('Contact ID')}</th><td>{p['party_id'] or '—'}</td></tr>"
+            f"<tr><th>{t('Name')}</th><td>{_escape(p['official_name'] or '—')}</td></tr>"
+            f"<tr><th>{t('Sex')}</th><td>{t(gender_label(p['gender']))}</td></tr>"
+            f"<tr><th>{t('City')}</th><td>{_escape(p['city'] or '—')}</td></tr>"
+            f"<tr><th>{t('Date of birth')}</th><td>{_date(p['date_of_birth'])} ({t('age')} {_age(p['date_of_birth'])})</td></tr>"
+            f"<tr><th>{t('NHS number')}</th><td>{_escape(p['nhs_number'] or '—')}</td></tr>"
+            f"<tr><th>{t('Critical notes')}</th><td>{_escape(p['critical_notes'] or '—')}</td></tr>"
             "</table>"
         ),
         cls="card",
@@ -231,16 +233,17 @@ def patient_detail_view(pid: int):
 
     cons = q.patient_consultations(pid)
     cons_rows = [[_date(c["consult_at"]), c["item_count"], _eur(c["revenue_vat"]),
-                  _escape((c["diagnoses"] or "—")[:120])] for c in cons]
+                  preserve((c["diagnoses"] or "—")[:120])] for c in cons]
     history = Div(
-        Div(H3(f"Consultation history ({len(cons)})"), cls="card-header"),
+        Div(H3(t("Consultation history ({count})", count=format_number(len(cons)))), cls="card-header"),
         _table(["Date", "Items", "Revenue", "Diagnoses"], cons_rows) if cons_rows else P("No consultations."),
         cls="card",
     )
 
     items = q.patient_items(pid, 40)
-    item_rows = [[_date(i["item_at"]), Span(i["category"], cls=f"status-pill {i['category']}"),
-                  _escape(i["name"]), _eur(i["line_total_vat"])] for i in items]
+    item_rows = [[_date(i["item_at"]),
+                  Span(t(category_label(i["category"])), cls=f"status-pill {i['category']}"),
+                  preserve(i["name"]), _eur(i["line_total_vat"])] for i in items]
     spend = Div(
         Div(H3("Recent line items"), cls="card-header"),
         _table(["Date", "Category", "Item", "£"], item_rows) if item_rows else P("No items."),
@@ -248,7 +251,7 @@ def patient_detail_view(pid: int):
     )
 
     return Div(
-        _page_title(f"Patient #{pid}", actions=A("← All patients", href="/patients", cls="btn")),
+        _page_title(t("Patient #{id}", id=pid), actions=A("← All patients", href="/patients", cls="btn")),
         cards,
         Div(profile, history, cls="grid-2"),
         spend,
@@ -268,10 +271,10 @@ def clinical_view():
           "marker": {"color": ACCENT}}],
         _base_layout(height=420),
     ))
-    diag_rows = [[d["name"], d["n"], d["patients"]] for d in diag]
+    diag_rows = [[preserve(d["name"]), d["n"], d["patients"]] for d in diag]
 
     clinicians = q.clinician_activity()
-    clinician_rows = [[f"Clinician #{v['clinician_id']}", v["consultations"], v["line_items"], _eur(v["revenue"])]
+    clinician_rows = [[t("Clinician #{id}", id=v["clinician_id"]), v["consultations"], v["line_items"], _eur(v["revenue"])]
                       for v in clinicians]
 
     return Div(
@@ -309,9 +312,9 @@ def revenue_view():
     rev_chart = plot_div("rev-trend", _plot_spec(
         [{"type": "bar", "x": months, "y": [r["revenue"] for r in trend],
           "marker": {"color": ACCENT}}],
-        _base_layout("Monthly revenue (£, incl VAT)"),
+        _base_layout(t("Monthly revenue (£, incl VAT)")),
     ))
-    cat_rows = [[Span(c["category"], cls=f"status-pill {c['category']}"), c["lines"],
+    cat_rows = [[Span(t(category_label(c["category"])), cls=f"status-pill {c['category']}"), c["lines"],
                  _eur(c["revenue"]),
                  f"{(100*(c['revenue'] or 0)/total):.0f}%" if total else "—"] for c in cat]
     return Div(
@@ -338,19 +341,18 @@ def treatments_view():
         kpi_card("Dental revenue", _eur(k.get("dental_rev")), neutral=True),
         cls="kpi-grid", style="grid-template-columns:repeat(4,1fr);",
     )
-    labels = [r["label"] for r in spec]
+    labels = [t(r["label"]) for r in spec]
     spec_chart = plot_div("spec-rev", _plot_spec(
         [{"type": "bar", "orientation": "h",
           "x": [r["revenue"] for r in spec][::-1], "y": labels[::-1],
           "marker": {"color": ACCENT}}],
-        _base_layout("Revenue by specialty (£, incl VAT)", height=360),
+        _base_layout(t("Revenue by specialty (£, incl VAT)"), height=360),
     ))
-    spec_rows = [[r["label"], f"{r['cases']:,}", f"{r['lines']:,}", _eur(r["revenue"]),
+    spec_rows = [[t(r["label"]), format_number(r["cases"]), format_number(r["lines"]), _eur(r["revenue"]),
                   f"{(100*(r['revenue'] or 0)/total):.0f}%" if total else "—"] for r in spec]
-    from pms.catalog import category_label
     top = q.top_procedures(limit=15)
-    top_rows = [[t["name"], t["specialty_label"], category_label(t["category"]),
-                 f"{t['n']:,}", _eur(t["revenue"])] for t in top]
+    top_rows = [[preserve(row["name"]), t(row["specialty_label"]), t(category_label(row["category"])),
+                 format_number(row["n"]), _eur(row["revenue"])] for row in top]
     return Div(
         _page_title("Treatments & Specialties",
                     "Case mix, volume and revenue across the clinic's departments"),
@@ -384,7 +386,7 @@ def data_admin_view():
                 n = query(f"SELECT COUNT(*) AS n FROM {tbl}")[0]["n"]
             except Exception:
                 continue
-            count_rows.append([label, f"{n:,}"])
+            count_rows.append([t(label), format_number(n)])
 
     exports = []
     data_dir = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -395,8 +397,8 @@ def data_admin_view():
         _page_title("Data & Import", "Clinic records built from practice-management exports"),
         Div(
             Div(H3("Clinic data"), cls="card-header"),
-            P(f"Status: {'loaded' if exists else 'not loaded'}"
-              + (f" · reference date {reference_date()}" if exists else "")),
+            P(t("Status: {status}", status=t("loaded" if exists else "not loaded"))
+              + (t(" · reference date {date}", date=format_date(reference_date())) if exists else "")),
             _table(["Records", "Count"], count_rows) if count_rows
             else P("No clinic data loaded yet."),
             cls="card",
@@ -405,7 +407,7 @@ def data_admin_view():
             Div(H3("Refresh from export"), cls="card-header"),
             P("Add a new practice-management export and refresh to update the "
               "clinic records."),
-            P("Detected exports: " + (", ".join(exports) or "none"),
+            P(t("Detected exports: {exports}", exports=", ".join(exports) or t("none")),
               style="color:var(--text-mute);font-size:13px;"),
             cls="card",
         ),
@@ -450,7 +452,7 @@ def ai_full_view(thread_id: str):
                 Input(type="hidden", name="thread_id", value=thread_id, id="thread-id"),
                 Div(
                     Input(type="text", name="message", id="chat-input",
-                          placeholder="Ask a question or type /due /lapsed /help …",
+                          placeholder=t("Ask a question or type /due /lapsed /help …"),
                           autocomplete="off"),
                     Button("Send", type="submit", cls="chat-send-btn", id="chat-send-btn"),
                     cls="chat-input-row",
@@ -460,7 +462,9 @@ def ai_full_view(thread_id: str):
             ),
             Div(
                 Div(Span("Try asking:", style="font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.12em; color:var(--text-mute); margin-right:6px;"),
-                    *[NotStr(f"<button class='sample-card' style='width:auto;display:inline-flex;' onclick=\"fillChat('{q}'); sendMessage(null);\">{_escape(q)}</button>")
+                    *[Button(t(q), cls="sample-card",
+                             style="width:auto;display:inline-flex;",
+                             onclick=f"fillChat({json.dumps(t(q))}); sendMessage(null);")
                       for q in SAMPLE_QUESTIONS],
                     Span(NotStr("&middot;"), style="color:var(--text-mute);margin:0 2px;"),
                     NotStr("<button class='shortcut-hint-btn' onclick=\"fillChat('/help'); sendMessage(null);\">⌘ Shortcuts</button>"),
@@ -514,12 +518,14 @@ def sms_broadcaster_view():
 
     demo_banner = None
     if not providers:
-        demo_banner = NotStr(
-            "<div class='callout'><strong>Demo mode.</strong> Live sending switches on as soon as "
-            "an SMS provider (Twilio or VoodooSMS) is connected — that's a later setup step. "
-            "You can already build and export targeted campaign lists from the Activation tabs"
-            + (f", where <strong>{contactable:,} patients</strong> have a phone number on file." if contactable else ".")
-            + "</div>"
+        demo_banner = Div(
+            Strong(t("Demo mode.")), " ",
+            t("Live sending switches on as soon as an SMS provider (Twilio or VoodooSMS) "
+              "is connected — that's a later setup step. You can already build and export "
+              "targeted campaign lists from the Activation tabs"),
+            (t(", where {count} patients have a phone number on file.",
+               count=format_number(contactable)) if contactable else "."),
+            cls="callout",
         )
 
     return Div(
@@ -532,24 +538,22 @@ def sms_broadcaster_view():
                 Div(Label("Provider"),
                     Select(*provider_opts, name="provider", id="sms-provider", disabled=not providers)),
                 Div(Label("Phone Number"),
-                    NotStr("<input type='tel' name='phone' id='sms-phone' "
-                           "placeholder='+44 7700 900000' required "
-                           "pattern='[+]?[0-9\\s]{7,20}' />")),
+                    Input(type="tel", name="phone", id="sms-phone",
+                          placeholder="+44 7700 900000", required=True,
+                          pattern=r"[+]?[0-9\s]{7,20}")),
                 Div(Label("Message"),
-                    NotStr("<textarea name='message' id='sms-message' "
-                           "placeholder='Hello! This is a reminder that your annual health check is "
-                           "due. To book, call +44 20 7946 0000 — FastClinic' "
-                           "maxlength='1600' oninput='updateCharCount(this)'></textarea>"),
+                    Textarea(name="message", id="sms-message",
+                             placeholder="Hello! This is a reminder that your annual health check is "
+                                         "due. To book, call +44 20 7946 0000 — FastClinic",
+                             maxlength="1600", oninput="updateCharCount(this)"),
                     Div("0 / 160 chars (1 SMS)", id="sms-chars", cls="sms-char-count")),
-                NotStr(
-                    "<button class='sms-send' id='sms-btn' "
-                    + ("disabled title='Connect a provider to enable live sending' " if not providers else "")
-                    + "hx-post='/api/sms/send' hx-target='#sms-result' hx-swap='innerHTML' "
-                    "hx-include='#sms-provider,#sms-phone,#sms-message' "
-                    "hx-indicator='#sms-spinner' hx-disabled-elt='this'>"
-                    "<span id='sms-spinner' class='htmx-indicator spinner'></span>"
-                    + ("Connect a provider to send" if not providers else "Send SMS") + "</button>"
-                ),
+                Button(Span(id="sms-spinner", cls="htmx-indicator spinner"),
+                       "Connect a provider to send" if not providers else "Send SMS",
+                       cls="sms-send", id="sms-btn", disabled=not providers,
+                       title="Connect a provider to enable live sending" if not providers else None,
+                       **{"hx-post": "/api/sms/send", "hx-target": "#sms-result",
+                          "hx-swap": "innerHTML", "hx-include": "#sms-provider,#sms-phone,#sms-message",
+                          "hx-indicator": "#sms-spinner", "hx-disabled-elt": "this"}),
                 cls="sms-form",
             ),
             cls="card",
@@ -557,18 +561,14 @@ def sms_broadcaster_view():
         Div(id="sms-result"),
         Div(
             Div(H3("Provider Configuration"), cls="card-header"),
-            NotStr(
-                "<table class='tbl'>"
-                "<thead><tr><th>Provider</th><th>Env Vars</th><th>Status</th></tr></thead>"
-                "<tbody>"
-                "<tr><td>Twilio</td>"
-                "<td><code>TWILIO_ACCOUNT_SID</code>, <code>TWILIO_AUTH_TOKEN</code>, <code>TWILIO_FROM_NUMBER</code></td>"
-                f"<td><span class='status-pill {'completed' if 'twilio' in providers else 'neutral'}'>{'Configured' if 'twilio' in providers else 'Not configured yet'}</span></td></tr>"
-                "<tr><td>VoodooSMS</td>"
-                "<td><code>VOODOO_SMS_API_KEY</code>, <code>VOODOO_SMS_FROM</code></td>"
-                f"<td><span class='status-pill {'completed' if 'voodoo' in providers else 'neutral'}'>{'Configured' if 'voodoo' in providers else 'Not configured yet'}</span></td></tr>"
-                "</tbody></table>"
-            ),
+            _table(["Provider", "Env Vars", "Status"], [
+                ["Twilio", "TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER",
+                 Span(t("Configured" if "twilio" in providers else "Not configured yet"),
+                      cls=f"status-pill {'completed' if 'twilio' in providers else 'neutral'}")],
+                ["VoodooSMS", "VOODOO_SMS_API_KEY, VOODOO_SMS_FROM",
+                 Span(t("Configured" if "voodoo" in providers else "Not configured yet"),
+                      cls=f"status-pill {'completed' if 'voodoo' in providers else 'neutral'}")],
+            ]),
             cls="card",
         ),
     )
@@ -577,12 +577,12 @@ def sms_broadcaster_view():
 def sms_send_result(ok: bool, provider: str, message_id: str = "", error: str = ""):
     if ok:
         return Div(
-            P(f"SMS sent successfully via {provider}"),
-            P(f"Message ID: {message_id}", style="font-size:12px; color:var(--text-dim);") if message_id else None,
+            P(t("SMS sent successfully via {provider}", provider=provider)),
+            P(t("Message ID: {id}", id=message_id), style="font-size:12px; color:var(--text-dim);") if message_id else None,
             cls="sms-result success",
         )
     return Div(
-        P(f"Failed to send via {provider}"),
+        P(t("Failed to send via {provider}", provider=provider)),
         P(error, style="font-size:12px;") if error else None,
         cls="sms-result error",
     )
@@ -596,10 +596,8 @@ def email_broadcaster_view():
 
     config_hint = ""
     if not configured:
-        config_hint = (
-            "Email not configured. Add Postmark credentials to .env:\n"
-            "  POSTMARK_API_TOKEN, POSTMARK_FROM, POSTMARK_FROM_NAME, EMAIL_REPLY_TO"
-        )
+        config_hint = t("Email not configured. Add Postmark credentials to .env:\n"
+                        "  POSTMARK_API_TOKEN, POSTMARK_FROM, POSTMARK_FROM_NAME, EMAIL_REPLY_TO")
 
     from_line = (f"{cfg['from_name']} <{cfg['from']}>" if cfg["from_name"] else cfg["from"]) or "—"
 
@@ -608,27 +606,25 @@ def email_broadcaster_view():
                     "Build targeted lists in the Activation tabs."),
         Div(
             Div(H3("Send Email"), cls="card-header"),
-            NotStr(f"<pre class='sms-result error' style='white-space:pre-wrap; display:block;'>{config_hint}</pre>") if config_hint else None,
+            Div(config_hint, cls="sms-result error",
+                style="white-space:pre-wrap; display:block;") if config_hint else None,
             Div(
                 Div(Label("From"),
-                    NotStr(f"<input type='text' value='{_escape(from_line)}' disabled />")),
+                    Input(type="text", value=from_line, disabled=True)),
                 Div(Label("To"),
-                    NotStr("<input type='email' name='to' id='email-to' "
-                           "placeholder='patient@example.com' required />")),
+                    Input(type="email", name="to", id="email-to",
+                          placeholder="patient@example.com", required=True)),
                 Div(Label("Subject"),
-                    NotStr("<input type='text' name='subject' id='email-subject' "
-                           "placeholder='You are due for a check-up' maxlength='200' required />")),
+                    Input(type="text", name="subject", id="email-subject",
+                          placeholder="You are due for a check-up", maxlength="200", required=True)),
                 Div(Label("Message"),
-                    NotStr("<textarea name='body' id='email-body' "
-                           "placeholder='Paste a drafted message from the Activation tab, or write your own...'></textarea>")),
-                NotStr(
-                    "<button class='sms-send' id='email-btn' "
-                    f"{'disabled' if not configured else ''} "
-                    "hx-post='/api/email/send' hx-target='#email-result' hx-swap='innerHTML' "
-                    "hx-include='#email-to,#email-subject,#email-body' "
-                    "hx-indicator='#email-spinner' hx-disabled-elt='this'>"
-                    "<span id='email-spinner' class='htmx-indicator spinner'></span>Send Email</button>"
-                ),
+                    Textarea(name="body", id="email-body",
+                             placeholder="Paste a drafted message from the Activation tab, or write your own...")),
+                Button(Span(id="email-spinner", cls="htmx-indicator spinner"), "Send Email",
+                       cls="sms-send", id="email-btn", disabled=not configured,
+                       **{"hx-post": "/api/email/send", "hx-target": "#email-result",
+                          "hx-swap": "innerHTML", "hx-include": "#email-to,#email-subject,#email-body",
+                          "hx-indicator": "#email-spinner", "hx-disabled-elt": "this"}),
                 cls="sms-form",
             ),
             cls="card",
@@ -636,17 +632,12 @@ def email_broadcaster_view():
         Div(id="email-result"),
         Div(
             Div(H3("Provider Configuration"), cls="card-header"),
-            NotStr(
-                "<table class='tbl'>"
-                "<thead><tr><th>Setting</th><th>Value</th></tr></thead><tbody>"
-                f"<tr><td>Provider</td><td>Postmark</td></tr>"
-                f"<tr><td>From</td><td>{_escape(from_line)}</td></tr>"
-                f"<tr><td>Reply-To</td><td>{_escape(cfg['reply_to'] or '—')}</td></tr>"
-                f"<tr><td>Message stream</td><td>{_escape(cfg['stream'])}</td></tr>"
-                f"<tr><td>API token</td><td><span class='status-pill {'completed' if cfg['token_set'] else 'cancelled'}'>"
-                f"{'Configured' if cfg['token_set'] else 'Not set'}</span></td></tr>"
-                "</tbody></table>"
-            ),
+            _table(["Setting", "Value"], [
+                ["Provider", "Postmark"], ["From", from_line],
+                ["Reply-To", cfg["reply_to"] or "—"], ["Message stream", cfg["stream"]],
+                ["API token", Span(t("Configured" if cfg["token_set"] else "Not set"),
+                                   cls=f"status-pill {'completed' if cfg['token_set'] else 'cancelled'}")],
+            ]),
             P("Sending domain fastclinic.example is DKIM + Return-Path verified in Postmark.",
               style="color:var(--text-mute);font-size:12px;"),
             cls="card",
@@ -658,7 +649,7 @@ def email_send_result(ok: bool, message_id: str = "", error: str = ""):
     if ok:
         return Div(
             P("Email sent successfully via Postmark"),
-            P(f"Message ID: {message_id}", style="font-size:12px; color:var(--text-dim);") if message_id else None,
+            P(t("Message ID: {id}", id=message_id), style="font-size:12px; color:var(--text-dim);") if message_id else None,
             cls="sms-result success",
         )
     return Div(

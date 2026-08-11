@@ -97,7 +97,7 @@ def developer_page(lang="en"):
         Body(
             Nav(
                 A(Span(cls="dev-diamond"), Span("FastClinic Developers"), href="/developers", cls="dev-brand"),
-                Div(language_switcher(lang, "/developers"), A(T("Back to product"), href="/", cls="dev-btn"), cls="dev-nav-actions"),
+                Div(A(T("Compliance"), href="/compliance", cls="dev-btn"), language_switcher(lang, "/developers"), A(T("Back to product"), href="/", cls="dev-btn"), cls="dev-nav-actions"),
                 cls="dev-public-nav dev-docs",
             ),
             developer_content(lang),

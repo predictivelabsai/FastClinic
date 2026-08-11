@@ -7,18 +7,19 @@ from fasthtml.common import (
 )
 
 from web.db import db_exists
+from web.i18n import format_currency, format_number, t
 from web.layout import kpi_card
 from web import billing
 
 
 def _money(v) -> str:
-    return f"£{(v or 0):,.2f}"
+    return format_currency(v, "GBP", decimals=2)
 
 
 def _status_pill(s: str):
     tone = {"Paid": "completed", "Partly Paid": "neutral",
             "Unpaid": "warn", "Overdue": "warn"}.get(s, "neutral")
-    return Span(s, cls=f"status-pill {tone}")
+    return Span(t(s), cls=f"status-pill {tone}")
 
 
 def _body():
@@ -56,20 +57,20 @@ def _body():
             _money(i["total"]), _money(i["paid"]),
             _status_pill(i["status"]), pay_btn,
         ])
-    tb_rows = [[r["account"], r["normal"], _money(r["debit"]),
+    tb_rows = [[t(r["account"]), r["normal"], _money(r["debit"]),
                 _money(r["credit"]), _money(r["balance"])] for r in tb]
     balanced = billing.gl_balanced()
 
     return Div(
         cards,
         Div(Div(H3("Raise a fee invoice"), cls="card-header"), raise_form, cls="card"),
-        Div(Div(H3(f"Invoices ({len(invs)})"), cls="card-header"),
-            Table(Thead(Tr(*[Th(h) for h in
+        Div(Div(H3(t("Invoices ({count})", count=format_number(len(invs)))), cls="card-header"),
+            Table(Thead(Tr(*[Th(t(h)) for h in
                     ["Code", "Patient", "For", "Total", "Paid", "Status", ""]])),
                   Tbody(*[Tr(*[Td(c) for c in r]) for r in inv_rows]), cls="tbl")
             if inv_rows else P("No invoices yet — raise one above."), cls="card"),
         Div(Div(H3("Trial balance"), cls="card-header"),
-            Table(Thead(Tr(*[Th(h) for h in ["Account", "Normal", "Debit", "Credit", "Balance"]])),
+            Table(Thead(Tr(*[Th(t(h)) for h in ["Account", "Normal", "Debit", "Credit", "Balance"]])),
                   Tbody(*[Tr(*[Td(c) for c in r]) for r in tb_rows]), cls="tbl"),
             P(("✓ ledger balanced" if balanced else "⚠ ledger NOT balanced"),
               style=f"color:{'var(--accent-green,#1f9d72)' if balanced else 'crimson'};"

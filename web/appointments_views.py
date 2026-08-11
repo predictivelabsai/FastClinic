@@ -9,6 +9,7 @@ from fasthtml.common import (
 )
 
 from web.db import db_exists, reference_date
+from web.i18n import format_date, format_number, preserve, t
 from web.layout import kpi_card
 from web import appointments as appt
 
@@ -23,7 +24,7 @@ def _booking_form(clinician_id: int, day: str, free_slots: list[dict]):
         time_field = Select(*[Option(s["time"], value=s["start_at"]) for s in free_slots],
                             name="start_at", required=True)
     else:
-        time_field = Span("No free slots on this day", style="color:var(--text-mute);")
+        time_field = Span(t("No free slots on this day"), style="color:var(--text-mute);")
     return Form(
         Div(
             Label("Patient ID", Input(name="subject_id", type="number",
@@ -42,7 +43,7 @@ def _booking_form(clinician_id: int, day: str, free_slots: list[dict]):
 def _status_pill(s: str):
     tone = {"scheduled": "neutral", "confirmed": "completed",
             "cancelled": "warn", "completed": "completed"}.get(s, "neutral")
-    return Span(s, cls=f"status-pill {tone}")
+    return Span(t(s), cls=f"status-pill {tone}")
 
 
 def _body(clinician_id: int, day: str):
@@ -66,7 +67,7 @@ def _body(clinician_id: int, day: str):
             sched_rows.append([
                 s["time"],
                 A(f"#{a['subject_id']}", href=f"/patients/{a['subject_id']}"),
-                a.get("reason") or "—",
+                preserve(a.get("reason") or "—"),
                 _status_pill(a["status"]),
                 Div(
                     A("Confirm", href="#", cls="btn",
@@ -82,9 +83,10 @@ def _body(clinician_id: int, day: str):
                                "", "", ""])
 
     up = appt.upcoming(limit=25)
-    up_rows = [[u["start_at"][:16], f"Clinician {u['clinician_id']}",
+    up_rows = [[f"{format_date(u['start_at'])} {u['start_at'][11:16]}",
+                t("Clinician {id}", id=u["clinician_id"]),
                 A(f"#{u['subject_id']}", href=f"/patients/{u['subject_id']}"),
-                u.get("reason") or "—", _status_pill(u["status"])] for u in up]
+                preserve(u.get("reason") or "—"), _status_pill(u["status"])] for u in up]
 
     return Div(
         cards,
@@ -98,14 +100,15 @@ def _body(clinician_id: int, day: str):
             ),
             method="get", action="/appointments",
         ),
-        Div(Div(H3(f"Book — Clinician {clinician_id}, {day}"), cls="card-header"),
+        Div(Div(H3(t("Book — Clinician {id}, {date}", id=clinician_id,
+                       date=format_date(day))), cls="card-header"),
             _booking_form(clinician_id, day, free), cls="card"),
-        Div(Div(H3(f"Schedule — {day}"), cls="card-header"),
-            Table(Thead(Tr(*[Th(h) for h in ["Time", "Patient", "Reason", "Status", ""]])),
+        Div(Div(H3(t("Schedule — {date}", date=format_date(day))), cls="card-header"),
+            Table(Thead(Tr(*[Th(t(h)) for h in ["Time", "Patient", "Reason", "Status", ""]])),
                   Tbody(*[Tr(*[Td(c) for c in r]) for r in sched_rows]), cls="tbl")
             if sched_rows else P("Not a working day."), cls="card"),
-        Div(Div(H3(f"Upcoming ({len(up)})"), cls="card-header"),
-            Table(Thead(Tr(*[Th(h) for h in ["When", "Clinician", "Patient", "Reason", "Status"]])),
+        Div(Div(H3(t("Upcoming ({count})", count=format_number(len(up)))), cls="card-header"),
+            Table(Thead(Tr(*[Th(t(h)) for h in ["When", "Clinician", "Patient", "Reason", "Status"]])),
                   Tbody(*[Tr(*[Td(c) for c in r]) for r in up_rows]), cls="tbl")
             if up_rows else P("No upcoming appointments."), cls="card"),
         id="appt-body",

@@ -122,6 +122,17 @@ python scripts/update_i18n.py --translate
 python -m unittest discover -s tests -v
 ```
 
+## Evaluations
+
+Deterministic application/data gates and live DeepEval LLM-judge benchmarks are
+documented in [`evals/README.md`](evals/README.md). The live suite covers grounded
+agent answers, tool routing, all supported response languages, clinical safety,
+privacy, prompt injection, robustness, streaming, and conversation memory.
+
+Authenticated chat conversations retain a bounded recent history in the
+operations database, scoped by account and thread. Starting a new chat creates a
+fresh thread; retention and context limits are configurable in `.env.sample`.
+
 ## Licence
 
 MIT. See `LICENSE`.
