@@ -98,8 +98,10 @@ cockpit shows a graceful "No data loaded" screen until records exist.
 See **[SKILLS.md](SKILLS.md)** for the full capability reference,
 **[CLAUDE.md](CLAUDE.md)** for the architecture, and
 **[docs/CLINIC_OS_PLAN.md](docs/CLINIC_OS_PLAN.md)** for the Clinic OS design,
-roadmap, and interoperability plan. `docs/` also holds the user guide and the
-FastHTML audit.
+roadmap, and interoperability plan, and
+**[docs/FASTHEALTHDATA_INTEGRATION_PLAN.md](docs/FASTHEALTHDATA_INTEGRATION_PLAN.md)**
+for the governed secondary-use/research integration boundary. `docs/` also holds
+the user guide and the FastHTML audit.
 
 ## Deploy
 
