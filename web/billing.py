@@ -15,6 +15,8 @@ not the read-only PMS replica.
 """
 from __future__ import annotations
 
+from datetime import date, timedelta
+
 from web.activation_loop import _connect, query, _now
 from web.db import query as _main_query
 
@@ -80,13 +82,22 @@ def raise_invoice(consultation_id: int) -> int | None:
             return None
         party_id = _payer_party(c["subject_id"])
         total = round(c["revenue_vat"], 2)
-        n = (conn.execute("SELECT COALESCE(MAX(id), 7000) FROM invoice").fetchone()[0]) + 1
+        created_at = _now()
+        invoice_date = created_at[:10]
+        due_date = (date.fromisoformat(invoice_date) + timedelta(days=30)).isoformat()
+        n = (
+            conn.execute(
+                "SELECT COALESCE(MAX(id), 7000) AS latest_id FROM invoice"
+            ).fetchone()["latest_id"]
+            + 1
+        )
         code = f"INV-{n}"
         cur = conn.execute(
             """INSERT INTO invoice (code, consultation_id, subject_id, party_id,
                    invoice_date, due_date, total, paid, status, created_at)
-               VALUES (?,?,?,?, date('now'), date('now','+30 day'), ?, 0, 'Unpaid', ?)""",
-            (code, consultation_id, c["subject_id"], party_id, total, _now()))
+               VALUES (?,?,?,?,?,?,?, 0, 'Unpaid', ?)""",
+            (code, consultation_id, c["subject_id"], party_id,
+             invoice_date, due_date, total, created_at))
         inv_id = cur.lastrowid
         _insert_gl(
             conn,

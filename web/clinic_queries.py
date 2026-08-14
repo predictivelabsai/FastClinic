@@ -83,7 +83,7 @@ def top_services(limit: int = 12) -> list[dict]:
         SELECT name, category, COUNT(*) AS times, ROUND(SUM(line_total_vat),2) AS revenue
         FROM item
         WHERE category NOT IN ('lab')
-        GROUP BY name ORDER BY revenue DESC LIMIT ?
+        GROUP BY name, category ORDER BY revenue DESC LIMIT ?
         """,
         (limit,),
     )
@@ -198,7 +198,7 @@ def top_procedures(limit: int = 15, specialty: str = "") -> list[dict]:
         f"""SELECT name, specialty, category, COUNT(*) AS n,
                    ROUND(SUM(line_total_vat), 2) AS revenue
             FROM item {where}
-            GROUP BY name ORDER BY revenue DESC LIMIT ?""",
+            GROUP BY name, specialty, category ORDER BY revenue DESC LIMIT ?""",
         tuple(params),
     )
     from pms.catalog import specialty_label

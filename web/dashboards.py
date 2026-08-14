@@ -6,7 +6,8 @@ FastHTML components rendered on the server.
 from __future__ import annotations
 
 import json
-from datetime import date
+from datetime import date, datetime
+from decimal import Decimal
 from fasthtml.common import (
     Div, H1, H3, P, Span, A, Button, Table, Thead, Tbody, Tr, Th, Td, NotStr,
     Select, Option, Label, Form, Input, Textarea, Strong,
@@ -22,8 +23,23 @@ ACCENT2 = "#1b2733"
 WARN = "#1f9d72"
 
 
+def _plot_json_default(value):
+    """Normalise database-native values before embedding Plotly JSON.
+
+    SQLite returns aggregate numbers as ``float`` while PostgreSQL returns
+    ``numeric`` columns as ``Decimal``. PostgreSQL date/time columns can also
+    arrive as native objects. Plotly needs numbers and ISO strings rather than
+    Python-specific representations.
+    """
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
+
+
 def _plot_spec(data, layout) -> str:
-    return json.dumps({"data": data, "layout": layout})
+    return json.dumps({"data": data, "layout": layout}, default=_plot_json_default)
 
 
 def _base_layout(title=None, height=280):
