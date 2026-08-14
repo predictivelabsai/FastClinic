@@ -39,8 +39,10 @@ python -m venv .venv
 .venv/bin/python web_app.py          # http://localhost:5005
 ```
 
-Login: `admin@fastclinic.example` / `FastClinic2026$` (override via
-`FASTCLINIC_ADMIN_*`, see `.env.sample`).
+Sign in at `/login` with Google or a verified local account. For local demos and
+automation, `.env.sample` documents an explicitly enabled bootstrap account;
+it is stored and authenticated through the same account system and is disabled
+by default.
 
 ## Module tour
 

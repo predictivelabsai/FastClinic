@@ -66,7 +66,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')authClose()});
 """
 
 
-def auth_modal(app_name: str, translate=None):
+def auth_modal(app_name: str, translate=None, *, open: bool = False, message: str = ""):
     T = translate or (lambda text: text)
     return Div(
         Div(
@@ -88,7 +88,7 @@ def auth_modal(app_name: str, translate=None):
                     onsubmit="event.preventDefault();authPost('/auth/local/login',this.id,'auth-login-msg')",
                     id="auth-login-form",
                 ),
-                Div(id="auth-login-msg", cls="auth-msg", role="status"),
+                Div(message, id="auth-login-msg", cls="auth-msg", role="status"),
                 id="auth-login",
             ),
             Div(
@@ -119,7 +119,8 @@ def auth_modal(app_name: str, translate=None):
             ),
             cls="auth-dialog", role="dialog", aria_modal="true", aria_label=T(f"{app_name} account"),
         ),
-        id="auth-overlay", cls="auth-overlay", onclick="if(event.target===this)authClose()",
+        id="auth-overlay", cls=f"auth-overlay{' visible' if open else ''}",
+        onclick="if(event.target===this)authClose()",
     )
 
 
@@ -129,6 +130,43 @@ class AccountStore:
         path.parent.mkdir(parents=True, exist_ok=True)
         self.path = path
         self._setup()
+        self._seed_bootstrap_account()
+
+    @staticmethod
+    def _bootstrap_enabled() -> bool:
+        return (os.getenv("FASTCLINIC_BOOTSTRAP_AUTH_ENABLED") or "").strip().lower() in {
+            "1", "true", "yes", "on",
+        }
+
+    def _seed_bootstrap_account(self) -> None:
+        """Create an opt-in local/test account in the normal account store.
+
+        This is deliberately disabled by default and has no built-in
+        credentials. It keeps demos and test automation on the same login path
+        as every other user instead of maintaining a second public admin form.
+        """
+        if not self._bootstrap_enabled():
+            return
+        email = self._email(os.getenv("FASTCLINIC_BOOTSTRAP_EMAIL"))
+        password = os.getenv("FASTCLINIC_BOOTSTRAP_PASSWORD") or ""
+        if not email or len(password) < 10:
+            raise RuntimeError(
+                "Bootstrap auth requires FASTCLINIC_BOOTSTRAP_EMAIL and a "
+                "FASTCLINIC_BOOTSTRAP_PASSWORD of at least 10 characters"
+            )
+        now = int(time.time())
+        password_hash = self._hash_password(password)
+        with self._db() as db:
+            db.execute(
+                """INSERT INTO accounts(
+                     email,name,password_hash,is_verified,google_linked,created_at,updated_at
+                   ) VALUES(?, 'FastClinic Administrator', ?, 1, 0, ?, ?)
+                   ON CONFLICT(email) DO UPDATE SET
+                     password_hash=excluded.password_hash,
+                     is_verified=1,
+                     updated_at=excluded.updated_at""",
+                (email, password_hash, now, now),
+            )
 
     @contextmanager
     def _db(self):

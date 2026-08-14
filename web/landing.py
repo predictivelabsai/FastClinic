@@ -101,7 +101,7 @@ def partner_section(lang="en"):
         id="partners", cls="lp-partners",
     )
 
-def landing_page(lang="en"):
+def landing_page(lang="en", *, auth_open: bool = False, auth_error: str = ""):
     T = lambda text: t(text, lang)
     description = T("Run appointments, patient operations, billing, recall, revenue, and multi-specialty workflows from one clinical cockpit.")
     return Html(
@@ -145,7 +145,7 @@ def landing_page(lang="en"):
                    Div(A(T("Compliance"), href="/compliance", style="color:var(--accent);margin-right:18px"),
                        A(T("View all products"), href="https://fastsme.com/products", style="color:var(--accent)")),
                    cls="lp-footer"),
-            auth_modal("FastClinic", T),
+            auth_modal("FastClinic", T, open=auth_open, message=auth_error),
             Script(AUTH_JS + LANGUAGE_JS),
         ),
         lang=lang,

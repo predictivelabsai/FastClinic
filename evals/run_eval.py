@@ -42,8 +42,9 @@ os.environ["FASTCLINIC_OPS_DB"] = str(OPS_DB_PATH)
 os.environ["FASTSME_AUTH_DB"] = str(AUTH_DB_PATH)
 os.environ["FASTCLINIC_DATABASE_BACKEND"] = "sqlite"
 os.environ["FASTCLINIC_OPS_BACKEND"] = "sqlite"
-os.environ["FASTCLINIC_ADMIN_EMAIL"] = "admin@fastclinic.example"
-os.environ["FASTCLINIC_ADMIN_PASSWORD"] = "FastClinic2026$"
+os.environ["FASTCLINIC_BOOTSTRAP_AUTH_ENABLED"] = "true"
+os.environ["FASTCLINIC_BOOTSTRAP_EMAIL"] = "admin@fastclinic.example"
+os.environ["FASTCLINIC_BOOTSTRAP_PASSWORD"] = "FastClinic2026$"
 os.environ.setdefault("FASTCLINIC_SECRET", "eval-secret")
 
 from pms.importer import build  # noqa: E402
@@ -106,8 +107,13 @@ def run_routes() -> list[dict]:
     from starlette.testclient import TestClient
     import web_app
     client = TestClient(web_app.app)
-    client.post("/login", data={"email": os.environ["FASTCLINIC_ADMIN_EMAIL"],
-                                "password": os.environ["FASTCLINIC_ADMIN_PASSWORD"]})
+    response = client.post(
+        "/auth/local/login",
+        data={"email": os.environ["FASTCLINIC_BOOTSTRAP_EMAIL"],
+              "password": os.environ["FASTCLINIC_BOOTSTRAP_PASSWORD"]},
+    )
+    if response.status_code != 200:
+        raise RuntimeError("Evaluation bootstrap account could not sign in")
     out = []
     for row in _read_csv(GT_DIR / "fastclinic_eval_routes.csv"):
         path, expect, expect_not, cat = (

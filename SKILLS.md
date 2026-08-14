@@ -21,7 +21,7 @@ bash scripts/build_user_guide.sh      # regenerate docs/fastclinic_user_guide.pd
 ```
 
 To refresh screenshots, re-capture the screens via Playwright MCP (login
-`admin@fastclinic.example` / `FastClinic2026$`) into `docs/img/`, then rebuild.
+a verified local account through the canonical `/login` flow) into `docs/img/`, then rebuild.
 
 ## Eval Pack (regression smoke test)
 
@@ -46,7 +46,7 @@ must return 200 with expected content and no error/`No data loaded` markers.
 
 ## Cockpit Dashboard
 
-**Entry:** `.venv/bin/python web_app.py` (port 5005, login: admin@fastclinic.example / FastClinic2026$)
+**Entry:** `.venv/bin/python web_app.py` (port 5005, canonical account/Google login at `/login`)
 
 3-pane FastHTML business dashboard: left nav, centre view, right chat/info panel.
 

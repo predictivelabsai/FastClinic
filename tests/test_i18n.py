@@ -16,6 +16,7 @@ from web.i18n import (
 )
 from web.layout import page
 from web.compliance import compliance_page
+from web.landing import landing_page
 
 
 class LanguageCatalogueTests(unittest.TestCase):
@@ -54,6 +55,14 @@ class LanguageCatalogueTests(unittest.TestCase):
                 self.assertIn('href="/developers"', rendered)
                 self.assertIn('compliance@fastclinic.dev', rendered)
                 self.assertNotIn("Traceback", rendered)
+
+    def test_canonical_login_reuses_the_landing_account_flow(self):
+        rendered = unescape(str(landing_page("en", auth_open=True)))
+        self.assertIn('id="auth-overlay" class="auth-overlay visible"', rendered)
+        self.assertIn('href="/auth/google"', rendered)
+        self.assertIn("/auth/local/login", rendered)
+        self.assertNotIn('action="/login"', rendered)
+        self.assertNotIn("admin@fastclinic.example", rendered)
 
     def test_request_context_is_isolated_and_supports_interpolation(self):
         with using_lang("de"):

@@ -8,7 +8,8 @@ feature page into docs/img/. These feed the landscape user guide
 Usage (server must be running):
     DEMO_BASE_URL=http://localhost:5005 python scripts/capture_guide_screenshots.py
 
-Env: FASTCLINIC_ADMIN_EMAIL / FASTCLINIC_ADMIN_PASSWORD (defaults match the demo).
+Env: FASTCLINIC_LOGIN_EMAIL / FASTCLINIC_LOGIN_PASSWORD for a verified local
+account (or an explicitly enabled bootstrap account).
 """
 from __future__ import annotations
 
@@ -53,8 +54,13 @@ def _settle(page):
 
 
 def capture(base_url: str, out_dir: str, only: set[str] | None = None):
-    email = os.getenv("FASTCLINIC_ADMIN_EMAIL", "admin@fastclinic.example")
-    password = os.getenv("FASTCLINIC_ADMIN_PASSWORD", "FastClinic2026$")
+    email = os.getenv("FASTCLINIC_LOGIN_EMAIL") or os.getenv("FASTCLINIC_BOOTSTRAP_EMAIL")
+    password = os.getenv("FASTCLINIC_LOGIN_PASSWORD") or os.getenv("FASTCLINIC_BOOTSTRAP_PASSWORD")
+    if not email or not password:
+        raise RuntimeError(
+            "Set FASTCLINIC_LOGIN_EMAIL and FASTCLINIC_LOGIN_PASSWORD to a "
+            "verified local account before capturing authenticated screens"
+        )
     os.makedirs(out_dir, exist_ok=True)
     shots = [s for s in SHOTS if not only or s[0] in only]
 
@@ -73,10 +79,10 @@ def capture(base_url: str, out_dir: str, only: set[str] | None = None):
 
         # login
         page.goto(f"{base_url}/login")
-        page.fill('input[name="email"]', email)
-        page.fill('input[name="password"]', password)
-        page.click('button[type="submit"]')
-        page.wait_for_load_state("networkidle")
+        page.fill('#auth-login-form input[name="email"]', email)
+        page.fill('#auth-login-form input[name="password"]', password)
+        page.click('#auth-login-form button[type="submit"]')
+        page.wait_for_url(f"{base_url}/")
 
         for fname, kind, target in shots:
             if kind == "login":

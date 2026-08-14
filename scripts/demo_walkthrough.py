@@ -14,8 +14,8 @@ Usage:
 
 Env:
     DEMO_BASE_URL              base URL (default: https://fastclinic.predictivelabs.ai)
-    FASTCLINIC_ADMIN_EMAIL     login email   (default: admin@fastclinic.example)
-    FASTCLINIC_ADMIN_PASSWORD  login password (default: FastClinic2026$)
+    FASTCLINIC_LOGIN_EMAIL     verified local-account email
+    FASTCLINIC_LOGIN_PASSWORD  verified local-account password
 
 Install deps first (or just run scripts/build_demo_gif.sh):
     pip install playwright pillow && python -m playwright install chromium
@@ -27,8 +27,8 @@ import sys
 from pathlib import Path
 
 BASE_URL = os.getenv("DEMO_BASE_URL", "https://fastclinic.predictivelabs.ai").rstrip("/")
-EMAIL = os.getenv("FASTCLINIC_ADMIN_EMAIL", "admin@fastclinic.example")
-PASSWORD = os.getenv("FASTCLINIC_ADMIN_PASSWORD", "FastClinic2026$")
+EMAIL = os.getenv("FASTCLINIC_LOGIN_EMAIL") or os.getenv("FASTCLINIC_BOOTSTRAP_EMAIL")
+PASSWORD = os.getenv("FASTCLINIC_LOGIN_PASSWORD") or os.getenv("FASTCLINIC_BOOTSTRAP_PASSWORD")
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "docs" / "demo"
@@ -61,11 +61,15 @@ SCREENS = [
 
 
 def login(page) -> None:
+    if not EMAIL or not PASSWORD:
+        raise RuntimeError(
+            "Set FASTCLINIC_LOGIN_EMAIL and FASTCLINIC_LOGIN_PASSWORD to a verified local account"
+        )
     page.goto(f"{BASE_URL}/login", wait_until="networkidle", timeout=45000)
-    page.fill('input[name="email"]', EMAIL)
-    page.fill('input[name="password"]', PASSWORD)
-    page.click('button[type="submit"]')
-    page.wait_for_load_state("networkidle", timeout=45000)
+    page.fill('#auth-login-form input[name="email"]', EMAIL)
+    page.fill('#auth-login-form input[name="password"]', PASSWORD)
+    page.click('#auth-login-form button[type="submit"]')
+    page.wait_for_url(f"{BASE_URL}/", timeout=45000)
 
 
 def capture(page) -> list[tuple[str, Path]]:
@@ -127,7 +131,7 @@ def main() -> int:
     except ImportError:
         sys.exit("Playwright not installed. Run scripts/build_demo_gif.sh or:\n"
                  "  pip install playwright pillow && python -m playwright install chromium")
-    print(f"Walkthrough of {BASE_URL} as {EMAIL}")
+    print(f"Walkthrough of {BASE_URL} using the canonical account login")
     with sync_playwright() as p:
         browser = p.chromium.launch()
         ctx = browser.new_context(viewport=VIEWPORT, device_scale_factor=1)

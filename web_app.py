@@ -5,7 +5,7 @@ FastHTML dashboards + customer-activation engines + AI chat, branded for FastCli
 Run:
     python web_app.py            # http://localhost:5005
 
-Login: admin@fastclinic.example / FastClinic2026$  (override via env, see .env.sample)
+Sign in through the canonical account/Google flow at /login.
 """
 from __future__ import annotations
 
@@ -20,8 +20,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fasthtml.common import (
-    fast_app, serve, Div, H1, P, A, Form, Input, Button,
-    Titled, NotStr, RedirectResponse, Script, Style, Link, Title,
+    fast_app, serve, Div, A, NotStr, RedirectResponse, Script, Style,
 )
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response, StreamingResponse
@@ -55,8 +54,6 @@ logger = logging.getLogger("fastclinic")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
 
 # --- config ---
-VALID_EMAIL = os.getenv("FASTCLINIC_ADMIN_EMAIL", os.getenv("MMG_ADMIN_EMAIL", "admin@fastclinic.example"))
-VALID_PASSWORD = os.getenv("FASTCLINIC_ADMIN_PASSWORD", os.getenv("MMG_ADMIN_PASSWORD", "FastClinic2026$"))
 CLINIC_ENV = os.getenv("FASTCLINIC_ENV_LABEL", "FastClinic")
 SECRET = os.getenv("FASTCLINIC_SECRET", os.getenv("MMG_COCKPIT_SECRET", secrets.token_hex(32)))
 PORT = int(os.getenv("FASTCLINIC_PORT", os.getenv("MMG_COCKPIT_PORT", "5005")))
@@ -149,45 +146,14 @@ def _localized(session, value):
         return localize_tree(built, lang)
 
 
-def _login_card(error: str = "", email: str = "", lang: str = "en"):
-    result = (
-        Title("FastClinic Cockpit"),
-        Link(rel="icon", type="image/svg+xml", href=FAVICON_HREF),
-        Style(LAYOUT_CSS),
-        Div(
-            Div(
-                H1(NotStr("<span style='color:#1e6fb8'>FastClinic</span>")),
-                P("GP clinic activation cockpit. Sign in to continue."),
-                Div(error, cls="error") if error else None,
-                Form(
-                    Input(type="email", name="email", value=email, placeholder="admin@fastclinic.example", required=True),
-                    Input(type="password", name="password", placeholder="Password", required=True),
-                    Button("Sign in", cls="btn primary", type="submit"),
-                    method="post", action="/login",
-                ),
-                cls="login-card",
-            ),
-            cls="login-wrap",
-        ),
-    )
-    return localize_tree(result, lang)
-
-
 # --- auth ---
 @rt("/login")
-def get(session):
+def get(session, request, error: str = ""):
     if _auth(session):
         return RedirectResponse("/", status_code=303)
-    return _login_card(lang=get_lang(session))
-
-
-@rt("/login")
-def post(session, email: str = "", password: str = ""):
-    if email.strip() == VALID_EMAIL and password == VALID_PASSWORD:
-        session["user_email"] = email.strip()
-        return RedirectResponse("/", status_code=303)
-    return _login_card(error=t("Invalid credentials", get_lang(session)), email=email,
-                       lang=get_lang(session))
+    lang = get_lang(session, request)
+    message = t("Invalid credentials", lang) if error else ""
+    return landing_page(lang, auth_open=True, auth_error=message)
 
 
 

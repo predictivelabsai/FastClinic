@@ -34,8 +34,7 @@ python -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python -m pms.synth             # write data/synthetic_fastclinic.xlsx (default 1000 patients)
 .venv/bin/python -m pms.importer          # build fastclinic.sqlite from newest data/*.xlsx
 .venv/bin/python -m pms.importer data/synthetic_fastclinic.xlsx fastclinic.sqlite   # explicit
-.venv/bin/python web_app.py               # cockpit on :5005
-# Login: admin@fastclinic.example / FastClinic2026$  (override via FASTCLINIC_ADMIN_* env)
+.venv/bin/python web_app.py               # cockpit on :5005; canonical login at /login
 
 .venv/bin/python -m evals.run_eval        # regression smoke test (see Testing)
 .venv/bin/python -m evals.run_eval --quiet
@@ -92,7 +91,7 @@ fields only (gender, date of birth, NHS number, blood group, insurance).
 
 ### Cockpit (`web_app.py`, `web/`)
 
-- **`web_app.py`** — routes + session auth (single shared admin login via env).
+- **`web_app.py`** — routes + canonical account/Google session authentication.
   `_ensure_db()` auto-builds the DB on boot if missing and a `data/*.xlsx` is
   present. Most route handlers are named `get`/`post` — FastHTML registers them
   by the `@rt("/path")` decorator, not the function name.
@@ -149,7 +148,8 @@ fields only (gender, date of birth, NHS number, blood group, insurance).
 ## Environment
 
 All config in `.env` (see `.env.sample`). Core:
-`FASTCLINIC_ADMIN_EMAIL/PASSWORD`, `FASTCLINIC_SECRET`, `FASTCLINIC_PORT`,
+`FASTCLINIC_SECRET`, `FASTCLINIC_PORT`, optional local-only
+`FASTCLINIC_BOOTSTRAP_AUTH_ENABLED/EMAIL/PASSWORD`,
 `FASTCLINIC_DATABASE_BACKEND`, `FASTCLINIC_OPS_BACKEND`, `FASTCLINIC_DB`, `DATABASE_URL_PROD`,
 `FASTCLINIC_DB_SCHEMA`, `FASTCLINIC_TODAY`, `FASTCLINIC_SEO_SITE`. AI assistant:
 `MODEL_PROVIDER` (xai|openai|anthropic|google), `MODEL_NAME`, and the matching
