@@ -10,11 +10,13 @@ from web.adapters.base import AdapterNotAvailable, CountryAdapter
 _ADAPTERS = {
     "GB": "web.adapters.nhs",
     "UK": "web.adapters.nhs",
+    "LT": "web.adapters.lt",
+    "EE": "web.adapters.ee",
 }
 
 
 def available_countries() -> list[str]:
-    return ["GB"]
+    return ["EE", "GB", "LT"]
 
 
 def get_adapter(country_code: str) -> CountryAdapter:

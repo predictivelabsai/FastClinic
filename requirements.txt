@@ -9,6 +9,7 @@ PyYAML
 markdownify
 python-dateutil
 psycopg2-binary>=2.9,<3
+cryptography>=44,<46
 openai
 # AI assistant — LangGraph agent + configurable provider.
 # xAI (Grok) and OpenAI both run through langchain-openai (xAI is API-compatible).

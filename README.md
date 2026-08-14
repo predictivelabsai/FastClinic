@@ -137,9 +137,17 @@ Swagger UI at `/api/docs`, ReDoc at `/api/redoc`, and OpenAPI JSON at
 `/api/openapi.json`. It covers clinical records, subject/party relationships,
 appointments and availability, activation and consent, immutable communication
 logs, balanced billing and payments, analytics, the API audit trail, and a
-FHIR R4 read surface (`/api/v1/fhir/*`) with an NHS adapter
-(`/api/v1/adapters/GB/*`) that applies UK Core profiles and a GP Connect STU3
-translation. Live PDS / GP Connect calls stay gated until onboarding.
+FHIR R4 read surface (`/api/v1/fhir/*`) with national adapters for the UK
+(`/api/v1/adapters/GB/*`), Lithuania (`/api/v1/adapters/LT/*`), and Estonia
+(`/api/v1/adapters/EE/*`). The Lithuanian sandbox projects ESPBI clinical
+documents, IPR appointments, and eLab FHIR R5 transactions. The Estonian
+sandbox projects TIS CDA documents, TEHIK MPI FHIR R5 resources, and X-Road
+request context. All national live transports stay fail-closed until the
+deploying clinic completes the relevant institutional onboarding and acceptance
+tests. See the consolidated
+[national health registry adapter guide](docs/national_health_registry_adapters.md),
+plus the detailed [Lithuania](docs/adapters/LITHUANIA_ESPBI.md) and
+[Estonia](docs/adapters/ESTONIA_TIS.md) notes.
 
 Public reads operate only over the synthetic demo surface. Operational reads and
 all mutations require `Authorization: Bearer <FASTSME_API_TOKEN>` and remain

@@ -140,7 +140,7 @@ API_GROUPS = (
     ),
     (
         "FHIR R4 & country adapters",
-        "Clinic OS Phase 5a/5b: vanilla R4 projection, UK Core profiles, GP Connect STU3 translation.",
+        "Vanilla R4 plus fail-closed UK, Lithuanian and Estonian national adapter sandboxes.",
         (
             ("GET", "/api/v1/fhir/metadata", "CapabilityStatement", "Public read"),
             ("GET", "/api/v1/fhir/{type}/{id}", "Single resource read", "Public clinical · token for ops"),
@@ -148,6 +148,8 @@ API_GROUPS = (
             ("POST", "/api/v1/fhir/$validate", "Structural validation", "Public"),
             ("POST", "/api/v1/fhir/$import", "Map a resource onto the core", "Token required"),
             ("GET POST", "/api/v1/adapters/GB/*", "NHS Number, UK Core export, STU3, reminders", "Public map · token for ops"),
+            ("GET POST", "/api/v1/adapters/LT/*", "ESPBI, IPR and eLab R5 synthetic sandbox", "Public fixture · token submit"),
+            ("GET POST", "/api/v1/adapters/EE/*", "TIS CDA, MPI R5 and X-Road synthetic sandbox", "Public fixture · token submit"),
         ),
     ),
 )
@@ -915,6 +917,16 @@ class NhsIdentifierIn(StrictModel):
     value: str = Field(min_length=1, max_length=32)
 
 
+class NationalIdentifierIn(StrictModel):
+    value: str = Field(min_length=1, max_length=64)
+
+
+class NationalSandboxPayload(StrictModel):
+    surface: str = Field(min_length=2, max_length=20)
+    document_type: str | None = Field(default=None, max_length=80)
+    payload: dict[str, Any] | None = None
+
+
 def _token_ok(credentials: HTTPAuthorizationCredentials | None) -> bool:
     configured = os.getenv("FASTSME_API_TOKEN", "")
     if not configured or not credentials:
@@ -1017,3 +1029,165 @@ def nhs_push_reminder(reminder_id: int):
     except AdapterNotAvailable as exc:
         _problem(404, "not_found", str(exc))
 
+
+# ------------------------------------- Lithuania adapter (ESPBI/IPR/eLab) --
+@api.get("/v1/adapters/LT/status", tags=["Lithuania adapter"])
+def lt_status():
+    from web.adapters.registry import get_adapter
+    return get_adapter("LT").status()
+
+
+@api.post("/v1/adapters/LT/verify-identifier", tags=["Lithuania adapter"])
+def lt_verify_identifier(payload: NationalIdentifierIn):
+    from web.adapters.registry import get_adapter
+    return get_adapter("LT").verify_identifier(payload.value)
+
+
+@api.get("/v1/adapters/LT/fixtures/outpatient", tags=["Lithuania adapter"])
+def lt_fixture(
+    surface: str = Query(default="espbi", pattern="^(espbi|elab|ipr)$"),
+    document_type: str = Query(default="E025", max_length=20),
+):
+    from web.adapters.registry import get_adapter
+    try:
+        return get_adapter("LT").fixture(surface=surface, document_type=document_type)
+    except ValueError as exc:
+        _problem(422, "invalid_sandbox_request", str(exc))
+
+
+@api.post("/v1/adapters/LT/validate", tags=["Lithuania adapter"])
+def lt_validate(payload: NationalSandboxPayload):
+    from web.adapters.registry import get_adapter
+    try:
+        return get_adapter("LT").validate(surface=payload.surface, payload=payload.payload or {})
+    except ValueError as exc:
+        _problem(422, "invalid_sandbox_request", str(exc))
+
+
+@api.post(
+    "/v1/adapters/LT/sandbox/submissions", status_code=201,
+    dependencies=[Depends(require_write_token)], tags=["Lithuania adapter"],
+)
+def lt_sandbox_submit(
+    payload: NationalSandboxPayload,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=8, max_length=200),
+):
+    from web.adapters.exchange import IdempotencyConflict
+    from web.adapters.registry import get_adapter
+    try:
+        result = get_adapter("LT").sandbox_submit(
+            surface=payload.surface, document_type=payload.document_type or "E025",
+            payload=payload.payload, idempotency_key=idempotency_key,
+        )
+    except IdempotencyConflict as exc:
+        _problem(409, "idempotency_conflict", str(exc))
+    except ValueError as exc:
+        _problem(422, "sandbox_validation_failed", str(exc))
+    _audit("sandbox_submit", "adapter_lt", result["id"], None, {
+        "surface": result["surface"], "document_type": result["document_type"],
+        "correlation_id": result["correlation_id"],
+    })
+    return result
+
+
+@api.get(
+    "/v1/adapters/LT/sandbox/submissions",
+    dependencies=[Depends(require_write_token)], tags=["Lithuania adapter"],
+)
+def lt_sandbox_submissions(limit: int = Query(default=50, ge=1, le=200)):
+    from web.adapters import exchange
+    rows = exchange.list_exchanges(country_code="LT", limit=limit)
+    return {"data": rows, "meta": {"total": len(rows), "sandbox": True}}
+
+
+@api.post(
+    "/v1/adapters/LT/sandbox/submissions/{exchange_id}/reconcile",
+    dependencies=[Depends(require_write_token)], tags=["Lithuania adapter"],
+)
+def lt_sandbox_reconcile(exchange_id: str):
+    from web.adapters import exchange
+    result = exchange.reconcile(exchange_id, country_code="LT")
+    if not result:
+        _problem(404, "not_found", "Lithuanian sandbox exchange was not found")
+    return result
+
+
+# ------------------------------------------ Estonia adapter (TIS/TEHIK) --
+@api.get("/v1/adapters/EE/status", tags=["Estonia adapter"])
+def ee_status():
+    from web.adapters.registry import get_adapter
+    return get_adapter("EE").status()
+
+
+@api.post("/v1/adapters/EE/verify-identifier", tags=["Estonia adapter"])
+def ee_verify_identifier(payload: NationalIdentifierIn):
+    from web.adapters.registry import get_adapter
+    return get_adapter("EE").verify_identifier(payload.value)
+
+
+@api.get("/v1/adapters/EE/fixtures/outpatient", tags=["Estonia adapter"])
+def ee_fixture(surface: str = Query(default="tis", pattern="^(tis|mpi)$")):
+    from web.adapters.registry import get_adapter
+    return get_adapter("EE").fixture(surface=surface)
+
+
+@api.get("/v1/adapters/EE/xroad-preview", tags=["Estonia adapter"])
+def ee_xroad_preview():
+    from web.adapters.registry import get_adapter
+    return get_adapter("EE").xroad_preview()
+
+
+@api.post("/v1/adapters/EE/validate", tags=["Estonia adapter"])
+def ee_validate(payload: NationalSandboxPayload):
+    from web.adapters.registry import get_adapter
+    try:
+        return get_adapter("EE").validate(surface=payload.surface, payload=payload.payload or {})
+    except ValueError as exc:
+        _problem(422, "invalid_sandbox_request", str(exc))
+
+
+@api.post(
+    "/v1/adapters/EE/sandbox/submissions", status_code=201,
+    dependencies=[Depends(require_write_token)], tags=["Estonia adapter"],
+)
+def ee_sandbox_submit(
+    payload: NationalSandboxPayload,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=8, max_length=200),
+):
+    from web.adapters.exchange import IdempotencyConflict
+    from web.adapters.registry import get_adapter
+    try:
+        result = get_adapter("EE").sandbox_submit(
+            surface=payload.surface, payload=payload.payload, idempotency_key=idempotency_key,
+        )
+    except IdempotencyConflict as exc:
+        _problem(409, "idempotency_conflict", str(exc))
+    except ValueError as exc:
+        _problem(422, "sandbox_validation_failed", str(exc))
+    _audit("sandbox_submit", "adapter_ee", result["id"], None, {
+        "surface": result["surface"], "document_type": result["document_type"],
+        "correlation_id": result["correlation_id"],
+    })
+    return result
+
+
+@api.get(
+    "/v1/adapters/EE/sandbox/submissions",
+    dependencies=[Depends(require_write_token)], tags=["Estonia adapter"],
+)
+def ee_sandbox_submissions(limit: int = Query(default=50, ge=1, le=200)):
+    from web.adapters import exchange
+    rows = exchange.list_exchanges(country_code="EE", limit=limit)
+    return {"data": rows, "meta": {"total": len(rows), "sandbox": True}}
+
+
+@api.post(
+    "/v1/adapters/EE/sandbox/submissions/{exchange_id}/reconcile",
+    dependencies=[Depends(require_write_token)], tags=["Estonia adapter"],
+)
+def ee_sandbox_reconcile(exchange_id: str):
+    from web.adapters import exchange
+    result = exchange.reconcile(exchange_id, country_code="EE")
+    if not result:
+        _problem(404, "not_found", "Estonian sandbox exchange was not found")
+    return result

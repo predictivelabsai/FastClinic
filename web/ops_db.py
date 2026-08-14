@@ -178,6 +178,15 @@ _TABLES = (
     """CREATE TABLE IF NOT EXISTS auth_limits (subject_hash TEXT NOT NULL, action TEXT NOT NULL,
        window_start BIGINT NOT NULL, attempts INTEGER NOT NULL,
        PRIMARY KEY(subject_hash,action))""",
+    """CREATE TABLE IF NOT EXISTS national_exchange (id TEXT PRIMARY KEY,
+       country_code TEXT NOT NULL, idempotency_key TEXT NOT NULL,
+       surface TEXT NOT NULL,
+       document_type TEXT NOT NULL, subject_ref TEXT NOT NULL,
+       practitioner_role_ref TEXT NOT NULL, correlation_id TEXT NOT NULL UNIQUE,
+       status TEXT NOT NULL, payload_hash TEXT NOT NULL, request_json TEXT NOT NULL,
+       response_json TEXT, error TEXT, attempt_count INTEGER NOT NULL DEFAULT 1,
+       created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+       UNIQUE(country_code,idempotency_key))""",
 )
 
 _INDEXES = (
@@ -190,6 +199,8 @@ _INDEXES = (
     "CREATE INDEX IF NOT EXISTS idx_chat_thread ON chat_message(owner_hash,thread_id,id)",
     "CREATE INDEX IF NOT EXISTS idx_chat_created ON chat_message(created_at)",
     "CREATE INDEX IF NOT EXISTS auth_tokens_account_purpose ON auth_tokens(account_id,purpose)",
+    "CREATE INDEX IF NOT EXISTS idx_national_exchange_status ON national_exchange(country_code,status,created_at)",
+    "CREATE INDEX IF NOT EXISTS idx_national_exchange_subject ON national_exchange(country_code,subject_ref,created_at)",
 )
 
 

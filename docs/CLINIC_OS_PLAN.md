@@ -477,6 +477,22 @@ materialises vanilla R4 at the boundary. `GET /api/v1/fhir/metadata`,
 §10 Q1 is answered by NHS England onboarding. The mapping layer does not
 depend on that answer.
 
+### Phase 5c — Lithuania and Estonia sandboxes ✅ DONE (2026-08-14); live access gated
+
+The country port now also registers `LT` and `EE`. Lithuania has separate
+offline projections for ESPBI clinical documents, IPR appointments, and the
+FHIR R5 eLab E200 transaction shape. Estonia has separate TIS CDA, MPI FHIR R5,
+and X-Road request-context projections. Both use synthetic identities, a shared
+idempotent `national_exchange` ledger, integrity/audit metadata and explicit
+reconciliation. Neither calls a national test or production environment.
+
+Live transports fail closed even if environment variables are present. Enabling
+them requires clinic-specific onboarding, current national specifications,
+official test identities, conformance/acceptance evidence, professional access
+context, and the required signing or X-Road infrastructure. Implementation and
+limits are recorded in `docs/adapters/LITHUANIA_ESPBI.md` and
+`docs/adapters/ESTONIA_TIS.md`.
+
 **Decided 2026-07-17:** the target is an **open-source human GP clinic**. Provet
 is a **reference model only — no Provet adapter will be built.** Everything
 Provet contributes to this plan is conceptual: the corrected cardinality (§2),

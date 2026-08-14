@@ -1,5 +1,18 @@
 # FastClinic change log
 
+## 0.3.0 — 2026-08-14
+
+- Added a Lithuanian E. sveikata adapter sandbox for ESPBI E025/E027/E063
+  projections, IPR appointments, and eLab FHIR R5 E200 transaction Bundles.
+- Added an Estonian TEHIK/TIS adapter sandbox for CDA-shaped outpatient
+  documents, MPI FHIR R5 previews, and X-Road request context.
+- Added a PostgreSQL/SQLite-portable, idempotent national exchange ledger with
+  mock receipts, reconciliation, payload hashes, actor context, and API audit.
+- Added privacy-safe national identifier checks, fail-closed live configuration,
+  synthetic fixtures, public validation previews, and token-gated submissions.
+- Documented institutional onboarding, access/licensing boundaries, production
+  limitations, deployment controls, and the required official validation work.
+
 ## 0.2.1 — 2026-08-14
 
 Release checkpoint for the FHIR patient-record integration.
@@ -19,4 +32,3 @@ Release checkpoint for the FHIR patient-record integration.
 - Added PostgreSQL-backed operational storage and migration tooling for accounts, chat, appointments, reminders, billing, payments, and audit state.
 - Added the NHS adapter boundary with UK Core R4 and GP Connect STU3 translation support.
 - Added the configurable MedBackend integration plan and environment contract; live synchronization remains disabled pending OAuth authorization and final write-schema validation.
-
