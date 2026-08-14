@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import asyncio
+import re
 import secrets
 import uuid
 import logging
@@ -222,6 +223,26 @@ def get(session):
     with using_lang(lang):
         return page("my-records", CLINIC_ENV, email, _thread(session),
                     fhir_portal.records_view(email), lang=lang)
+
+
+@rt("/my-records/{bundle_id}/download")
+def get(session, bundle_id: str):
+    email = _auth(session)
+    if not email:
+        return RedirectResponse("/login", status_code=303)
+    content = fhir_portal.xml_for_email(email, bundle_id)
+    if content is None:
+        return Response("Not found", status_code=404)
+    filename = re.sub(r"[^A-Za-z0-9._-]", "-", bundle_id) + ".fhir.xml"
+    return Response(
+        content,
+        media_type=fhir_portal.FHIR_XML_MEDIA_TYPE,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @rt("/my-records/{bundle_id}")

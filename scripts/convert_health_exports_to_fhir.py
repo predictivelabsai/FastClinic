@@ -81,7 +81,8 @@ def reference(parent, name: str, target: str):
 def entry(bundle, full_url: str, resource):
     item = node(bundle, "entry")
     node(item, "fullUrl", full_url)
-    item.append(resource)
+    wrapper = node(item, "resource")
+    wrapper.append(resource)
 
 
 def resource(name: str, resource_id: str):
@@ -148,11 +149,18 @@ def fhir_json(element, resource_path: str = ""):
         if child.tag.startswith(f"{{{XHTML}}}"):
             result[child_name] = fhir_json(child)
             continue
-        if name == "entry" and child_name in RESOURCE_TYPES:
-            result["resource"] = fhir_json(child, child_name)
-            continue
+        if name == "resource" and child_name in RESOURCE_TYPES:
+            return fhir_json(child, child_name)
         child_path = f"{current_path}.{child_name}" if current_path else child_name
         value = fhir_json(child, child_path)
+        if name == "entry" and child_name in RESOURCE_TYPES:
+            # Backward compatibility for XML created before entry.resource was
+            # corrected to match the normative FHIR R4 representation.
+            result["resource"] = fhir_json(child, child_name)
+            continue
+        if name == "entry" and child_name == "resource" and isinstance(value, dict):
+            result["resource"] = value
+            continue
         if child_path in REPEATING_PATHS:
             result.setdefault(child_name, []).append(value)
         elif child_name in result:

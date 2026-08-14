@@ -48,6 +48,16 @@ def _xml_value(element: ET.Element) -> Any:
         return element.attrib["value"]
     if element.tag.startswith("{http://www.w3.org/1999/xhtml}"):
         return ET.tostring(element, encoding="unicode")
+    # Normative FHIR XML wraps embedded resources (for example Bundle.entry
+    # resources) in a <resource> element.  Older FastClinic exports placed the
+    # resource directly under <entry>; retain support for those imports while
+    # accepting the standards-shaped wrapper.
+    if _local(element.tag) in {"resource", "contained", "outcome"}:
+        children = list(element)
+        if len(children) == 1:
+            embedded = _xml_value(children[0])
+            if isinstance(embedded, dict) and embedded.get("resourceType"):
+                return embedded
     result: dict[str, Any] = {}
     if _local(element.tag) in {
         "Bundle", "Composition", "Patient", "Encounter", "DocumentReference",

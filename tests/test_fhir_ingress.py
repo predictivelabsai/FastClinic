@@ -1,8 +1,9 @@
 import json
+from xml.etree import ElementTree as ET
 
 import pytest
 
-from web.fhir.ingress import FHIRIngressError, discover_inputs, normalize_bundle, read_bundles
+from web.fhir.ingress import FHIRIngressError, _xml_value, discover_inputs, normalize_bundle, read_bundles
 
 
 def bundle(bundle_id="bundle-1"):
@@ -47,3 +48,20 @@ def test_directory_prefers_json_over_duplicate_xml(tmp_path):
     assert [path.name for path in discover_inputs(tmp_path)] == ["record.fhir.json"]
     assert len(read_bundles(tmp_path)) == 1
 
+
+def test_ingress_accepts_normative_bundle_entry_resource_wrapper():
+    root = ET.fromstring("""<Bundle xmlns="http://hl7.org/fhir">
+      <id value="bundle-1"/><type value="document"/>
+      <entry><fullUrl value="urn:uuid:composition-1"/><resource>
+        <Composition><id value="composition-1"/><status value="final"/>
+        <subject><reference value="urn:uuid:patient-1"/></subject></Composition>
+      </resource></entry>
+      <entry><fullUrl value="urn:uuid:patient-1"/><resource>
+        <Patient><id value="patient-1"/></Patient>
+      </resource></entry>
+    </Bundle>""")
+
+    parsed = _xml_value(root)
+
+    assert parsed["entry"][0]["resource"]["resourceType"] == "Composition"
+    assert parsed["entry"][1]["resource"]["resourceType"] == "Patient"

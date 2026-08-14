@@ -129,6 +129,21 @@ a:hover { text-decoration: underline; }
 }
 .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .card-header h3 { margin: 0; font-size: 15px; font-weight: 700; }
+.record-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.clinical-narrative { max-height:65vh; overflow:auto; line-height:1.6; overflow-wrap:anywhere; }
+.clinical-narrative > div:first-child { margin-top:0; }
+.clinical-narrative p { margin:0 0 .72rem; }
+.clinical-narrative h1, .clinical-narrative h2, .clinical-narrative h3,
+.clinical-narrative h4, .clinical-narrative h5, .clinical-narrative h6 {
+  margin:1.2rem 0 .5rem; line-height:1.3; color:var(--text);
+}
+.clinical-narrative .episode-note h4:first-child { margin-top:0; }
+.clinical-narrative ul, .clinical-narrative ol { margin:.4rem 0 .9rem; padding-left:1.5rem; }
+.clinical-narrative blockquote { margin:.8rem 0; padding:.5rem .9rem; border-left:3px solid var(--border); color:var(--text-dim); }
+.clinical-narrative code { background:var(--surface-2); border-radius:4px; padding:1px 4px; }
+.clinical-narrative table { width:100%; border-collapse:collapse; margin:.8rem 0; }
+.clinical-narrative th, .clinical-narrative td { border:1px solid var(--border); padding:7px 9px; text-align:left; vertical-align:top; }
+.clinical-narrative th { background:var(--surface-2); }
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
