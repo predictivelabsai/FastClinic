@@ -33,7 +33,12 @@ WHITE = RGBColor(0xFF, 0xFF, 0xFF)
 ROW_ALT = RGBColor(0xEE, 0xF4, 0xFA)   # blue tint
 CREAM = RGBColor(0xD6, 0xE6, 0xF5)     # pale blue
 
-FOOTER = "FastClinic · Modern clinical care, made personal · fastclinic.example"
+GUIDE_VERSION = os.getenv("GUIDE_VERSION", "0.1.0")
+GUIDE_DATE = os.getenv("GUIDE_DATE", "")
+FOOTER = (
+    f"FastClinic · Modern clinical care, made personal · "
+    f"v{GUIDE_VERSION} · {GUIDE_DATE} · fastclinic.dev"
+)
 
 IMG_RE = re.compile(r"!\[(?P<alt>[^\]]*)\]\((?P<path>[^)]+)\)")
 HEAD_RE = re.compile(r"^(#{1,6})\s+(.*)$")
@@ -66,6 +71,7 @@ def parse_slides(md: str) -> list[dict]:
     for raw in re.split(r"(?m)^---\s*$", md):
         lines = raw.split("\n")
         title, level, image, blocks, para = "", 0, None, [], []
+        kind = "cover" if "::: cover" in raw else ("section" if "::: divider" in raw else "content")
 
         def flush():
             nonlocal para
@@ -112,7 +118,13 @@ def parse_slides(md: str) -> list[dict]:
             i += 1
         flush()
         if title or image or blocks:
-            slides.append({"title": title, "level": level, "image": image, "blocks": blocks})
+            slides.append({
+                "title": title,
+                "level": level,
+                "image": image,
+                "blocks": blocks,
+                "kind": kind,
+            })
     return slides
 
 
@@ -129,20 +141,29 @@ def _add_runs(para, text, size, color):
         elif tok.startswith("*") and tok.endswith("*") and len(tok) > 2:
             run.text = tok[1:-1]; run.font.italic = True; run.font.color.rgb = color
         elif tok.startswith("["):
-            m = re.match(r"\[([^\]]+)\]\([^)]+\)", tok)
+            m = re.match(r"\[([^\]]+)\]\(([^)]+)\)", tok)
             run.text = m.group(1) if m else tok; run.font.color.rgb = TEAL
+            if m:
+                run.hyperlink.address = m.group(2)
         else:
             run.text = tok; run.font.color.rgb = color
         run.font.size = size
 
 
 def _add_title(slide, text, sw):
-    band = slide.shapes.add_shape(1, 0, 0, sw, Inches(1.0))
+    band = slide.shapes.add_shape(
+        1, Inches(0.55), Inches(0.48), sw - Inches(1.1), Inches(0.58)
+    )
     band.fill.solid(); band.fill.fore_color.rgb = TEAL; band.line.fill.background()
+    accent = slide.shapes.add_shape(
+        1, Inches(0.55), Inches(0.48), Inches(0.08), Inches(0.58)
+    )
+    accent.fill.solid(); accent.fill.fore_color.rgb = RGBColor(0x1F, 0x9D, 0x72)
+    accent.line.fill.background()
     tf = band.text_frame; tf.word_wrap = True
-    tf.margin_left = Inches(0.45); tf.margin_top = Inches(0.14)
+    tf.margin_left = Inches(0.28); tf.margin_top = Inches(0.07)
     r = tf.paragraphs[0].add_run(); r.text = text
-    r.font.size = Pt(26); r.font.bold = True; r.font.color.rgb = WHITE
+    r.font.size = Pt(21); r.font.bold = True; r.font.color.rgb = WHITE
 
 
 def _add_text(slide, blocks, left, top, width, height):
@@ -185,10 +206,10 @@ def _add_table(slide, rows, left, top, width, height):
     return gf
 
 
-def _add_footer(slide, sw, sh):
+def _add_footer(slide, sw, sh, page_number):
     box = slide.shapes.add_textbox(Inches(0.4), sh - Inches(0.42), sw - Inches(0.8), Inches(0.32))
     p = box.text_frame.paragraphs[0]
-    r = p.add_run(); r.text = FOOTER
+    r = p.add_run(); r.text = f"{FOOTER} · {page_number}"
     r.font.size = Pt(9); r.font.color.rgb = MUTE; p.alignment = PP_ALIGN.RIGHT
 
 
@@ -211,6 +232,31 @@ def _render_cover(slide, sl, sw, sh):
         run.font.size = Pt(18); run.font.color.rgb = CREAM
 
 
+def _render_section(slide, sl, sw, sh, section_number):
+    bg = slide.shapes.add_shape(
+        1, Inches(0.55), Inches(0.48), sw - Inches(1.1), sh - Inches(1.0)
+    )
+    bg.fill.solid(); bg.fill.fore_color.rgb = DARK; bg.line.fill.background()
+    accent = slide.shapes.add_shape(1, Inches(0.55), Inches(0.48), Inches(0.08), sh - Inches(1.0))
+    accent.fill.solid(); accent.fill.fore_color.rgb = RGBColor(0x1F, 0x9D, 0x72)
+    accent.line.fill.background()
+    label = slide.shapes.add_textbox(Inches(1.25), Inches(1.25), Inches(3), Inches(0.5))
+    lp = label.text_frame.paragraphs[0]
+    lr = lp.add_run(); lr.text = f"SECTION {section_number:02d}"
+    lr.font.size = Pt(12); lr.font.bold = True; lr.font.color.rgb = CREAM
+    box = slide.shapes.add_textbox(Inches(1.25), Inches(2.05), sw - Inches(2.2), Inches(3.5))
+    tf = box.text_frame; tf.word_wrap = True
+    p = tf.paragraphs[0]
+    r = p.add_run(); r.text = _plain(sl["title"])
+    r.font.size = Pt(42); r.font.bold = True; r.font.color.rgb = WHITE
+    for kind, val in sl["blocks"]:
+        if kind != "p":
+            continue
+        pp = tf.add_paragraph(); pp.space_before = Pt(16)
+        rr = pp.add_run(); rr.text = _plain(val)
+        rr.font.size = Pt(18); rr.font.color.rgb = CREAM
+
+
 def build(md_path: str, out_path: str, deck_title: str) -> None:
     base = os.path.dirname(os.path.abspath(md_path))
     with open(md_path, encoding="utf-8") as f:
@@ -221,10 +267,16 @@ def build(md_path: str, out_path: str, deck_title: str) -> None:
     blank = prs.slide_layouts[6]
     SW, SH = prs.slide_width, prs.slide_height
 
+    section_number = 0
     for idx, sl in enumerate(slides):
         slide = prs.slides.add_slide(blank)
-        if idx == 0 and sl["level"] == 1:        # cover page
+        if sl["kind"] == "cover" or (idx == 0 and sl["level"] == 1):
             _render_cover(slide, sl, SW, SH)
+            continue
+        if sl["kind"] == "section":
+            section_number += 1
+            _render_section(slide, sl, SW, SH, section_number)
+            _add_footer(slide, SW, SH, idx + 1)
             continue
 
         _add_title(slide, sl["title"] or deck_title, SW)
@@ -253,7 +305,7 @@ def build(md_path: str, out_path: str, deck_title: str) -> None:
         else:
             _add_text(slide, texts, Inches(0.55), top, SW - Inches(1.1), SH - Inches(1.6))
 
-        _add_footer(slide, SW, SH)
+        _add_footer(slide, SW, SH, idx + 1)
 
     prs.save(out_path)
     print(f"✓ Built {out_path} ({len(slides)} slides)")

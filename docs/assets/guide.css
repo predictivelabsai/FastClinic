@@ -3,18 +3,19 @@
    dark #1b2733, green #1f9d72. */
 
 @page {
-  size: A4 landscape;
-  margin: 1.1cm 1.5cm 1.3cm 1.5cm;
+  size: 13.333in 7.5in;
+  margin: .48in .58in .52in .58in;
   @bottom-left  { content: "FastClinic · Modern clinical care, made personal"; font-size: 8pt; color: #9aa6b2; }
-  @bottom-right { content: "v0.1.0 · 2026-07-22 · fastclinic.example"; font-size: 8pt; color: #9aa6b2; }
+  @bottom-right { content: "v0.1.0 · 2026-08-14 · fastclinic.dev · " counter(page); font-size: 8pt; color: #9aa6b2; }
 }
 
-html { font-size: 11.5pt; }
+html { font-size: 10.5pt; }
 body {
   font-family: "Helvetica Neue", Helvetica, Arial, "DejaVu Sans", sans-serif;
   color: #1b2733;
   line-height: 1.5;
   margin: 0;
+  counter-reset: guide-section;
 }
 
 /* every horizontal rule ends a slide */
@@ -36,15 +37,38 @@ h1 + h2 { /* subtitle on the title slide — plain, not a slide bar */
 }
 
 /* ---- cover page (pandoc `::: cover` fenced div) ---- */
-.cover { text-align: center; padding-top: 4cm; }
+.cover {
+  min-height: 5.9in; margin: -.05in; padding: 1.75in .65in 0;
+  box-sizing: border-box; text-align: center; border-radius: 12px;
+  background: #1e6fb8; color: #fff;
+}
 .cover h1 { color: #1e6fb8; font-size: 42pt; margin: 0 0 .35cm; letter-spacing: .5px; }
 .cover h2, .cover h3, .cover h4 {
   background: none; border: 0; padding: 0; border-radius: 0;
   color: #55636f; font-weight: 600; font-size: 18pt; margin: .25cm 0;
 }
-.cover p { font-size: 14pt; color: #3a4855; margin: .4cm 0; }
-.cover strong { color: #17568f; }
-.cover em { color: #6b7278; }
+.cover h1, .cover h2, .cover h3, .cover h4 { color: #fff; }
+.cover p { font-size: 14pt; color: #d6e6f5; margin: .4cm 0; }
+.cover strong { color: #fff; }
+.cover em { color: #d6e6f5; }
+
+/* ---- component section divider pages ---- */
+.divider {
+  min-height: 5.9in; margin: -.05in; padding: 1.55in .75in 0 1.1in;
+  box-sizing: border-box; border-left: .12in solid #1f9d72;
+  border-radius: 8px; background: #1b2733; color: #fff;
+  counter-increment: guide-section;
+}
+.divider::before {
+  content: "SECTION " counter(guide-section, decimal-leading-zero);
+  display: block; margin-bottom: .42in; color: #d6e6f5;
+  font-size: 10pt; font-weight: 700; letter-spacing: .08em;
+}
+.divider h2 {
+  padding: 0; margin: 0 0 .28in; border: 0; background: none;
+  color: #fff; font-size: 34pt; letter-spacing: -.5px;
+}
+.divider p { max-width: 8.7in; color: #d6e6f5; font-size: 17pt; line-height: 1.45; }
 
 /* ---- slide titles ---- */
 h2 {
@@ -85,8 +109,8 @@ blockquote {
 img {
   display: block;
   float: right;
-  max-width: 14cm;
-  max-height: 13.6cm;
+  max-width: 6.0in;
+  max-height: 4.9in;
   margin: 0 0 .3cm .7cm;
   border: 1px solid #d5e2ef;
   border-radius: 6px;

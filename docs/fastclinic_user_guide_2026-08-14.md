@@ -8,7 +8,7 @@
 
 General practice · surgical specialties · dental · patient activation
 
-Version {{GUIDE_VERSION}} · {{GUIDE_DATE_LONG}} · **fastclinic.dev**
+Version 0.1.0 · 14 August 2026 · **fastclinic.dev**
 
 :::
 

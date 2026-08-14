@@ -80,8 +80,9 @@ Login: `admin@fastclinic.example` / `FastClinic2026$` (override via
   DB from the synthetic export and covers commands, chat, routes, consent, the
   people model, the multi-specialty taxonomy, recall, appointments, and billing.
 - **User guide** — a landscape guide with a screenshot per feature:
-  [PDF](docs/fastclinic_user_guide_2026-07-22.pdf) ·
-  [PPTX](docs/fastclinic_user_guide_2026-07-22.pptx), rebuilt any time with
+  [PDF](docs/fastclinic_user_guide_2026-08-14.pdf) ·
+  [PPTX](docs/fastclinic_user_guide_2026-08-14.pptx), rebuilt from one shared
+  source with matching page/slide numbers using
   `scripts/build_user_guide.sh`.
 
 ## Data
