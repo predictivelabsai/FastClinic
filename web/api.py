@@ -28,10 +28,10 @@ from web import (
 )
 
 from .api_core import (
+    DatabaseBackend,
     ErrorEnvelope,
     Resource,
-    SQLiteBackend,
-    create_sqlite_api,
+    create_database_api,
     require_write_token,
 )
 
@@ -139,10 +139,10 @@ API_GROUPS = (
 )
 
 
-backend = SQLiteBackend(db.DB_PATH, RESOURCES)
-api = create_sqlite_api(
+backend = DatabaseBackend(db.database_target(), RESOURCES)
+api = create_database_api(
     product="FastClinic",
-    version="1.1.0",
+    version="1.2.0",
     description=(
         "Typed integration access across FastClinic's synthetic clinical model, "
         "scheduling, activation, consent, billing, and analytics."

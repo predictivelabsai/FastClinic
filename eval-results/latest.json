@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-11T07:49:25",
+  "timestamp": "2026-08-14T13:44:00",
   "db_row_counts": {
     "subject": 1000,
     "diagnosis": 5358,
@@ -1210,7 +1210,7 @@
       "suite": "routes",
       "path": "/api/v1/health",
       "category": "api",
-      "expect_contains": "1.1.0",
+      "expect_contains": "1.2.0",
       "passed": true,
       "detail": "",
       "status": 200

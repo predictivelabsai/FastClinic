@@ -1,7 +1,8 @@
 """Read-only queries for the FastClinic GP-clinic cockpit dashboards.
 
-All dates are ISO strings ('YYYY-MM-DD HH:MM:SS'), so lexical comparison and
-SQLite's julianday()/strftime() work directly.
+All dates are ISO strings ('YYYY-MM-DD HH:MM:SS'), so lexical comparisons stay
+portable while the database adapter translates the small aggregation/date
+format subset that differs between SQLite and PostgreSQL.
 """
 from __future__ import annotations
 

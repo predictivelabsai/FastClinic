@@ -8,7 +8,6 @@ contacts, and consent without exposing arbitrary SQL through the API layer.
 from __future__ import annotations
 
 import hashlib
-import sqlite3
 from contextlib import contextmanager
 from datetime import UTC, datetime
 
@@ -32,18 +31,8 @@ def _now() -> str:
 
 @contextmanager
 def connection():
-    conn = sqlite3.connect(db.DB_PATH, timeout=15)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA busy_timeout=15000")
-    conn.execute("BEGIN IMMEDIATE")
-    try:
+    with db.connection(write=True) as conn:
         yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
 
 
 def _row(row) -> dict | None:
@@ -51,7 +40,7 @@ def _row(row) -> dict | None:
 
 
 def _require(conn, table: str, item_id: int, label: str) -> dict:
-    row = conn.execute(f'SELECT * FROM "{table}" WHERE id=?', (item_id,)).fetchone()
+    row = db.execute(conn, f'SELECT * FROM "{table}" WHERE id=?', (item_id,)).fetchone()
     if not row:
         raise NotFound(f"{label} {item_id} was not found")
     return dict(row)
@@ -69,25 +58,19 @@ def relationships(
         sql += " AND party_id=?"
         params.append(party_id)
     sql += " ORDER BY subject_id, is_primary DESC, role, party_id"
-    with sqlite3.connect(db.DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
-        return [dict(row) for row in conn.execute(sql, tuple(params)).fetchall()]
+    return db.query(sql, tuple(params))
 
 
 def relationship(subject_id: int, party_id: int, role: str) -> dict | None:
-    with sqlite3.connect(db.DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
-        return _row(
-            conn.execute(
-                """SELECT * FROM subject_party_role
-                   WHERE subject_id=? AND party_id=? AND role=?""",
-                (subject_id, party_id, role),
-            ).fetchone()
-        )
+    return db.query_one(
+        """SELECT * FROM subject_party_role
+           WHERE subject_id=? AND party_id=? AND role=?""",
+        (subject_id, party_id, role),
+    )
 
 
 def _refresh_party_count(conn, party_id: int) -> None:
-    conn.execute(
+    db.execute(conn,
         """UPDATE party SET subject_count=(
                SELECT COUNT(DISTINCT subject_id) FROM subject_party_role
                WHERE party_id=?
@@ -105,13 +88,13 @@ def _normalise_primary(
 ) -> None:
     """Keep exactly one primary relationship and subject.party_id in sync."""
     if preferred is not None:
-        selected = conn.execute(
+        selected = db.execute(conn,
             """SELECT party_id, role FROM subject_party_role
                WHERE subject_id=? AND party_id=? AND role=?""",
             (subject_id, *preferred),
         ).fetchone()
     else:
-        rows = conn.execute(
+        rows = db.execute(conn,
             """SELECT party_id, role, is_primary FROM subject_party_role
                WHERE subject_id=? ORDER BY is_primary DESC, party_id, role""",
             (subject_id,),
@@ -123,18 +106,18 @@ def _normalise_primary(
             ),
             rows[0] if rows else None,
         )
-    conn.execute(
+    db.execute(conn,
         "UPDATE subject_party_role SET is_primary=0 WHERE subject_id=?",
         (subject_id,),
     )
     party_id = selected["party_id"] if selected else None
     if selected:
-        conn.execute(
+        db.execute(conn,
             """UPDATE subject_party_role SET is_primary=1
                WHERE subject_id=? AND party_id=? AND role=?""",
             (subject_id, selected["party_id"], selected["role"]),
         )
-    conn.execute(
+    db.execute(conn,
         "UPDATE subject SET party_id=?, modified=? WHERE id=?",
         (party_id, _now(), subject_id),
     )
@@ -152,13 +135,13 @@ def create_relationship(
     with connection() as conn:
         _require(conn, "subject", subject_id, "Patient")
         _require(conn, "party", party_id, "Party")
-        if conn.execute(
+        if db.execute(conn,
             """SELECT 1 FROM subject_party_role
                WHERE subject_id=? AND party_id=? AND role=?""",
             (subject_id, party_id, role),
         ).fetchone():
             raise Conflict("Relationship already exists")
-        conn.execute(
+        db.execute(conn,
             """INSERT INTO subject_party_role
                (subject_id, party_id, role, is_primary) VALUES (?,?,?,?)""",
             (subject_id, party_id, role, int(is_primary)),
@@ -189,12 +172,12 @@ def update_relationship(
     target_primary = bool(before["is_primary"]) if is_primary is None else is_primary
     with connection() as conn:
         try:
-            conn.execute(
+            db.execute(conn,
                 """UPDATE subject_party_role SET role=?, is_primary=?
                    WHERE subject_id=? AND party_id=? AND role=?""",
                 (target_role, int(target_primary), subject_id, party_id, role),
             )
-        except sqlite3.IntegrityError as exc:
+        except db.db_errors() as exc:
             raise Conflict("The requested relationship already exists") from exc
         _normalise_primary(
             conn,
@@ -210,7 +193,7 @@ def delete_relationship(subject_id: int, party_id: int, role: str) -> dict:
     if not before:
         raise NotFound("Relationship was not found")
     with connection() as conn:
-        conn.execute(
+        db.execute(conn,
             "DELETE FROM subject_party_role WHERE subject_id=? AND party_id=? AND role=?",
             (subject_id, party_id, role),
         )
@@ -222,12 +205,13 @@ def delete_relationship(subject_id: int, party_id: int, role: str) -> dict:
 def delete_unlinked_party(party_id: int) -> dict:
     with connection() as conn:
         before = _require(conn, "party", party_id, "Party")
-        linked = conn.execute(
+        linked_row = db.execute(conn,
             "SELECT COUNT(*) FROM subject_party_role WHERE party_id=?", (party_id,)
-        ).fetchone()[0]
+        ).fetchone()
+        linked = next(iter(dict(linked_row).values()))
         if linked:
             raise Conflict("Linked parties cannot be deleted; remove relationships first")
-        conn.execute("DELETE FROM party WHERE id=?", (party_id,))
+        db.execute(conn, "DELETE FROM party WHERE id=?", (party_id,))
     return before
 
 
@@ -258,18 +242,20 @@ def create_note(values: dict) -> dict:
             "modified": _now(),
         }
         fields = tuple(payload)
-        cursor = conn.execute(
-            f"INSERT INTO note ({','.join(fields)}) VALUES ({','.join('?' for _ in fields)})",
+        statement = f"INSERT INTO note ({','.join(fields)}) VALUES ({','.join('?' for _ in fields)})"
+        if db.is_postgres():
+            statement += " RETURNING id"
+        cursor = db.execute(
+            conn,
+            statement,
             tuple(payload[field] for field in fields),
         )
-        note_id = cursor.lastrowid
+        note_id = cursor.fetchone()["id"] if db.is_postgres() else cursor.lastrowid
     return get_note(note_id) or payload
 
 
 def get_note(note_id: int) -> dict | None:
-    with sqlite3.connect(db.DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
-        return _row(conn.execute("SELECT * FROM note WHERE id=?", (note_id,)).fetchone())
+    return db.query_one("SELECT * FROM note WHERE id=?", (note_id,))
 
 
 def update_note(note_id: int, values: dict) -> tuple[dict, dict]:
@@ -292,7 +278,7 @@ def update_note(note_id: int, values: dict) -> tuple[dict, dict]:
     clean["modified"] = _now()
     with connection() as conn:
         assignments = ",".join(f"{field}=?" for field in clean)
-        conn.execute(
+        db.execute(conn,
             f"UPDATE note SET {assignments} WHERE id=?",
             (*clean.values(), note_id),
         )
@@ -304,7 +290,7 @@ def archive_note(note_id: int) -> tuple[dict, dict]:
     if not before:
         raise NotFound(f"Note {note_id} was not found")
     with connection() as conn:
-        conn.execute(
+        db.execute(conn,
             "UPDATE note SET archived_at=?, modified=? WHERE id=?",
             (_now(), _now(), note_id),
         )
@@ -314,11 +300,9 @@ def archive_note(note_id: int) -> tuple[dict, dict]:
 def set_marketing_opt_out(party_id: int, opted_out: bool) -> tuple[dict, dict]:
     with connection() as conn:
         before = _require(conn, "party", party_id, "Party")
-        conn.execute(
+        db.execute(conn,
             "UPDATE party SET marketing_opt_out=? WHERE id=?",
             (int(opted_out), party_id),
         )
-    with sqlite3.connect(db.DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
-        after = _row(conn.execute("SELECT * FROM party WHERE id=?", (party_id,)).fetchone())
+    after = db.query_one("SELECT * FROM party WHERE id=?", (party_id,))
     return before, after or before

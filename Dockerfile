@@ -11,10 +11,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Cockpit reads fastclinic.sqlite. In production mount a volume at /data and set
-# FASTCLINIC_DB=/data/fastclinic.sqlite, then build it inside the container:
+# SQLite mode reads fastclinic.sqlite. Mount /data and set FASTCLINIC_DB, then:
 #   docker compose exec fastclinic python -m pms.importer /data/export.xlsx /data/fastclinic.sqlite
-# If a data/*.xlsx export is present in the image, the app auto-builds on boot.
+# PostgreSQL mode uses DATABASE_URL_PROD and FASTCLINIC_DB_SCHEMA=fast_clinic.
+# The source SQLite database remains available as a rollback path.
 EXPOSE 5005
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \

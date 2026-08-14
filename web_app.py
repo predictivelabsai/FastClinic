@@ -718,13 +718,18 @@ def _js_str(s: str) -> str:
 
 
 def _ensure_db():
-    """Build fastclinic.sqlite from the newest data/ export if it's missing.
+    """Build fastclinic.sqlite from the newest export in SQLite mode.
 
     Lets the container come up with data even when the DB isn't committed.
     """
-    from web.db import db_exists, DB_PATH
+    from web.db import db_exists, DB_PATH, is_postgres
     if db_exists():
         return
+    if is_postgres():
+        raise RuntimeError(
+            "PostgreSQL clinical schema is missing; run "
+            "scripts/migrate_clinical_to_postgres.py before startup"
+        )
     try:
         from pms.importer import build, _default_export
         # Prefer the shipped synthetic demo export; fall back to any data/*.xlsx.

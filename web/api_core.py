@@ -51,6 +51,8 @@ class HealthResponse(BaseModel):
     product: str
     version: str
     writes_enabled: bool
+    database_backend: str
+    database_ready: bool
 
 
 @dataclass(frozen=True)
@@ -70,8 +72,8 @@ class Resource:
     soft_delete_value: Any = 1
 
 
-class SQLiteBackend:
-    """Small read/write adapter with strict identifier allow-lists."""
+class DatabaseBackend:
+    """Small SQLite/PostgreSQL adapter with strict identifier allow-lists."""
 
     def __init__(
         self,
@@ -85,19 +87,81 @@ class SQLiteBackend:
             initialize()
 
     @contextmanager
-    def connection(self) -> Iterator[sqlite3.Connection]:
-        connection = sqlite3.connect(self.path, timeout=15)
-        connection.row_factory = sqlite3.Row
+    def connection(self) -> Iterator[Any]:
+        if self.is_postgres:
+            try:
+                import psycopg2
+                from psycopg2.extras import RealDictCursor
+            except ImportError as exc:  # pragma: no cover - deployment guard
+                raise RuntimeError("PostgreSQL requires psycopg2") from exc
+            schema = os.getenv("FASTCLINIC_DB_SCHEMA") or "fast_clinic"
+            if not schema.replace("_", "a").isalnum() or schema[0].isdigit():
+                raise RuntimeError("FASTCLINIC_DB_SCHEMA is not a valid SQL identifier")
+            connection = psycopg2.connect(
+                self.path,
+                connect_timeout=10,
+                cursor_factory=RealDictCursor,
+                options=f"-c search_path={schema}",
+            )
+        else:
+            connection = sqlite3.connect(self.path, timeout=15)
+            connection.row_factory = sqlite3.Row
         try:
             yield connection
         finally:
             connection.close()
 
+    @property
+    def is_postgres(self) -> bool:
+        return self.path.startswith(("postgres://", "postgresql://"))
+
+    def ready(self) -> bool:
+        try:
+            with self.connection() as connection:
+                return self._execute(connection, "SELECT 1").fetchone() is not None
+        except Exception:
+            return False
+
+    def _execute(self, connection, sql: str, params: tuple | list = ()):
+        if self.is_postgres:
+            cursor = connection.cursor()
+            cursor.execute(sql.replace("?", "%s"), params)
+            return cursor
+        return connection.execute(sql, params)
+
     def columns(self, resource: Resource) -> list[dict[str, Any]]:
         with self.connection() as connection:
-            rows = connection.execute(
-                f'PRAGMA table_info("{resource.table}")'
-            ).fetchall()
+            if self.is_postgres:
+                rows = self._execute(
+                    connection,
+                    """SELECT column_name AS name,
+                              data_type AS type,
+                              CASE WHEN is_nullable='NO' THEN 1 ELSE 0 END AS notnull,
+                              column_default AS dflt_value,
+                              CASE WHEN EXISTS (
+                                  SELECT 1
+                                  FROM information_schema.table_constraints tc
+                                  JOIN information_schema.key_column_usage kcu
+                                    ON tc.constraint_name=kcu.constraint_name
+                                   AND tc.table_schema=kcu.table_schema
+                                 WHERE tc.constraint_type='PRIMARY KEY'
+                                   AND tc.table_schema=? AND tc.table_name=?
+                                   AND kcu.column_name=c.column_name
+                              ) THEN 1 ELSE 0 END AS pk
+                       FROM information_schema.columns c
+                       WHERE table_schema=? AND table_name=?
+                       ORDER BY ordinal_position""",
+                    (
+                        os.getenv("FASTCLINIC_DB_SCHEMA") or "fast_clinic",
+                        resource.table,
+                        os.getenv("FASTCLINIC_DB_SCHEMA") or "fast_clinic",
+                        resource.table,
+                    ),
+                ).fetchall()
+            else:
+                rows = self._execute(
+                    connection, f'PRAGMA table_info("{resource.table}")'
+                ).fetchall()
         if not rows:
             raise RuntimeError(
                 f"API resource {resource.slug!r} references missing table "
@@ -123,14 +187,21 @@ class SQLiteBackend:
         where = ""
         params: list[Any] = []
         if query and resource.search_fields:
-            clauses = [f'CAST("{field}" AS TEXT) LIKE ?' for field in resource.search_fields]
+            operator = "ILIKE" if self.is_postgres else "LIKE"
+            clauses = [
+                f'CAST("{field}" AS TEXT) {operator} ?'
+                for field in resource.search_fields
+            ]
             where = " WHERE " + " OR ".join(clauses)
             params.extend([f"%{query}%"] * len(clauses))
         with self.connection() as connection:
-            total = connection.execute(
+            total_row = self._execute(
+                connection,
                 f'SELECT COUNT(*) FROM "{resource.table}"{where}', params
-            ).fetchone()[0]
-            rows = connection.execute(
+            ).fetchone()
+            total = next(iter(dict(total_row).values()))
+            rows = self._execute(
+                connection,
                 f'SELECT * FROM "{resource.table}"{where} '
                 f'ORDER BY "{self.primary_key(resource)}" LIMIT ? OFFSET ?',
                 (*params, limit, offset),
@@ -140,7 +211,8 @@ class SQLiteBackend:
     def get(self, resource: Resource, item_id: str) -> dict[str, Any] | None:
         primary_key = self.primary_key(resource)
         with self.connection() as connection:
-            row = connection.execute(
+            row = self._execute(
+                connection,
                 f'SELECT * FROM "{resource.table}" WHERE "{primary_key}"=?',
                 (item_id,),
             ).fetchone()
@@ -167,12 +239,16 @@ class SQLiteBackend:
         placeholders = ",".join("?" for _ in fields)
         quoted = ",".join(f'"{field}"' for field in fields)
         with self.connection() as connection:
-            cursor = connection.execute(
-                f'INSERT INTO "{resource.table}" ({quoted}) VALUES ({placeholders})',
-                tuple(clean[field] for field in fields),
+            statement = f'INSERT INTO "{resource.table}" ({quoted}) VALUES ({placeholders})'
+            if self.is_postgres:
+                statement += f' RETURNING "{primary_key}"'
+            cursor = self._execute(connection, statement, tuple(clean[field] for field in fields))
+            item_id = (
+                cursor.fetchone()[primary_key]
+                if self.is_postgres
+                else cursor.lastrowid
             )
             connection.commit()
-            item_id = cursor.lastrowid
         created = self.get(resource, str(item_id))
         return created or clean
 
@@ -197,7 +273,8 @@ class SQLiteBackend:
         assignments = ",".join(f'"{field}"=?' for field in clean)
         primary_key = self.primary_key(resource)
         with self.connection() as connection:
-            connection.execute(
+            self._execute(
+                connection,
                 f'UPDATE "{resource.table}" SET {assignments} WHERE "{primary_key}"=?',
                 (*clean.values(), item_id),
             )
@@ -219,7 +296,8 @@ class SQLiteBackend:
             value = datetime.now(UTC).isoformat()
         primary_key = self.primary_key(resource)
         with self.connection() as connection:
-            connection.execute(
+            self._execute(
+                connection,
                 f'UPDATE "{resource.table}" SET "{resource.soft_delete_field}"=? '
                 f'WHERE "{primary_key}"=?',
                 (value, item_id),
@@ -228,10 +306,9 @@ class SQLiteBackend:
         return before, self.get(resource, item_id) or before
 
 
-def _serialise_row(row: sqlite3.Row) -> dict[str, Any]:
+def _serialise_row(row: Any) -> dict[str, Any]:
     result: dict[str, Any] = {}
-    for key in row.keys():
-        value = row[key]
+    for key, value in dict(row).items():
         if isinstance(value, bytes):
             value = value.hex()
         result[key] = value
@@ -250,7 +327,7 @@ def _python_type(sql_type: str) -> type[Any]:
 
 
 def _models_for(
-    backend: SQLiteBackend,
+    backend: DatabaseBackend,
     resource: Resource,
 ) -> tuple[type[BaseModel], type[BaseModel], type[BaseModel] | None, type[BaseModel] | None]:
     fields: dict[str, tuple[Any, Any]] = {}
@@ -345,13 +422,13 @@ def require_write_token(
         )
 
 
-def create_sqlite_api(
+def create_database_api(
     *,
     product: str,
     version: str,
     description: str,
     base_url: str,
-    backend: SQLiteBackend,
+    backend: DatabaseBackend,
     resources: tuple[Resource, ...],
     on_mutation: Callable[[str, str, str, dict[str, Any] | None, dict[str, Any] | None], None] | None = None,
 ) -> FastAPI:
@@ -420,11 +497,14 @@ def create_sqlite_api(
 
     @api.get("/v1/health", response_model=HealthResponse, tags=["System"])
     def api_health() -> HealthResponse:
+        ready = backend.ready()
         return HealthResponse(
-            status="ok",
+            status="ok" if ready else "degraded",
             product=product,
             version=version,
             writes_enabled=bool(os.getenv("FASTSME_API_TOKEN")),
+            database_backend="postgresql" if backend.is_postgres else "sqlite",
+            database_ready=ready,
         )
 
     def register(resource: Resource) -> None:
@@ -484,7 +564,7 @@ def create_sqlite_api(
                     if on_mutation:
                         on_mutation("create", resource.slug, item_id, None, created)
                     return created
-                except (sqlite3.IntegrityError, sqlite3.OperationalError, ValueError) as exc:
+                except backend_errors() + (ValueError,) as exc:
                     raise HTTPException(
                         status_code=422,
                         detail={
@@ -526,7 +606,7 @@ def create_sqlite_api(
                         item_id,
                         payload.model_dump(exclude_unset=True),
                     )
-                except (sqlite3.IntegrityError, sqlite3.OperationalError, ValueError) as exc:
+                except backend_errors() + (ValueError,) as exc:
                     raise HTTPException(
                         status_code=422,
                         detail={
@@ -569,7 +649,7 @@ def create_sqlite_api(
             def delete_item(item_id: str) -> Response:
                 try:
                     changed = backend.delete(resource, item_id)
-                except (sqlite3.IntegrityError, sqlite3.OperationalError, ValueError) as exc:
+                except backend_errors() + (ValueError,) as exc:
                     raise HTTPException(
                         status_code=422,
                         detail={
@@ -606,6 +686,21 @@ def create_sqlite_api(
         register(configured_resource)
 
     return api
+
+
+def backend_errors() -> tuple[type[Exception], ...]:
+    errors: list[type[Exception]] = [sqlite3.IntegrityError, sqlite3.OperationalError]
+    try:
+        import psycopg2
+        errors.extend([psycopg2.IntegrityError, psycopg2.OperationalError])
+    except ImportError:
+        pass
+    return tuple(errors)
+
+
+# Compatibility aliases for sister repositories and existing integrations.
+SQLiteBackend = DatabaseBackend
+create_sqlite_api = create_database_api
 
 
 def write_swagger(api: FastAPI, destination: str | Path) -> None:

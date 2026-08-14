@@ -49,7 +49,7 @@ best-practices reference; `docs/FASTHTML_AUDIT.md` records audit findings.
 
 ## Architecture
 
-### Data layer — synthetic PMS export → local SQLite (`pms/`, `web/db.py`)
+### Data layer — synthetic PMS export → SQLite/PostgreSQL (`pms/`, `web/db.py`)
 
 - **`pms/synth.py`** — generates `data/synthetic_fastclinic.xlsx`, a fully
   synthetic, structurally realistic GP PMS export (people, consultations,
@@ -74,9 +74,12 @@ best-practices reference; `docs/FASTHTML_AUDIT.md` records audit findings.
   field coverage. The model column for the supervising clinician is
   `clinician_id` (xlsx key `supervising_clinician_id`). Idempotent — re-run to
   refresh.
-- **`web/db.py`** — **read-only** SQLite access (`query`, `query_one`,
-  `scalar`). `reference_date()` is "today" for due/lapsed maths (latest activity
-  date, or `FASTCLINIC_TODAY`). DB path is `FASTCLINIC_DB` or `./fastclinic.sqlite`.
+- **`web/db.py`** — portable SQLite/PostgreSQL access (`query`, `query_one`,
+  `scalar`, transactional writes). Select with `FASTCLINIC_DATABASE_BACKEND`;
+  PostgreSQL uses `DATABASE_URL_PROD` and the isolated
+  `FASTCLINIC_DB_SCHEMA` (`fast_clinic` by default).
+- **`scripts/migrate_clinical_to_postgres.py`** — transactionally copies and
+  verifies the seven synthetic clinical tables before commit.
 
 The person is modelled as a single entity: `patient` is the person, `client` is
 the same person's 1:1 contact record (`patient.client_id`). Human demographic
@@ -135,7 +138,8 @@ fields only (gender, date of birth, NHS number, blood group, insurance).
 
 All config in `.env` (see `.env.sample`). Core:
 `FASTCLINIC_ADMIN_EMAIL/PASSWORD`, `FASTCLINIC_SECRET`, `FASTCLINIC_PORT`,
-`FASTCLINIC_DB`, `FASTCLINIC_TODAY`, `FASTCLINIC_SEO_SITE`. AI assistant:
+`FASTCLINIC_DATABASE_BACKEND`, `FASTCLINIC_DB`, `DATABASE_URL_PROD`,
+`FASTCLINIC_DB_SCHEMA`, `FASTCLINIC_TODAY`, `FASTCLINIC_SEO_SITE`. AI assistant:
 `MODEL_PROVIDER` (xai|openai|anthropic|google), `MODEL_NAME`, and the matching
 key (`XAI_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY`).
 SMS: `TWILIO_*`, `VOODOO_SMS_*`. Email: `POSTMARK_API_TOKEN`, `POSTMARK_FROM`,

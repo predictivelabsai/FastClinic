@@ -90,7 +90,9 @@ def due_rows(cat_filter: str = "all") -> list[dict]:
         LEFT JOIN party c ON c.id = p.party_id
         WHERE i.category IN ({placeholders}) AND p.deceased_at IS NULL
               {sql_filter("c")}
-        GROUP BY i.subject_id, i.category
+        GROUP BY i.subject_id, i.category, p.party_id, p.official_name,
+                 p.gender, p.date_of_birth, p.critical_notes, p.deceased_at,
+                 c.name, c.phone
         """,
         tuple(cats),
     )
@@ -131,8 +133,9 @@ def lapsed_rows(months: int = 12) -> list[dict]:
         LEFT JOIN party cl ON cl.id = p.party_id
         WHERE p.deceased_at IS NULL
               {sql_filter("cl")}
-        GROUP BY p.id
-        HAVING last_visit < ?
+        GROUP BY p.id, p.party_id, p.official_name, p.gender, p.critical_notes,
+                 cl.name, cl.phone
+        HAVING MAX(c.consult_at) < ?
         ORDER BY lifetime_value DESC
         """,
         (cutoff,),
@@ -151,8 +154,8 @@ def followup_rows(days: int = 14) -> list[dict]:
         SELECT c.id AS consultation_id, c.subject_id AS patient_id, c.consult_at, c.revenue_vat,
                p.party_id AS contact_id, p.official_name AS patient_name, p.gender,
                cl.name AS contact_name, cl.phone AS contact_phone,
-               (SELECT GROUP_CONCAT(DISTINCT cat) FROM
-                   (SELECT category AS cat FROM item i WHERE i.consultation_id=c.id)) AS categories,
+               (SELECT GROUP_CONCAT(DISTINCT i.category)
+                  FROM item i WHERE i.consultation_id=c.id) AS categories,
                (SELECT GROUP_CONCAT(d.name, '; ') FROM diagnosis d WHERE d.consultation_id=c.id) AS diagnoses
         FROM consultation c JOIN subject p ON p.id = c.subject_id
         LEFT JOIN party cl ON cl.id = p.party_id

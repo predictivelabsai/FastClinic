@@ -21,7 +21,7 @@ path,expect_contains,expect_not_contains,category
 /ai/prompt,Prompt,Traceback,admin
 /compliance,Compliance &amp; Trust for European Private Clinics,Traceback,page
 /developers,Complete API surface,Traceback,page
-/api/v1/health,1.1.0,Traceback,api
+/api/v1/health,1.2.0,Traceback,api
 /api/v1/analytics/overview,total_patients,Traceback,api
 /api/docs,Swagger UI,Traceback,api
 /api/openapi.json,FastClinic API,Traceback,api

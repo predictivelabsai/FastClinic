@@ -946,6 +946,14 @@
       "HealthResponse": {
         "description": "API health response.",
         "properties": {
+          "database_backend": {
+            "title": "Database Backend",
+            "type": "string"
+          },
+          "database_ready": {
+            "title": "Database Ready",
+            "type": "boolean"
+          },
           "product": {
             "title": "Product",
             "type": "string"
@@ -967,7 +975,9 @@
           "status",
           "product",
           "version",
-          "writes_enabled"
+          "writes_enabled",
+          "database_backend",
+          "database_ready"
         ],
         "title": "HealthResponse",
         "type": "object"
@@ -2967,7 +2977,7 @@
       "name": "MIT"
     },
     "title": "FastClinic API",
-    "version": "1.1.0"
+    "version": "1.2.0"
   },
   "openapi": "3.1.0",
   "paths": {

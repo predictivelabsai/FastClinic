@@ -36,12 +36,16 @@ def _first(client, resource):
 
 def test_openapi_documents_deep_surface_and_consistent_errors(client, monkeypatch):
     schema = client.get("/openapi.json").json()
-    assert schema["info"]["version"] == "1.1.0"
+    assert schema["info"]["version"] == "1.2.0"
     assert len(schema["paths"]) >= 47
     assert "post" in schema["paths"]["/v1/patients"]
     assert {"get", "patch", "delete"} <= set(schema["paths"]["/v1/patients/{item_id}"])
     assert "/v1/analytics/specialties" in schema["paths"]
     assert "/v1/trial-balance" in schema["paths"]
+
+    health = client.get("/v1/health").json()
+    assert health["database_backend"] == "sqlite"
+    assert health["database_ready"] is True
 
     missing_route = client.get("/v1/not-a-resource")
     assert missing_route.status_code == 404
