@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-14T13:44:00",
+  "timestamp": "2026-08-14T18:19:27",
   "db_row_counts": {
     "subject": 1000,
     "diagnosis": 5358,
@@ -10,8 +10,8 @@
     "subject_party_role": 1000
   },
   "summary": {
-    "total": 163,
-    "passed": 163,
+    "total": 182,
+    "passed": 182,
     "failed": 0,
     "pass_rate": 1.0,
     "by_suite": {
@@ -24,8 +24,8 @@
         "total": 25
       },
       "routes": {
-        "passed": 31,
-        "total": 31
+        "passed": 36,
+        "total": 36
       },
       "coverage": {
         "passed": 4,
@@ -52,6 +52,10 @@
         "total": 6
       },
       "specialties": {
+        "passed": 14,
+        "total": 14
+      },
+      "fhir": {
         "passed": 14,
         "total": 14
       }
@@ -122,12 +126,12 @@
         "total": 3
       },
       "admin": {
-        "passed": 2,
-        "total": 2
-      },
-      "api": {
         "passed": 4,
         "total": 4
+      },
+      "api": {
+        "passed": 7,
+        "total": 7
       },
       "export": {
         "passed": 3,
@@ -162,6 +166,10 @@
         "total": 6
       },
       "multi_specialty": {
+        "passed": 14,
+        "total": 14
+      },
+      "interop": {
         "passed": 14,
         "total": 14
       }
@@ -1181,6 +1189,24 @@
     },
     {
       "suite": "routes",
+      "path": "/admin/fhir",
+      "category": "admin",
+      "expect_contains": "FHIR R4",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/admin/fhir",
+      "category": "admin",
+      "expect_contains": "CapabilityStatement",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
       "path": "/ai/prompt",
       "category": "admin",
       "expect_contains": "Prompt",
@@ -1210,7 +1236,34 @@
       "suite": "routes",
       "path": "/api/v1/health",
       "category": "api",
-      "expect_contains": "1.2.0",
+      "expect_contains": "1.3.0",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/api/v1/fhir/metadata",
+      "category": "api",
+      "expect_contains": "CapabilityStatement",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/api/v1/fhir/metadata",
+      "category": "api",
+      "expect_contains": "Patient",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/api/v1/adapters/GB/status",
+      "category": "api",
+      "expect_contains": "uk_core_r4_mapping",
       "passed": true,
       "detail": "",
       "status": 200
@@ -1670,6 +1723,118 @@
       "passed": true,
       "detail": "",
       "response_excerpt": "'appointment' wrongly matched ENT"
+    },
+    {
+      "suite": "fhir",
+      "question": "capability-is-r4",
+      "category": "interop",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "4.0.1"
+    },
+    {
+      "suite": "fhir",
+      "question": "adult-has-patient",
+      "category": "interop",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "ok"
+    },
+    {
+      "suite": "fhir",
+      "question": "adult-has-no-related-person",
+      "category": "interop",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "ok"
+    },
+    {
+      "suite": "fhir",
+      "question": "patient-id-matches-subject",
+      "category": "interop",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "ok"
+    },
+    {
+      "suite": "fhir",
+      "question": "minor-has-related-person",
+      "category": "interop",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "related=1"
+    },
+    {
+      "suite": "fhir",
+      "question": "minor-has-person-linkage",
+      "category": "interop",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "person=1"
+    },
+    {
+      "suite": "fhir",
+      "question": "related-person-patient-is-1-1",
+      "category": "interop",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "ok"
+    },
+    {
+      "suite": "fhir",
+      "question": "exported-patient-validates",
+      "category": "interop",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "ok"
+    },
+    {
+      "suite": "fhir",
+      "question": "import-patient-apply-safe",
+      "category": "interop",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "ok"
+    },
+    {
+      "suite": "fhir",
+      "question": "nhs-number-modulus-11-accepts-known-valid",
+      "category": "interop",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "ok"
+    },
+    {
+      "suite": "fhir",
+      "question": "nhs-number-rejects-short",
+      "category": "interop",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "ok"
+    },
+    {
+      "suite": "fhir",
+      "question": "uk-core-profile-on-patient",
+      "category": "interop",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "ok"
+    },
+    {
+      "suite": "fhir",
+      "question": "gpconnect-stu3-profile-on-patient",
+      "category": "interop",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "ok"
+    },
+    {
+      "suite": "fhir",
+      "question": "pds-stays-gated",
+      "category": "interop",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "ok"
     }
   ]
 }

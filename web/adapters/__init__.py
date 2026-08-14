@@ -5,17 +5,23 @@ The FastClinic core is country-neutral and FHIR R4-shaped (see
 identifier systems, national profiles, auth, terminology bindings, consent
 regimes — lives behind a `CountryAdapter` (see `base.py`), never in the core.
 
-Adapters implemented / stubbed:
+Adapters:
 
-  • nhs_gpconnect  — UK / NHS.  STUB ONLY.  Not built. See the module docstring
-                     and docs/adapters/NHS_GP_CONNECT.md for why, and for the
-                     assurance gate that blocks building it.
+  • nhs  — UK / NHS. Mapping, NHS Number check-digit, UK Core R4 export and
+           GP Connect STU3 translation are implemented. Live PDS / GP Connect
+           / IM1 / SSP calls remain gated on onboarding credentials.
 
-No adapter is wired into the running app. Importing one and calling it raises
-`NotImplementedError` by design — the seam is defined, the implementation is not.
+Select an adapter through `web.adapters.registry.get_adapter('GB')`. The core
+never imports a national module directly.
 """
 from __future__ import annotations
 
-from web.adapters.base import CountryAdapter, AdapterNotAvailable
+from web.adapters.base import AdapterNotAvailable, CountryAdapter
+from web.adapters.registry import available_countries, get_adapter
 
-__all__ = ["CountryAdapter", "AdapterNotAvailable"]
+__all__ = [
+    "AdapterNotAvailable",
+    "CountryAdapter",
+    "available_countries",
+    "get_adapter",
+]

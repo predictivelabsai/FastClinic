@@ -161,7 +161,7 @@ def compliance_page(lang="en"):
                                 ),
                                 cls="trust-table-wrap",
                             ),
-                            P(T("The current public API is a typed, versioned read surface over synthetic data. Production write paths and conformant FHIR import/export are roadmap work, not current capabilities."), cls="trust-copy"),
+                            P(T("The current public API includes a FHIR R4 read surface over synthetic data. Production write paths, national profile certification, and live spine connections remain gated."), cls="trust-copy"),
                             cls="trust-wrap",
                         ),
                         cls="trust-section tint",
@@ -214,7 +214,7 @@ def compliance_page(lang="en"):
                             Div(
                                 Article(H3(T("Foundation")), P(T("Synthetic pipeline, subject/party model, consent gates, balanced ledger, evaluation suite, and multilingual product surfaces.")), cls="roadmap-card"),
                                 Article(H3(T("Production readiness")), P(T("EU-only deployment profiles, RBAC, encryption defaults, audit matrix, retention and legal holds, DPIA/processing-record/DPA templates, and structured export.")), cls="roadmap-card"),
-                                Article(H3(T("FHIR core")), P(T("Conformant read surface, later controlled writes, validation, Encounter and Appointment fidelity, and the first pilot-led national adapter.")), cls="roadmap-card"),
+                                Article(H3(T("FHIR core")), P(T("R4 read surface, Patient $everything, validation, and an offline NHS adapter (UK Core + GP Connect STU3). Live PDS and GP Connect stay gated on onboarding.")), cls="roadmap-card"),
                                 Article(H3(T("Operational maturity")), P(T("Patient portal primitives, stronger identity, ISO gap analysis, NIS2-aligned playbooks, additional adapters, and continuous EHDS monitoring.")), cls="roadmap-card"),
                                 cls="roadmap",
                             ),

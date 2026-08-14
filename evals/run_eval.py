@@ -40,6 +40,8 @@ AUTH_DB_PATH.unlink(missing_ok=True)  # never touch the configured account store
 os.environ["FASTCLINIC_DB"] = str(DB_PATH)
 os.environ["FASTCLINIC_OPS_DB"] = str(OPS_DB_PATH)
 os.environ["FASTSME_AUTH_DB"] = str(AUTH_DB_PATH)
+os.environ["FASTCLINIC_DATABASE_BACKEND"] = "sqlite"
+os.environ["FASTCLINIC_OPS_BACKEND"] = "sqlite"
 os.environ["FASTCLINIC_ADMIN_EMAIL"] = "admin@fastclinic.example"
 os.environ["FASTCLINIC_ADMIN_PASSWORD"] = "FastClinic2026$"
 os.environ.setdefault("FASTCLINIC_SECRET", "eval-secret")
@@ -486,6 +488,94 @@ def run_specialties() -> list[dict]:
     return out
 
 
+def run_fhir() -> list[dict]:
+    """Assert Clinic OS Phase 5a/5b: R4 shaping + offline NHS adapter."""
+    from web import fhir
+    from web.adapters.base import AdapterNotAvailable
+    from web.adapters.nhs import live
+    from web.adapters.nhs.identifiers import verify_nhs_number
+    from web.adapters.registry import get_adapter
+    from web.db import query_one, reference_date
+
+    out = []
+
+    def check(label, passed, detail=""):
+        out.append({
+            "suite": "fhir", "question": label, "category": "interop",
+            "passed": bool(passed), "detail": "" if passed else detail,
+            "response_excerpt": detail or "ok",
+        })
+
+    cap = fhir.capability_statement()
+    check("capability-is-r4", cap.get("fhirVersion") == "4.0.1", cap.get("fhirVersion"))
+
+    adult = query_one(
+        "SELECT id FROM subject s JOIN subject_party_role r ON r.subject_id=s.id "
+        "WHERE r.role='self' AND s.deceased_at IS NULL ORDER BY s.id LIMIT 1"
+    )
+    if not adult:
+        check("has-adult-subject", False, "no adult subject")
+        return out
+    resources = fhir.export_subject(adult["id"])
+    kinds = {row["resourceType"] for row in resources}
+    check("adult-has-patient", "Patient" in kinds)
+    check("adult-has-no-related-person", "RelatedPerson" not in kinds)
+    patient = next(row for row in resources if row["resourceType"] == "Patient")
+    check("patient-id-matches-subject", patient["id"] == str(adult["id"]))
+
+    minor = query_one(
+        "SELECT s.id FROM subject s JOIN subject_party_role r ON r.subject_id=s.id "
+        "WHERE r.role='guardian' AND s.date_of_birth > date(?, '-16 years') "
+        "ORDER BY s.id LIMIT 1",
+        (reference_date(),),
+    )
+    if minor:
+        mres = fhir.export_subject(minor["id"])
+        related = [row for row in mres if row["resourceType"] == "RelatedPerson"]
+        people = [row for row in mres if row["resourceType"] == "Person"]
+        check("minor-has-related-person", len(related) >= 1, f"related={len(related)}")
+        check("minor-has-person-linkage", len(people) >= 1, f"person={len(people)}")
+        if related:
+            check(
+                "related-person-patient-is-1-1",
+                related[0]["patient"]["reference"] == f"Patient/{minor['id']}",
+            )
+    else:
+        check("has-minor-subject", False, "no guardian-linked minor")
+
+    outcome = fhir.validate_resource(patient)
+    check(
+        "exported-patient-validates",
+        all(issue.get("severity") not in {"error", "fatal"} for issue in outcome["issue"]),
+    )
+    mapped = fhir.import_resource(patient)
+    check("import-patient-apply-safe", mapped.get("apply_safe") is True)
+
+    known_valid = verify_nhs_number("943 476 5919")
+    check("nhs-number-modulus-11-accepts-known-valid", known_valid["valid"] is True)
+    check("nhs-number-rejects-short", verify_nhs_number("123")["valid"] is False)
+
+    nhs = get_adapter("GB")
+    uk = nhs.export_subject(adult["id"], release="r4")
+    uk_patient = next(row for row in uk if row["resourceType"] == "Patient")
+    check(
+        "uk-core-profile-on-patient",
+        any("UKCore-Patient" in p for p in uk_patient.get("meta", {}).get("profile", [])),
+    )
+    stu3 = nhs.export_subject(adult["id"], release="stu3")
+    stu3_patient = next(row for row in stu3 if row["resourceType"] == "Patient")
+    check(
+        "gpconnect-stu3-profile-on-patient",
+        any("CareConnect-GPC-Patient-1" in p for p in stu3_patient.get("meta", {}).get("profile", [])),
+    )
+    try:
+        live.pds_lookup("9434765919")
+        check("pds-stays-gated", False, "PDS call did not raise")
+    except AdapterNotAvailable:
+        check("pds-stays-gated", True)
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--quiet", action="store_true")
@@ -498,7 +588,7 @@ def main() -> int:
 
     cases = (run_shortcuts() + run_chat() + run_routes() + run_coverage()
              + run_consent() + run_model() + run_loop() + run_appointments()
-             + run_billing() + run_specialties())
+             + run_billing() + run_specialties() + run_fhir())
 
     passed = sum(c["passed"] for c in cases)
     total = len(cases)

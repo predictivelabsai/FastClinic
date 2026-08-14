@@ -91,9 +91,14 @@ Login: `admin@fastclinic.example` / `FastClinic2026$` (override via
 realistic, fully synthetic PMS export). `pms/importer.py` builds the clinical
 database from it, modelling patients (the *subject* of care) and contacts
 (the *party*) as separate entities linked by role; re-run either step to refresh.
-Operational state the cockpit writes — reminders, appointments, invoices — lives
-in a **separate store** so refreshing the clinic records never wipes it. The
-cockpit shows a graceful "No data loaded" screen until records exist.
+Operational state the cockpit writes—accounts, chat, reminders, appointments,
+communications, invoices, payments, ledger and audit—lives in separate tables
+so refreshing the clinical import never wipes it. Production can keep all of
+these tables in `DATABASE_URL_PROD`/`fast_clinic` by setting
+`FASTCLINIC_OPS_BACKEND=postgresql`; SQLite remains available for local tests.
+Migrate legacy operations and account files additively with
+`python scripts/migrate_ops_to_postgres.py`. The cockpit shows a graceful "No
+data loaded" screen until clinical records exist.
 
 See **[SKILLS.md](SKILLS.md)** for the full capability reference,
 **[CLAUDE.md](CLAUDE.md)** for the architecture, and
@@ -129,7 +134,10 @@ The typed API is mounted at `/api`, with human documentation at `/developers`,
 Swagger UI at `/api/docs`, ReDoc at `/api/redoc`, and OpenAPI JSON at
 `/api/openapi.json`. It covers clinical records, subject/party relationships,
 appointments and availability, activation and consent, immutable communication
-logs, balanced billing and payments, analytics, and the API audit trail.
+logs, balanced billing and payments, analytics, the API audit trail, and a
+FHIR R4 read surface (`/api/v1/fhir/*`) with an NHS adapter
+(`/api/v1/adapters/GB/*`) that applies UK Core profiles and a GP Connect STU3
+translation. Live PDS / GP Connect calls stay gated until onboarding.
 
 Public reads operate only over the synthetic demo surface. Operational reads and
 all mutations require `Authorization: Bearer <FASTSME_API_TOKEN>` and remain

@@ -36,7 +36,7 @@ def _first(client, resource):
 
 def test_openapi_documents_deep_surface_and_consistent_errors(client, monkeypatch):
     schema = client.get("/openapi.json").json()
-    assert schema["info"]["version"] == "1.2.0"
+    assert schema["info"]["version"] == "1.3.0"
     assert len(schema["paths"]) >= 47
     assert "post" in schema["paths"]["/v1/patients"]
     assert {"get", "patch", "delete"} <= set(schema["paths"]["/v1/patients/{item_id}"])

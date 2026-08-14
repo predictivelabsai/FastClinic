@@ -9,7 +9,6 @@ import json
 import os
 import re
 import secrets
-import sqlite3
 import time
 from contextlib import contextmanager
 from pathlib import Path
@@ -133,10 +132,8 @@ class AccountStore:
 
     @contextmanager
     def _db(self):
-        db = sqlite3.connect(self.path, timeout=10)
-        db.row_factory = sqlite3.Row
-        db.execute("PRAGMA journal_mode=WAL")
-        db.execute("PRAGMA foreign_keys=ON")
+        from web.ops_db import connect
+        db = connect(self.path)
         try:
             yield db
             db.commit()
@@ -147,25 +144,9 @@ class AccountStore:
             db.close()
 
     def _setup(self):
-        with self._db() as db:
-            db.executescript("""
-            CREATE TABLE IF NOT EXISTS accounts (
-              id INTEGER PRIMARY KEY, email TEXT NOT NULL UNIQUE, name TEXT NOT NULL DEFAULT '',
-              password_hash TEXT, is_verified INTEGER NOT NULL DEFAULT 0,
-              google_linked INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL,
-              updated_at INTEGER NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS auth_tokens (
-              id INTEGER PRIMARY KEY, account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-              purpose TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE, expires_at INTEGER NOT NULL,
-              used_at INTEGER, created_at INTEGER NOT NULL
-            );
-            CREATE INDEX IF NOT EXISTS auth_tokens_account_purpose ON auth_tokens(account_id,purpose);
-            CREATE TABLE IF NOT EXISTS auth_limits (
-              subject_hash TEXT NOT NULL, action TEXT NOT NULL, window_start INTEGER NOT NULL,
-              attempts INTEGER NOT NULL, PRIMARY KEY(subject_hash,action)
-            );
-            """)
+        # ``connect`` initializes the complete operational schema atomically.
+        with self._db():
+            pass
 
     @staticmethod
     def _email(value):

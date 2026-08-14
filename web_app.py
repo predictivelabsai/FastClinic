@@ -47,6 +47,8 @@ from web import billing
 from web import billing_views
 from web import seo, seo_views
 from web import help_views
+from web import fhir_views
+from web import fhir_portal
 from web.api import api
 
 logger = logging.getLogger("fastclinic")
@@ -243,6 +245,30 @@ def get(session, pid: int):
     with using_lang(lang):
         return page("patients", CLINIC_ENV, _auth(session), _thread(session),
                     dash.patient_detail_view(pid), lang=lang)
+
+
+@rt("/my-records")
+def get(session):
+    email = _auth(session)
+    if not email:
+        return RedirectResponse("/login", status_code=303)
+    lang = get_lang(session)
+    with using_lang(lang):
+        return page("my-records", CLINIC_ENV, email, _thread(session),
+                    fhir_portal.records_view(email), lang=lang)
+
+
+@rt("/my-records/{bundle_id}")
+def get(session, bundle_id: str):
+    email = _auth(session)
+    if not email:
+        return RedirectResponse("/login", status_code=303)
+    view = fhir_portal.record_view(email, bundle_id)
+    if view is None:
+        return Response("Not found", status_code=404)
+    lang = get_lang(session)
+    with using_lang(lang):
+        return page("my-records", CLINIC_ENV, email, _thread(session), view, lang=lang)
 
 
 @rt("/treatments")
@@ -465,6 +491,24 @@ def get(session):
 @rt("/admin/data")
 def get(session):
     return _guarded("data-admin", dash.data_admin_view)(session)
+
+
+@rt("/admin/fhir")
+def get(session, subject_id: int = 0, nhs_number: str = "", release: str = "r4"):
+    email = _auth(session)
+    if not email:
+        return RedirectResponse("/login", status_code=303)
+    lang = get_lang(session)
+    with using_lang(lang):
+        return page(
+            "fhir-admin", CLINIC_ENV, email, _thread(session),
+            fhir_views.fhir_admin_view(
+                subject_id=subject_id or None,
+                nhs_number=nhs_number,
+                release=release or "r4",
+            ),
+            lang=lang,
+        )
 
 
 # --- AI assistant ---

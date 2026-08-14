@@ -74,10 +74,15 @@ best-practices reference; `docs/FASTHTML_AUDIT.md` records audit findings.
   field coverage. The model column for the supervising clinician is
   `clinician_id` (xlsx key `supervising_clinician_id`). Idempotent — re-run to
   refresh.
-- **`web/db.py`** — portable SQLite/PostgreSQL access (`query`, `query_one`,
+- **`web/db.py`** — portable SQLite/PostgreSQL clinical access (`query`, `query_one`,
   `scalar`, transactional writes). Select with `FASTCLINIC_DATABASE_BACKEND`;
   PostgreSQL uses `DATABASE_URL_PROD` and the isolated
   `FASTCLINIC_DB_SCHEMA` (`fast_clinic` by default).
+- **`web/ops_db.py`** — portable SQLite/PostgreSQL operational storage for
+  appointments, reminders, communications, billing/ledger, API audit, chat, and
+  local-account state. Select with `FASTCLINIC_OPS_BACKEND`; PostgreSQL shares
+  `DATABASE_URL_PROD` and the configured schema. SQLite remains the local/test
+  fallback. `scripts/migrate_ops_to_postgres.py` copies legacy SQLite state.
 - **`scripts/migrate_clinical_to_postgres.py`** — transactionally copies and
   verifies the seven synthetic clinical tables before commit.
 
@@ -115,6 +120,13 @@ fields only (gender, date of birth, NHS number, blood group, insurance).
   reference, `SHORTCUTS` is the single source of truth) and `/help/guide` (web
   render of `docs/fastclinic_user_guide.md`; images + PDF served statically from
   `docs/`).
+- **`web/fhir/`** — Clinic OS Phase 5a: vanilla FHIR R4 projection of the
+  normalised core (`Patient`, `RelatedPerson`/`Person`, `Encounter`,
+  `Condition`, item-by-category, notes, appointments, consent, reminders).
+  Read surface at `/api/v1/fhir/*`; admin preview at `/admin/fhir`.
+- **`web/adapters/`** — country port (`CountryAdapter`) plus the NHS adapter
+  (`web/adapters/nhs/`): NHS Number modulus 11, UK Core R4, GP Connect STU3
+  translation. Live PDS/GP Connect raise `AdapterNotAvailable` until onboarded.
 - **`web/seo.py`** + **`web/seo_views.py`** — LLM SEO/GEO-audit suite, targeted at
   `FASTCLINIC_SEO_SITE`. Prompts in `prompts/seo/`, outputs `data/seo/`.
 - **`web/exports.py`**, **`web/sse.py`** — CSV exports and server-sent-event
@@ -138,7 +150,7 @@ fields only (gender, date of birth, NHS number, blood group, insurance).
 
 All config in `.env` (see `.env.sample`). Core:
 `FASTCLINIC_ADMIN_EMAIL/PASSWORD`, `FASTCLINIC_SECRET`, `FASTCLINIC_PORT`,
-`FASTCLINIC_DATABASE_BACKEND`, `FASTCLINIC_DB`, `DATABASE_URL_PROD`,
+`FASTCLINIC_DATABASE_BACKEND`, `FASTCLINIC_OPS_BACKEND`, `FASTCLINIC_DB`, `DATABASE_URL_PROD`,
 `FASTCLINIC_DB_SCHEMA`, `FASTCLINIC_TODAY`, `FASTCLINIC_SEO_SITE`. AI assistant:
 `MODEL_PROVIDER` (xai|openai|anthropic|google), `MODEL_NAME`, and the matching
 key (`XAI_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY`).

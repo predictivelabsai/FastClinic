@@ -453,6 +453,30 @@ insurance and a parent paying for a child's treatment fall out of the same model
 
 ## 9. Phase 5 — interoperability: generic core + country adapters
 
+### Phase 5a — FHIR R4 shaping ✅ DONE (2026-08-14)
+
+**Implemented** in `web/fhir/`. The core stays normalised; this package
+materialises vanilla R4 at the boundary. `GET /api/v1/fhir/metadata`,
+`GET /api/v1/fhir/{type}/{id}`, `GET /api/v1/fhir/Patient/{id}/$everything`,
+`POST /api/v1/fhir/$validate`, and `POST /api/v1/fhir/$import`. Admin preview at
+`/admin/fhir`. Evals: `fhir` suite. Design intent below.
+
+### Phase 5b — NHS adapter (mapping) ✅ DONE (2026-08-14); live spine still gated
+
+**Implemented** in `web/adapters/nhs/`, version-split as designed:
+
+- `identifiers.py` — NHS Number modulus 11 (no network)
+- `profiles.py` — UK Core R4 profiles + GP Connect STU3 translation
+  (including R4 `dateCriterion` → STU3 `recommendation.date`)
+- `live.py` — PDS / GP Connect / spine write-back raise `AdapterNotAvailable`
+  until `NHS_LIVE_ENABLED` and onboarding credentials exist
+
+`GET /api/v1/adapters/GB/status`, `POST .../verify-identifier`,
+`GET .../subjects/{id}?release=r4|stu3`, `POST .../import`,
+`GET .../reminders/{id}`. Live PDS/GP Connect remain **unschedulable** until
+§10 Q1 is answered by NHS England onboarding. The mapping layer does not
+depend on that answer.
+
 **Decided 2026-07-17:** the target is an **open-source human GP clinic**. Provet
 is a **reference model only — no Provet adapter will be built.** Everything
 Provet contributes to this plan is conceptual: the corrected cardinality (§2),
@@ -591,17 +615,18 @@ Still open:
 | **2** | Persisted reminders + comms log + outcomes | Makes the core claim measurable |
 | **3** | Appointments + availability | Largest greenfield build; nothing in the estate to lift |
 | **4** | Invoices/payments/GL (lift FastERP) | Cheap; mostly a port |
-| **5a** | Shape the core to FHIR R4 | International; not gated on anyone's approval |
-| **5b** | NHS adapter (GP Connect, IM1, NHS App, PDS) | **Gated on §10 Q1 — assurance may block open development** |
+| **5a** | Shape the core to FHIR R4 | ✅ vanilla R4 read surface |
+| **5b-map** | NHS adapter mapping (UK Core R4 + GP Connect STU3 + NHS Number) | ✅ offline |
+| **5b-live** | Live PDS / GP Connect / IM1 / NHS App | **Gated on §10 Q1 — assurance may block open development** |
 
-Phases 0–4 are unblocked and country-neutral. Only **5b** depends on NHS
-gatekeeping, which is why the core is shaped to R4 *before* any adapter is
-attempted: if NHS onboarding proves closed to an open-source project, phases 0–5a
-still stand on their own and another country's adapter can go first.
+Phases 0–5a and the NHS *mapping* layer are unblocked and country-neutral. Only
+**5b-live** depends on NHS gatekeeping. If onboarding proves closed to an
+open-source project, 0–5b-map still stand and another country's adapter can
+go first.
 
-Adapter seam is already stubbed: `web/adapters/base.py` (the `CountryAdapter`
-port) + `web/adapters/nhs_gpconnect.py` (NHS stub, refuses every call) +
-`docs/adapters/NHS_GP_CONNECT.md`.
+Adapter seam: `web/adapters/base.py` (the `CountryAdapter` port) +
+`web/adapters/registry.py` + `web/adapters/nhs/` (implemented mapping; live
+calls gated) + `docs/adapters/NHS_GP_CONNECT.md`.
 
 ---
 

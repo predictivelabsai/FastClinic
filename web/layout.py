@@ -478,6 +478,7 @@ def topbar(env: str, user_email: str | None, lang: str | None = None):
 NAV_ITEMS = [
     ("OVERVIEW", [
         ("dashboard", "Overview", "📊", "/"),
+        ("my-records", "My Health Records", "🩺", "/my-records"),
         ("chat-full", "AI Assistant", "🤖", "/ai"),
     ]),
     ("OPERATIONS", [
@@ -506,6 +507,7 @@ NAV_ITEMS = [
     ]),
     ("ADMIN", [
         ("data-admin", "Data & Import", "🗂️", "/admin/data"),
+        ("fhir-admin", "FHIR R4", "🔗", "/admin/fhir"),
         ("prompt", "System Prompt", "📝", "/ai/prompt"),
     ]),
 ]

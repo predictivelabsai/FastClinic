@@ -226,6 +226,8 @@ def patient_detail_view(pid: int):
             f"<tr><th>{t('Date of birth')}</th><td>{_date(p['date_of_birth'])} ({t('age')} {_age(p['date_of_birth'])})</td></tr>"
             f"<tr><th>{t('NHS number')}</th><td>{_escape(p['nhs_number'] or '—')}</td></tr>"
             f"<tr><th>{t('Critical notes')}</th><td>{_escape(p['critical_notes'] or '—')}</td></tr>"
+            f"<tr><th>{t('FHIR R4')}</th><td><a href='/admin/fhir?subject_id={pid}'>{t('Export FHIR')}</a>"
+            f" · <a href='/api/v1/fhir/Patient/{pid}/$everything'>Patient/$everything</a></td></tr>"
             "</table>"
         ),
         cls="card",
@@ -409,6 +411,7 @@ def data_admin_view():
               "clinic records."),
             P(t("Detected exports: {exports}", exports=", ".join(exports) or t("none")),
               style="color:var(--text-mute);font-size:13px;"),
+            P(A(t("Open FHIR R4 export"), href="/admin/fhir")),
             cls="card",
         ),
         Div(

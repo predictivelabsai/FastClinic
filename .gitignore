@@ -178,6 +178,10 @@ cython_debug/
 .pypirc
 
 # Google service account keys
+
+# Private medical-record exports downloaded from Terviseportaal/TEHIK.
+# Never commit identifiable health data to this repository.
+data/private-health-records/
 ga4-service-account.json
 *-service-account.json
 secrets/

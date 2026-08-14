@@ -10,7 +10,6 @@ from __future__ import annotations
 import hashlib
 import os
 import re
-import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -34,12 +33,9 @@ CREATE INDEX IF NOT EXISTS idx_chat_created ON chat_message (created_at);
 """
 
 
-def _connect() -> sqlite3.Connection:
-    CHAT_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(CHAT_DB_PATH, timeout=10)
-    connection.row_factory = sqlite3.Row
-    connection.executescript(_SCHEMA)
-    return connection
+def _connect():
+    from web.ops_db import connect
+    return connect(CHAT_DB_PATH)
 
 
 def _owner_hash(owner_id: str | None) -> str:

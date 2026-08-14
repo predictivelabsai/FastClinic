@@ -13,7 +13,8 @@ import secrets
 from datetime import date
 from typing import Any, Literal
 
-from fastapi import Depends, Header, HTTPException, Query, Response, status
+from fastapi import Depends, Header, HTTPException, Query, Response, Security, status
+from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import BaseModel, ConfigDict, Field
 
 from web import (
@@ -31,6 +32,7 @@ from .api_core import (
     DatabaseBackend,
     ErrorEnvelope,
     Resource,
+    bearer,
     create_database_api,
     require_write_token,
 )
@@ -136,13 +138,25 @@ API_GROUPS = (
             ("GET", "/api/v1/health", "Version and write-readiness status", "Public read"),
         ),
     ),
+    (
+        "FHIR R4 & country adapters",
+        "Clinic OS Phase 5a/5b: vanilla R4 projection, UK Core profiles, GP Connect STU3 translation.",
+        (
+            ("GET", "/api/v1/fhir/metadata", "CapabilityStatement", "Public read"),
+            ("GET", "/api/v1/fhir/{type}/{id}", "Single resource read", "Public clinical · token for ops"),
+            ("GET", "/api/v1/fhir/Patient/{id}/$everything", "Subject bundle", "Public clinical · token adds ops"),
+            ("POST", "/api/v1/fhir/$validate", "Structural validation", "Public"),
+            ("POST", "/api/v1/fhir/$import", "Map a resource onto the core", "Token required"),
+            ("GET POST", "/api/v1/adapters/GB/*", "NHS Number, UK Core export, STU3, reminders", "Public map · token for ops"),
+        ),
+    ),
 )
 
 
 backend = DatabaseBackend(db.database_target(), RESOURCES)
 api = create_database_api(
     product="FastClinic",
-    version="1.2.0",
+    version="1.3.0",
     description=(
         "Typed integration access across FastClinic's synthetic clinical model, "
         "scheduling, activation, consent, billing, and analytics."
@@ -889,3 +903,117 @@ def cancel_external_appointment(appointment_id: int):
     if not cancelled:
         _problem(404, "appointment_not_found", "External appointment was not found")
     return cancelled
+
+
+# ----------------------------------------------------------- FHIR R4 (Phase 5a) --
+class FhirResource(StrictModel):
+    model_config = ConfigDict(extra="allow")
+    resourceType: str = Field(min_length=1, max_length=80)
+
+
+class NhsIdentifierIn(StrictModel):
+    value: str = Field(min_length=1, max_length=32)
+
+
+def _token_ok(credentials: HTTPAuthorizationCredentials | None) -> bool:
+    configured = os.getenv("FASTSME_API_TOKEN", "")
+    if not configured or not credentials:
+        return False
+    return secrets.compare_digest(configured, credentials.credentials or "")
+
+
+@api.get("/v1/fhir/metadata", tags=["FHIR"])
+def fhir_metadata():
+    from web import fhir
+    return fhir.capability_statement()
+
+
+@api.get("/v1/fhir/Patient/{subject_id}/$everything", tags=["FHIR"])
+def fhir_patient_everything(
+    subject_id: int,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer),
+):
+    from web import fhir
+    try:
+        return fhir.bundle_subject(subject_id, include_ops=_token_ok(credentials))
+    except fhir.NotFound as exc:
+        _problem(404, "not_found", str(exc))
+
+
+@api.get("/v1/fhir/{resource_type}/{resource_id}", tags=["FHIR"])
+def fhir_read(
+    resource_type: str,
+    resource_id: str,
+    credentials: HTTPAuthorizationCredentials | None = Security(bearer),
+):
+    from web import fhir
+    try:
+        return fhir.export_resource(
+            resource_type, resource_id, include_ops=_token_ok(credentials),
+        )
+    except fhir.NotFound as exc:
+        _problem(404, "not_found", str(exc))
+
+
+@api.post("/v1/fhir/$validate", tags=["FHIR"])
+def fhir_validate(payload: FhirResource):
+    from web import fhir
+    return fhir.validate_resource(payload.model_dump())
+
+
+@api.post("/v1/fhir/$import", dependencies=[Depends(require_write_token)], tags=["FHIR"])
+def fhir_import(payload: FhirResource):
+    from web import fhir
+    mapped = fhir.import_resource(payload.model_dump())
+    _audit("import", "fhir", payload.resourceType, None, {"id": payload.model_dump().get("id")})
+    return mapped
+
+
+# ----------------------------------------------------- NHS adapter (Phase 5b) --
+@api.get("/v1/adapters/GB/status", tags=["NHS adapter"])
+def nhs_status():
+    from web.adapters.registry import get_adapter
+    return get_adapter("GB").status()
+
+
+@api.post("/v1/adapters/GB/verify-identifier", tags=["NHS adapter"])
+def nhs_verify_identifier(payload: NhsIdentifierIn):
+    from web.adapters.registry import get_adapter
+    return get_adapter("GB").verify_identifier(payload.value)
+
+
+@api.get("/v1/adapters/GB/subjects/{subject_id}", tags=["NHS adapter"])
+def nhs_export_subject(
+    subject_id: int,
+    release: str = Query(default="r4", pattern="^(r4|stu3|gpc|gpconnect)$"),
+):
+    from web.adapters.base import AdapterNotAvailable
+    from web.adapters.registry import get_adapter
+    from web import fhir
+    try:
+        resources = get_adapter("GB").export_subject(subject_id, release=release)
+    except fhir.NotFound as exc:
+        _problem(404, "not_found", str(exc))
+    except AdapterNotAvailable as exc:
+        _problem(503, "adapter_unavailable", str(exc))
+    from web.fhir.assemble import as_bundle
+    return as_bundle(resources)
+
+
+@api.post("/v1/adapters/GB/import", dependencies=[Depends(require_write_token)], tags=["NHS adapter"])
+def nhs_import(payload: FhirResource):
+    from web.adapters.registry import get_adapter
+    mapped = get_adapter("GB").import_record(payload.model_dump())
+    _audit("import", "nhs", payload.resourceType, None, {"id": payload.model_dump().get("id")})
+    return mapped
+
+
+@api.get("/v1/adapters/GB/reminders/{reminder_id}", dependencies=[Depends(require_write_token)], tags=["NHS adapter"])
+def nhs_push_reminder(reminder_id: int):
+    from web.adapters.base import AdapterNotAvailable
+    from web.adapters.registry import get_adapter
+    try:
+        return get_adapter("GB").push_reminder(reminder_id)
+    except AdapterNotAvailable as exc:
+        _problem(404, "not_found", str(exc))
+

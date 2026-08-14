@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import os
 import json
-import sqlite3
 from datetime import datetime, timedelta
 
 from web.db import query as _main_query, reference_date
@@ -136,11 +135,9 @@ CREATE INDEX IF NOT EXISTS idx_api_audit_resource
 """
 
 
-def _connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(OPS_DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.executescript(_SCHEMA)
-    return conn
+def _connect():
+    from web.ops_db import connect
+    return connect(OPS_DB_PATH)
 
 
 def _now() -> str:
