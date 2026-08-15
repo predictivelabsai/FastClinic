@@ -2,8 +2,8 @@
 
 Run the non-destructive live checks with::
 
-    set -a; source .env; set +a
-    MEDBACKEND_LIVE_TEST=1 pytest -q tests/medbackend_test.py
+    MEDBACKEND_LIVE_TEST=1 python -m dotenv run -- \
+      pytest -q tests/medbackend_test.py --tb=line
 
 MedBackend issues patient tokens through the OAuth 2.0 authorization-code
 grant; ``client_credentials`` is not supported and neither is PKCE, because
@@ -22,6 +22,7 @@ in assertion messages or output.
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -50,6 +51,17 @@ CREDENTIALS = (
     "MEDBACKEND_PATIENT_PASSWORD",
     "MEDBACKEND_PATIENT_REDIRECT_URI",
 )
+
+OAUTH_STATE = "fastclinic-integration-check"
+
+
+@dataclass(frozen=True)
+class OAuthResult:
+    """Secrets stay in memory for the duration of one live test session."""
+
+    access_token: str
+    authorization_code_received: bool
+    source: str
 
 
 def _config() -> dict[str, str]:
@@ -92,13 +104,14 @@ def _authorization_code(config: dict[str, str], credentials: dict[str, str]) -> 
     The code lives 5 minutes and is consumed by the first exchange, so it is
     fetched fresh per test rather than carried in the environment.
     """
+    __tracebackhide__ = True
     response = requests.post(
         _login_url(config),
         json={
             "email": credentials["MEDBACKEND_PATIENT_EMAIL"],
             "password": credentials["MEDBACKEND_PATIENT_PASSWORD"],
             "redirect_uri": credentials["MEDBACKEND_PATIENT_REDIRECT_URI"],
-            "state": "fastclinic-integration-check",
+            "state": OAUTH_STATE,
         },
         timeout=20,
     )
@@ -108,12 +121,15 @@ def _authorization_code(config: dict[str, str], credentials: dict[str, str]) -> 
         f"patient login failed with HTTP {response.status_code}: {_server_error(response)}"
     )
     redirect_url = response.json().get("redirect_url", "")
-    code = parse_qs(urlparse(redirect_url).query).get("code", [""])[0]
+    query = parse_qs(urlparse(redirect_url).query)
+    assert query.get("state") == [OAUTH_STATE], "login redirect did not preserve OAuth state"
+    code = query.get("code", [""])[0]
     assert code, "login succeeded but the redirect_url carried no authorization code"
     return code
 
 
 def _exchange_code(config: dict[str, str], credentials: dict[str, str], code: str) -> str:
+    __tracebackhide__ = True
     response = requests.post(
         config["MEDBACKEND_PATIENT_TOKEN_URL"],
         data={
@@ -135,12 +151,26 @@ def _exchange_code(config: dict[str, str], credentials: dict[str, str], code: st
     return body["access_token"]
 
 
-def _access_token(config: dict[str, str]) -> str:
+def _oauth_result(config: dict[str, str]) -> OAuthResult:
+    __tracebackhide__ = True
     token = os.getenv("MEDBACKEND_PATIENT_ACCESS_TOKEN")
     if token:
-        return token
+        return OAuthResult(token, False, "injected_access_token")
     credentials = _credentials()
-    return _exchange_code(config, credentials, _authorization_code(config, credentials))
+    code = _authorization_code(config, credentials)
+    token = _exchange_code(config, credentials, code)
+    return OAuthResult(token, True, "authorization_code")
+
+
+@pytest.fixture(scope="session")
+def live_oauth() -> OAuthResult:
+    """Drive one OAuth transaction and reuse only its in-memory access token.
+
+    Fetching one result per session matters because authorization codes are
+    short-lived and single-use.  It also avoids performing multiple password
+    logins merely because several assertions exercise the same flow.
+    """
+    return _oauth_result(_config())
 
 
 def test_patient_oauth_configuration_is_complete():
@@ -157,24 +187,22 @@ def test_patient_jwks_is_reachable():
     assert all(key.get("kid") and key.get("kty") for key in keys)
 
 
-def test_patient_login_issues_authorization_code():
+def test_patient_login_issues_authorization_code(live_oauth: OAuthResult):
+    if live_oauth.source == "injected_access_token":
+        pytest.skip("an injected access token bypasses the authorization-code login")
+    assert live_oauth.authorization_code_received
+
+
+def test_patient_authorization_code_exchange(live_oauth: OAuthResult):
+    assert live_oauth.access_token
+
+
+def test_patient_list_graphql(live_oauth: OAuthResult):
     config = _config()
-    assert _authorization_code(config, _credentials())
-
-
-def test_patient_authorization_code_exchange():
-    config = _config()
-    credentials = _credentials()
-    assert _exchange_code(config, credentials, _authorization_code(config, credentials))
-
-
-def test_patient_list_graphql():
-    config = _config()
-    token = _access_token(config)
     response = requests.post(
         config["MEDBACKEND_GRAPHQL_URL"],
         headers={
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"Bearer {live_oauth.access_token}",
             "Content-Type": "application/json",
             # Must equal the project_uid claim in the token; backbone rejects a
             # mismatch before it resolves anything.
