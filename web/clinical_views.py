@@ -291,3 +291,28 @@ def audit_view():
             _table(["When", "Who", "Action", "Resource"], rows) if rows else P(t("No events yet.")),
             cls="card"),
     )
+
+
+def medbackend_oauth_view(email: str, notice: str = ""):
+    from web import medbackend_oauth
+    latest = medbackend_oauth.latest(email)
+    rows = [
+        ["Configuration", "Ready" if medbackend_oauth.configured() else "Incomplete"],
+        ["OAuth flow", "Authorization Code + PKCE"],
+        ["Test account", medbackend_oauth.TEST_EMAIL],
+        ["Last status", (latest or {}).get("status") or "Not tested"],
+        ["Patient records visible", (latest or {}).get("patient_count") if latest else "—"],
+    ]
+    return Div(
+        _page_title(t("MedBackend OAuth"), t("Patient-authorized connectivity test")),
+        P(notice, style="color:var(--ok);") if notice else None,
+        Div(
+            Div(H3(t("OAuth 2.0 status")), cls="card-header"),
+            _table(["Field", "Value"], rows),
+            P(t("The access token is used once for Me and PatientList and is not stored.")),
+            A(t("Connect MedBackend as patient"), href="/integrations/medbackend/patient/start",
+              cls="btn primary") if email.strip().lower() == medbackend_oauth.TEST_EMAIL else
+            P(t("Sign in with the configured patient test account to start OAuth.")),
+            cls="card",
+        ),
+    )

@@ -219,6 +219,14 @@ _TABLES = (
        created_at TEXT NOT NULL)""",
     """CREATE TABLE IF NOT EXISTS access_audit (id {id}, actor_email TEXT NOT NULL, action TEXT NOT NULL,
        resource TEXT NOT NULL, item_id TEXT, created_at TEXT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS medbackend_oauth_transaction (
+       state_hash TEXT PRIMARY KEY, account_email TEXT NOT NULL,
+       code_verifier TEXT NOT NULL, expires_at BIGINT NOT NULL,
+       used_at BIGINT, created_at BIGINT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS medbackend_connection_audit (
+       id {id}, account_email TEXT NOT NULL, status TEXT NOT NULL,
+       identity_reference TEXT, patient_count INTEGER, error_code TEXT,
+       tested_at BIGINT NOT NULL)""",
 )
 
 _INDEXES = (
@@ -240,6 +248,7 @@ _INDEXES = (
     "CREATE INDEX IF NOT EXISTS idx_inbox_thread_subject ON inbox_thread(subject_id)",
     "CREATE INDEX IF NOT EXISTS idx_inbox_msg_thread ON inbox_message(thread_id)",
     "CREATE INDEX IF NOT EXISTS idx_access_audit_actor ON access_audit(actor_email,created_at)",
+    "CREATE INDEX IF NOT EXISTS idx_medbackend_connection_email ON medbackend_connection_audit(account_email,tested_at)",
 )
 
 

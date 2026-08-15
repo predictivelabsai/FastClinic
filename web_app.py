@@ -15,7 +15,7 @@ import re
 import secrets
 import uuid
 import logging
-from urllib.parse import urlsplit
+from urllib.parse import quote_plus, urlsplit
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -53,6 +53,7 @@ from web import access
 from web import clinical
 from web import clinical_views
 from web import portal_views
+from web import medbackend_oauth
 from web.api import api
 
 logger = logging.getLogger("fastclinic")
@@ -544,6 +545,51 @@ def post(session, email: str = "", role: str = "patient",
 def get(session):
     _, denied = _require(session, "settings-roles")
     return denied or RedirectResponse("/settings/roles", status_code=303)
+
+
+@rt("/settings/medbackend")
+def get(session, notice: str = ""):
+    email, denied = _require(session, "settings-medbackend")
+    if denied:
+        return denied
+    lang = get_lang(session)
+    with using_lang(lang):
+        return page(
+            "settings-medbackend", CLINIC_ENV, email, _thread(session),
+            clinical_views.medbackend_oauth_view(email, notice), lang=lang,
+        )
+
+
+@rt("/integrations/medbackend/patient/start")
+def get(session):
+    email, denied = _require(session, "settings-medbackend")
+    if denied:
+        return denied
+    try:
+        return RedirectResponse(medbackend_oauth.begin(email), status_code=303)
+    except medbackend_oauth.MedBackendOAuthError as exc:
+        return RedirectResponse(
+            f"/settings/medbackend?notice={quote_plus(str(exc))}", status_code=303,
+        )
+
+
+@rt("/integrations/medbackend/patient/callback")
+def get(session, code: str = "", state: str = "", error: str = ""):
+    email, denied = _require(session, "settings-medbackend")
+    if denied:
+        return denied
+    if error or not code or not state:
+        notice = "MedBackend authorization was cancelled or incomplete"
+    else:
+        try:
+            result = medbackend_oauth.complete(code, state, email)
+            notice = f"Connected; {result['patient_count']} patient record(s) visible"
+            access.audit(email, "connect", "medbackend_patient_oauth")
+        except medbackend_oauth.MedBackendOAuthError as exc:
+            notice = str(exc)
+    return RedirectResponse(
+        f"/settings/medbackend?notice={quote_plus(notice)}", status_code=303,
+    )
 
 
 @rt("/admin/audit")

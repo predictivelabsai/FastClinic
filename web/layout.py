@@ -536,6 +536,7 @@ NAV_ITEMS = [
     ]),
     ("SETTINGS", [
         ("settings-roles", "Users & roles", "⚙️", "/settings/roles"),
+        ("settings-medbackend", "MedBackend OAuth", "🔐", "/settings/medbackend"),
     ]),
 ]
 
