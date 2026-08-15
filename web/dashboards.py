@@ -244,6 +244,7 @@ def patient_detail_view(pid: int):
             f"<tr><th>{t('Critical notes')}</th><td>{_escape(p['critical_notes'] or '—')}</td></tr>"
             f"<tr><th>{t('FHIR R4')}</th><td><a href='/admin/fhir?subject_id={pid}'>{t('Export FHIR')}</a>"
             f" · <a href='/api/v1/fhir/Patient/{pid}/$everything'>Patient/$everything</a></td></tr>"
+            f"<tr><th>{t('Chart')}</th><td><a href='/patients/{pid}/chart'>{t('Open chart')}</a></td></tr>"
             "</table>"
         ),
         cls="card",

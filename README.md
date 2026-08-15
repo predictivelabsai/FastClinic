@@ -72,6 +72,13 @@ by default.
 - **Communications** — an **SMS** (Twilio / VoodooSMS) and **Email** (Postmark)
   sender, both with automatic opted-out suppression, plus a **web-presence audit**
   suite that writes dated reports.
+- **Clinical workspace** — writable encounter charting (SOAP), orders (lab,
+  imaging, referral, medication), care tasks, insurance coverage, in-app
+  messages, an intake questionnaire, and a patient portal. Staff roles
+  (`admin`, `doctor`, `receptionist`, `billing`, `patient`) select distinct
+  workspaces and are enforced on direct routes and write actions. Administrators
+  manage account roles from the final **Settings → Users & roles** navigation section.
+  local account; the shared admin login is unchanged.
 - **AI assistant** — a LangGraph agent over read-only clinic data with a
   configurable model provider, plus fast slash-commands: `/kpi`, `/due`,
   `/lapsed`, `/followup`, `/revenue`, `/patient`.
@@ -97,7 +104,8 @@ Operational state the cockpit writes—accounts, chat, reminders, appointments,
 communications, invoices, payments, ledger and audit—lives in separate tables
 so refreshing the clinical import never wipes it. Production can keep all of
 these tables in `DATABASE_URL_PROD`/`fast_clinic` by setting
-`FASTCLINIC_OPS_BACKEND=postgresql`; SQLite remains available for local tests.
+`FASTCLINIC_OPS_BACKEND=postgresql`. PostgreSQL is the application default;
+SQLite remains available as an explicit local/test backend.
 Migrate legacy operations and account files additively with
 `python scripts/migrate_ops_to_postgres.py`. The cockpit shows a graceful "No
 data loaded" screen until clinical records exist.
@@ -116,8 +124,9 @@ the user guide and the FastHTML audit.
 `fastclinic-data` volume at `/data` so the database lives outside the image.
 Configure via `.env` (see `.env.sample`).
 
-The clinical model is selectable with `FASTCLINIC_DATABASE_BACKEND=sqlite` or
-`postgresql`. PostgreSQL reads `DATABASE_URL_PROD` (with `DATABASE_URL` as a
+The clinical model defaults to `FASTCLINIC_DATABASE_BACKEND=postgresql` and can
+be explicitly switched to `sqlite` for isolated development/tests. PostgreSQL
+reads `DATABASE_URL_PROD` (with `DATABASE_URL` as a
 fallback) and is isolated to `FASTCLINIC_DB_SCHEMA=fast_clinic`. Migrate the
 current synthetic SQLite data transactionally with:
 

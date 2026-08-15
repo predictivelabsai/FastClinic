@@ -41,7 +41,8 @@ RESOURCE_TYPES = frozenset({
     "Organization", "Encounter", "Condition", "Procedure", "Observation",
     "ServiceRequest", "Immunization", "MedicationRequest", "DocumentReference",
     "Appointment", "Consent", "ImmunizationRecommendation", "Task",
-    "CommunicationRequest", "Communication", "Bundle", "CapabilityStatement",
+    "CommunicationRequest", "Communication", "Coverage", "QuestionnaireResponse",
+    "Bundle", "CapabilityStatement",
 })
 
 
@@ -402,6 +403,18 @@ def consent_resource(party: dict, subject_id: int) -> dict:
     })
 
 
+def coverage_resource(row: dict) -> dict:
+    return _omit_empty({
+        "resourceType": "Coverage",
+        "id": str(row["id"]),
+        "identifier": [identifier(f"{CORE_SID}/coverage", row["id"])],
+        "status": "active" if row.get("status") == "active" else "cancelled",
+        "beneficiary": ref("Patient", row["subject_id"]),
+        "payor": [{"display": row.get("payor") or "Unknown payor"}],
+        "subscriberId": row.get("member_id") or None,
+    })
+
+
 def reminder_resource(reminder: dict) -> dict:
     """Vaccine slice → ImmunizationRecommendation; everything else → Task."""
     category = reminder.get("category") or ""
@@ -466,6 +479,8 @@ def capability_statement() -> dict:
         ("Task", "Non-vaccine recall"),
         ("CommunicationRequest", "Appointment reminder"),
         ("Communication", "Sent, failed, or blocked message"),
+        ("Coverage", "Insurance or payor"),
+        ("QuestionnaireResponse", "Patient intake answers"),
     ):
         rest_resources.append({
             "type": name,

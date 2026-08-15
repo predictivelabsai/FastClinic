@@ -23,7 +23,11 @@ path,expect_contains,expect_not_contains,category
 /ai/prompt,Prompt,Traceback,admin
 /compliance,Compliance &amp; Trust for European Private Clinics,Traceback,page
 /developers,Complete API surface,Traceback,page
-/api/v1/health,1.3.0,Traceback,api
+/api/v1/health,1.4.0,Traceback,api
+/orders,Orders,Traceback,operations
+/tasks,Tasks,Traceback,operations
+/messages,Messages,Traceback,operations
+/admin/staff,Staff,Traceback,admin
 /api/v1/fhir/metadata,CapabilityStatement,Traceback,api
 /api/v1/fhir/metadata,Patient,Traceback,api
 /api/v1/adapters/GB/status,uk_core_r4_mapping,Traceback,api

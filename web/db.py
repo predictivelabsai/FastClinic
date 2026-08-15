@@ -1,9 +1,7 @@
 """Configurable clinical-database access for the FastClinic cockpit.
 
-The synthetic clinical model can run from the bundled SQLite database or from
-PostgreSQL.  Operational state (sessions, chat, appointments and billing) stays
-in its separately configured SQLite store so deployments can migrate the
-clinical data without changing those lifecycle guarantees.
+The clinical model defaults to PostgreSQL and can use the bundled SQLite
+database when explicitly selected for isolated local development and tests.
 """
 from __future__ import annotations
 
@@ -18,7 +16,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.getenv("FASTCLINIC_DB") or os.path.join(ROOT, "fastclinic.sqlite")
 DATABASE_URL = os.getenv("DATABASE_URL_PROD") or os.getenv("DATABASE_URL") or ""
 DB_SCHEMA = os.getenv("FASTCLINIC_DB_SCHEMA") or "fast_clinic"
-DATABASE_BACKEND = (os.getenv("FASTCLINIC_DATABASE_BACKEND") or "sqlite").lower()
+DATABASE_BACKEND = (os.getenv("FASTCLINIC_DATABASE_BACKEND") or "postgresql").lower()
 
 # "Today" reference for due/lapsed maths. The sample export runs to mid-2026;
 # override with FASTCLINIC_TODAY=YYYY-MM-DD to pin a reference date for demos.

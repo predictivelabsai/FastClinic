@@ -16,6 +16,8 @@ _TEST_ROOT = Path(_TEST_STORAGE.name)
 # committed synthetic clinical database remains the read-only test fixture.
 os.environ.setdefault("FASTCLINIC_OPS_DB", str(_TEST_ROOT / "operations.sqlite"))
 os.environ.setdefault("FASTSME_AUTH_DB", str(_TEST_ROOT / "accounts.sqlite"))
+os.environ.setdefault("FASTCLINIC_DATABASE_BACKEND", "sqlite")
+os.environ.setdefault("FASTCLINIC_OPS_BACKEND", "sqlite")
 
 
 def pytest_unconfigure(config):

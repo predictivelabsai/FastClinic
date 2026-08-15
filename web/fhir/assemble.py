@@ -20,6 +20,7 @@ from web.fhir.resources import (
     practitioner_role_resource,
     related_person_resource,
     reminder_resource,
+    coverage_resource,
 )
 
 _OPS_TYPES = {
@@ -305,4 +306,50 @@ def _ops(subject_id: int) -> list[dict]:
         (subject_id,),
     ):
         resources.append(communication_resource(row))
+    try:
+        for row in activation_loop.query(
+            "SELECT * FROM coverage WHERE subject_id=? ORDER BY id",
+            (subject_id,),
+        ):
+            resources.append(coverage_resource(row))
+        for row in activation_loop.query(
+            "SELECT * FROM chart_encounter WHERE subject_id=? ORDER BY started_at",
+            (subject_id,),
+        ):
+            resources.append(encounter_resource({
+                "id": f"chart-{row['id']}",
+                "subject_id": row["subject_id"],
+                "consult_at": row.get("started_at"),
+                "clinician_id": row.get("clinician_id"),
+                "is_visit": 1,
+            }))
+        for row in activation_loop.query(
+            "SELECT * FROM clinical_order WHERE subject_id=? ORDER BY id",
+            (subject_id,),
+        ):
+            resources.append(item_resource({
+                "id": f"ord-{row['id']}",
+                "subject_id": row["subject_id"],
+                "consultation_id": None,
+                "clinician_id": row.get("clinician_id"),
+                "code": row.get("code"),
+                "name": row.get("name"),
+                "category": row.get("kind") or "procedure",
+                "item_at": row.get("created_at"),
+            }))
+        for row in activation_loop.query(
+            "SELECT * FROM care_task WHERE subject_id=? ORDER BY id",
+            (subject_id,),
+        ):
+            resources.append(reminder_resource({
+                "id": f"task-{row['id']}",
+                "subject_id": row["subject_id"],
+                "category": "care",
+                "status": "pending" if row.get("status") != "completed" else "sent",
+                "due_date": row.get("due_date"),
+                "created_at": row.get("created_at"),
+                "sms_text": row.get("title"),
+            }))
+    except Exception:
+        pass
     return resources

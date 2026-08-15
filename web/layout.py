@@ -468,13 +468,17 @@ def _language_selector(lang: str):
 
 
 def topbar(env: str, user_email: str | None, lang: str | None = None):
+    from web.access import can, role_of
     lang = lang or current_lang()
     ver = _read_version()
+    role = role_of(user_email) if user_email else ""
     right = Div(
         Button(NotStr("&laquo; Chat"), id="copilot-topbar-toggle", cls="btn copilot-toggle",
-               onclick="toggleCopilot()", title="Show / hide the AI assistant") if user_email else None,
+               onclick="toggleCopilot()", title="Show / hide the AI assistant")
+        if user_email and can(user_email, "chat-full") else None,
         _language_selector(lang),
         Span(env, cls="env-pill"),
+        Span(t(role.title()), cls="status-pill ok") if role else None,
         Span(user_email or "", style="color:var(--text-mute); font-size:12px;") if user_email else None,
         A("Logout", href="/logout", cls="btn") if user_email else None,
         cls="actions",
@@ -493,6 +497,7 @@ def topbar(env: str, user_email: str | None, lang: str | None = None):
 NAV_ITEMS = [
     ("OVERVIEW", [
         ("dashboard", "Overview", "📊", "/"),
+        ("portal", "Patient portal", "🏠", "/portal"),
         ("my-records", "My Health Records", "🩺", "/my-records"),
         ("chat-full", "AI Assistant", "🤖", "/ai"),
     ]),
@@ -501,6 +506,8 @@ NAV_ITEMS = [
         ("appointments", "Appointments", "📅", "/appointments"),
         ("treatments", "Treatments & Specialties", "🩹", "/treatments"),
         ("clinical", "Clinical", "🩺", "/clinical"),
+        ("orders", "Orders", "🧪", "/orders"),
+        ("tasks", "Tasks", "✅", "/tasks"),
         ("billing", "Billing", "🧾", "/billing"),
         ("revenue", "Revenue", "💷", "/revenue"),
     ]),
@@ -511,6 +518,7 @@ NAV_ITEMS = [
         ("act-loop", "Recall Loop", "🔄", "/activation/loop"),
     ]),
     ("COMMUNICATIONS", [
+        ("messages", "Messages", "💬", "/messages"),
         ("sms", "SMS", "📱", "/ops/sms"),
         ("email", "Email", "✉️", "/ops/email"),
         ("seo", "Web Presence", "🔍", "/seo"),
@@ -523,7 +531,11 @@ NAV_ITEMS = [
     ("ADMIN", [
         ("data-admin", "Data & Import", "🗂️", "/admin/data"),
         ("fhir-admin", "FHIR R4", "🔗", "/admin/fhir"),
+        ("audit", "Access audit", "📜", "/admin/audit"),
         ("prompt", "System Prompt", "📝", "/ai/prompt"),
+    ]),
+    ("SETTINGS", [
+        ("settings-roles", "Users & roles", "⚙️", "/settings/roles"),
     ]),
 ]
 
@@ -537,16 +549,20 @@ def _seo_subnav() -> list[tuple[str, str, str, str]]:
         return []
 
 
-def left_pane(active: str):
+def left_pane(active: str, user_email: str | None = None):
+    from web.access import visible_nav
     sections = []
     for section_name, items in NAV_ITEMS:
+        visible = visible_nav(items, user_email)
+        if not visible:
+            continue
         links = [
             A(
                 Span(icon, cls="nav-icon"), Span(t(label)),
                 href=href,
                 cls=f"nav-item {'active' if active == key else ''}",
             )
-            for key, label, icon, href in items
+            for key, label, icon, href in visible
         ]
         # Append SEO drilldowns under the SEO AUDIT section
         if section_name == "SEO AUDIT":
@@ -950,8 +966,10 @@ JS_I18N_KEYS = (
 
 def page(active: str, env: str, user_email: str, thread_id: str, *content,
          right_override=None, lang: str | None = None):
+    from web.access import can
     lang = lang or current_lang()
-    right = right_override if right_override is not None else right_pane_chat(thread_id)
+    assistant = can(user_email, "chat-full")
+    right = (right_override if right_override is not None else right_pane_chat(thread_id)) if assistant else None
     result = (
         Title("FastClinic Cockpit"),
         Link(rel="icon", type="image/svg+xml", href="/favicon.svg"),
@@ -963,12 +981,12 @@ def page(active: str, env: str, user_email: str, thread_id: str, *content,
                       json.dumps(js_translations(lang, JS_I18N_KEYS), ensure_ascii=False) + ";")),
         Div(
             topbar(env, user_email, lang),
-            left_pane(active),
+            left_pane(active, user_email),
             Div(*content, cls="center-pane"),
             right,
             Div(NotStr("&lsaquo; AI Assistant"), id="copilot-reopen", onclick="toggleCopilot()",
-                title="Show assistant"),
-            cls="app",
+                title="Show assistant") if assistant else None,
+            cls=f"app{' right-collapsed' if not assistant else ''}",
         ),
         Script(LAYOUT_JS),
     )

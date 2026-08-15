@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-14T18:19:27",
+  "timestamp": "2026-08-14T22:33:02",
   "db_row_counts": {
     "subject": 1000,
     "diagnosis": 5358,
@@ -10,8 +10,8 @@
     "subject_party_role": 1000
   },
   "summary": {
-    "total": 182,
-    "passed": 182,
+    "total": 195,
+    "passed": 195,
     "failed": 0,
     "pass_rate": 1.0,
     "by_suite": {
@@ -24,8 +24,8 @@
         "total": 25
       },
       "routes": {
-        "passed": 36,
-        "total": 36
+        "passed": 40,
+        "total": 40
       },
       "coverage": {
         "passed": 4,
@@ -58,6 +58,10 @@
       "fhir": {
         "passed": 14,
         "total": 14
+      },
+      "clinical": {
+        "passed": 9,
+        "total": 9
       }
     },
     "by_category": {
@@ -126,20 +130,20 @@
         "total": 3
       },
       "admin": {
-        "passed": 4,
-        "total": 4
+        "passed": 5,
+        "total": 5
       },
       "api": {
         "passed": 7,
         "total": 7
       },
+      "operations": {
+        "passed": 5,
+        "total": 5
+      },
       "export": {
         "passed": 3,
         "total": 3
-      },
-      "operations": {
-        "passed": 2,
-        "total": 2
       },
       "field_coverage": {
         "passed": 4,
@@ -172,6 +176,10 @@
       "interop": {
         "passed": 14,
         "total": 14
+      },
+      "workspace": {
+        "passed": 9,
+        "total": 9
       }
     }
   },
@@ -1236,7 +1244,43 @@
       "suite": "routes",
       "path": "/api/v1/health",
       "category": "api",
-      "expect_contains": "1.3.0",
+      "expect_contains": "1.4.0",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/orders",
+      "category": "operations",
+      "expect_contains": "Orders",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/tasks",
+      "category": "operations",
+      "expect_contains": "Tasks",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/messages",
+      "category": "operations",
+      "expect_contains": "Messages",
+      "passed": true,
+      "detail": "",
+      "status": 200
+    },
+    {
+      "suite": "routes",
+      "path": "/admin/staff",
+      "category": "admin",
+      "expect_contains": "Staff",
       "passed": true,
       "detail": "",
       "status": 200
@@ -1832,6 +1876,78 @@
       "suite": "fhir",
       "question": "pds-stays-gated",
       "category": "interop",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "ok"
+    },
+    {
+      "suite": "clinical",
+      "question": "env-admin-is-admin",
+      "category": "workspace",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "ok"
+    },
+    {
+      "suite": "clinical",
+      "question": "practitioner-cannot-see-billing",
+      "category": "workspace",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "ok"
+    },
+    {
+      "suite": "clinical",
+      "question": "practitioner-can-chart",
+      "category": "workspace",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "ok"
+    },
+    {
+      "suite": "clinical",
+      "question": "open-encounter",
+      "category": "workspace",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "ok"
+    },
+    {
+      "suite": "clinical",
+      "question": "soap-note",
+      "category": "workspace",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "ok"
+    },
+    {
+      "suite": "clinical",
+      "question": "order-completes",
+      "category": "workspace",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "ok"
+    },
+    {
+      "suite": "clinical",
+      "question": "task-completes",
+      "category": "workspace",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "ok"
+    },
+    {
+      "suite": "clinical",
+      "question": "coverage-recorded",
+      "category": "workspace",
+      "passed": true,
+      "detail": "",
+      "response_excerpt": "ok"
+    },
+    {
+      "suite": "clinical",
+      "question": "finish-encounter",
+      "category": "workspace",
       "passed": true,
       "detail": "",
       "response_excerpt": "ok"

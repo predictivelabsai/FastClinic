@@ -12,6 +12,12 @@ def test_sqlite_operational_schema_and_generated_ids(tmp_path, monkeypatch):
         assert cursor.lastrowid > 0
         row = connection.execute("SELECT * FROM reminder WHERE id=?", (cursor.lastrowid,)).fetchone()
         assert row["subject_id"] == 42
+        roles = connection.execute(
+            "SELECT role FROM access_role ORDER BY sort_order"
+        ).fetchall()
+        assert [row["role"] for row in roles] == [
+            "admin", "doctor", "receptionist", "billing", "patient",
+        ]
 
 
 def test_explicit_ops_path_keeps_tests_off_postgres(tmp_path, monkeypatch):

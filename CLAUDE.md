@@ -119,6 +119,11 @@ fields only (gender, date of birth, NHS number, blood group, insurance).
   reference, `SHORTCUTS` is the single source of truth) and `/help/guide` (web
   render of `docs/fastclinic_user_guide.md`; images + PDF served statically from
   `docs/`).
+- **`web/clinical.py`** + **`web/access.py`** — local Medplum-style workspace:
+  staff/patient roles, writable chart encounters + SOAP notes, lab/imaging/
+  referral/medication orders, care tasks, coverage, in-app messages, intake,
+  and a patient portal. The imported PMS record stays read-only; new work
+  lives in the ops database. Shared admin login remains full administrator.
 - **`web/fhir/`** — Clinic OS Phase 5a: vanilla FHIR R4 projection of the
   normalised core (`Patient`, `RelatedPerson`/`Person`, `Encounter`,
   `Condition`, item-by-category, notes, appointments, consent, reminders).

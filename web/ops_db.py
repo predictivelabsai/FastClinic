@@ -24,7 +24,7 @@ def backend_name() -> str:
     elif os.getenv("FASTCLINIC_OPS_DB"):
         value = "sqlite"
     else:
-        value = (os.getenv("FASTCLINIC_DATABASE_BACKEND") or "sqlite").lower()
+        value = (os.getenv("FASTCLINIC_DATABASE_BACKEND") or "postgresql").lower()
     if value in {"postgres", "postgresql", "pg"}:
         return "postgresql"
     if value == "sqlite":
@@ -79,6 +79,9 @@ class Connection:
             "REMINDER", "COMMUNICATION", "APPOINTMENT", "INVOICE", "GL_ENTRY",
             "PAYMENT", "API_AUDIT", "CHAT_MESSAGE",
             "ACCOUNTS", "AUTH_TOKENS",
+            "CHART_ENCOUNTER", "CHART_NOTE", "CLINICAL_ORDER", "COVERAGE",
+            "CARE_TASK", "INBOX_THREAD", "INBOX_MESSAGE", "INTAKE_FORM",
+            "ACCESS_AUDIT",
         }
         match = re.match(r'INSERT\s+INTO\s+["\']?([A-Za-z_][A-Za-z0-9_]*)', statement, re.I)
         if match and match.group(1).upper() in serial_tables:
@@ -187,6 +190,35 @@ _TABLES = (
        response_json TEXT, error TEXT, attempt_count INTEGER NOT NULL DEFAULT 1,
        created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
        UNIQUE(country_code,idempotency_key))""",
+    """CREATE TABLE IF NOT EXISTS access_role (role TEXT PRIMARY KEY, label TEXT NOT NULL,
+       sort_order INTEGER NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS access_profile (email TEXT PRIMARY KEY, role TEXT NOT NULL,
+       subject_id INTEGER, clinician_id INTEGER, created_at TEXT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS chart_encounter (id {id}, subject_id INTEGER NOT NULL,
+       consultation_id INTEGER, clinician_id INTEGER, status TEXT NOT NULL DEFAULT 'in-progress',
+       reason TEXT, started_at TEXT, ended_at TEXT, created_at TEXT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS chart_note (id {id}, encounter_id INTEGER, subject_id INTEGER NOT NULL,
+       clinician_id INTEGER, kind TEXT NOT NULL DEFAULT 'soap', subjective TEXT, objective TEXT,
+       assessment TEXT, plan TEXT, created_at TEXT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS clinical_order (id {id}, encounter_id INTEGER,
+       subject_id INTEGER NOT NULL, clinician_id INTEGER, kind TEXT NOT NULL, code TEXT,
+       name TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active', details TEXT,
+       created_at TEXT NOT NULL, completed_at TEXT)""",
+    """CREATE TABLE IF NOT EXISTS coverage (id {id}, subject_id INTEGER NOT NULL, party_id INTEGER,
+       payor TEXT NOT NULL, member_id TEXT, status TEXT NOT NULL DEFAULT 'active',
+       created_at TEXT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS care_task (id {id}, subject_id INTEGER NOT NULL,
+       encounter_id INTEGER, assignee TEXT, title TEXT NOT NULL,
+       status TEXT NOT NULL DEFAULT 'requested', due_date TEXT, created_at TEXT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS inbox_thread (id {id}, subject_id INTEGER, title TEXT NOT NULL,
+       created_at TEXT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS inbox_message (id {id}, thread_id INTEGER NOT NULL,
+       sender_email TEXT NOT NULL, sender_role TEXT, body TEXT NOT NULL, created_at TEXT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS intake_form (id {id}, subject_id INTEGER NOT NULL,
+       title TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'completed', answers_json TEXT,
+       created_at TEXT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS access_audit (id {id}, actor_email TEXT NOT NULL, action TEXT NOT NULL,
+       resource TEXT NOT NULL, item_id TEXT, created_at TEXT NOT NULL)""",
 )
 
 _INDEXES = (
@@ -201,6 +233,13 @@ _INDEXES = (
     "CREATE INDEX IF NOT EXISTS auth_tokens_account_purpose ON auth_tokens(account_id,purpose)",
     "CREATE INDEX IF NOT EXISTS idx_national_exchange_status ON national_exchange(country_code,status,created_at)",
     "CREATE INDEX IF NOT EXISTS idx_national_exchange_subject ON national_exchange(country_code,subject_ref,created_at)",
+    "CREATE INDEX IF NOT EXISTS idx_chart_enc_subject ON chart_encounter(subject_id,started_at)",
+    "CREATE INDEX IF NOT EXISTS idx_chart_note_enc ON chart_note(encounter_id)",
+    "CREATE INDEX IF NOT EXISTS idx_order_subject ON clinical_order(subject_id,status)",
+    "CREATE INDEX IF NOT EXISTS idx_task_subject ON care_task(subject_id,status)",
+    "CREATE INDEX IF NOT EXISTS idx_inbox_thread_subject ON inbox_thread(subject_id)",
+    "CREATE INDEX IF NOT EXISTS idx_inbox_msg_thread ON inbox_message(thread_id)",
+    "CREATE INDEX IF NOT EXISTS idx_access_audit_actor ON access_audit(actor_email,created_at)",
 )
 
 
@@ -208,6 +247,18 @@ def initialize(connection: Connection) -> None:
     identity = "BIGSERIAL PRIMARY KEY" if connection.postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"
     for statement in _TABLES:
         connection.execute(statement.format(id=identity))
+    for role, label, sort_order in (
+        ("admin", "Administrator", 10),
+        ("doctor", "Doctor", 20),
+        ("receptionist", "Receptionist", 30),
+        ("billing", "Billing", 40),
+        ("patient", "Patient", 50),
+    ):
+        connection.execute(
+            "INSERT INTO access_role(role,label,sort_order) VALUES(?,?,?) "
+            "ON CONFLICT(role) DO UPDATE SET label=excluded.label,sort_order=excluded.sort_order",
+            (role, label, sort_order),
+        )
     for statement in _INDEXES:
         connection.execute(statement)
     connection.commit()

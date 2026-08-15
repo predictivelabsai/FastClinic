@@ -582,6 +582,48 @@ def run_fhir() -> list[dict]:
     return out
 
 
+def run_clinical() -> list[dict]:
+    """Assert the local clinical workspace does not disturb existing engines."""
+    from web import access, clinical
+    from web.db import query_one
+
+    out = []
+
+    def check(label, passed, detail=""):
+        out.append({
+            "suite": "clinical", "question": label, "category": "workspace",
+            "passed": bool(passed), "detail": "" if passed else detail,
+            "response_excerpt": detail or "ok",
+        })
+
+    admin = access.role_of(os.environ["FASTCLINIC_ADMIN_EMAIL"])
+    check("env-admin-is-admin", admin == "admin")
+    access.set_profile("eval-gp@example.com", "practitioner")
+    check("practitioner-cannot-see-billing", not access.can("eval-gp@example.com", "billing"))
+    check("practitioner-can-chart", access.can("eval-gp@example.com", "chart"))
+
+    subject = query_one("SELECT id FROM subject WHERE deceased_at IS NULL ORDER BY id LIMIT 1")
+    if not subject:
+        check("has-subject", False, "no subject")
+        return out
+    sid = subject["id"]
+    enc = clinical.open_encounter(sid, reason="Eval visit")
+    check("open-encounter", enc and enc["status"] == "in-progress")
+    clinical.add_note(sid, encounter_id=enc["id"], assessment="Stable")
+    check("soap-note", len(clinical.notes_for(sid)) >= 1)
+    order = clinical.place_order(sid, "lab", "HbA1c", encounter_id=enc["id"])
+    clinical.set_order_status(order["id"], "completed")
+    check("order-completes", clinical.order(order["id"])["status"] == "completed")
+    task = clinical.add_task(sid, "Follow up")
+    clinical.set_task_status(task["id"], "completed")
+    check("task-completes", clinical.tasks(subject_id=sid)[0]["status"] == "completed")
+    clinical.add_coverage(sid, "NHS")
+    check("coverage-recorded", len(clinical.coverages_for(sid)) >= 1)
+    clinical.finish_encounter(enc["id"])
+    check("finish-encounter", clinical.encounter(enc["id"])["status"] == "finished")
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--quiet", action="store_true")
@@ -594,7 +636,7 @@ def main() -> int:
 
     cases = (run_shortcuts() + run_chat() + run_routes() + run_coverage()
              + run_consent() + run_model() + run_loop() + run_appointments()
-             + run_billing() + run_specialties() + run_fhir())
+             + run_billing() + run_specialties() + run_fhir() + run_clinical())
 
     passed = sum(c["passed"] for c in cases)
     total = len(cases)

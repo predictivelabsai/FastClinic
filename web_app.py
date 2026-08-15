@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fasthtml.common import (
-    fast_app, serve, Div, A, NotStr, RedirectResponse, Script, Style,
+    fast_app, serve, Div, H1, P, A, NotStr, RedirectResponse, Script, Style,
 )
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response, StreamingResponse
@@ -49,6 +49,10 @@ from web import seo, seo_views
 from web import help_views
 from web import fhir_views
 from web import fhir_portal
+from web import access
+from web import clinical
+from web import clinical_views
+from web import portal_views
 from web.api import api
 
 logger = logging.getLogger("fastclinic")
@@ -128,11 +132,33 @@ def _thread(session) -> str:
     return tid
 
 
-def _guarded(active: str, builder):
+def _denied(session, email: str):
+    if access.role_of(email) == "patient":
+        return RedirectResponse("/portal", status_code=303)
+    lang = get_lang(session)
+    with using_lang(lang):
+        return page(
+            "dashboard", CLINIC_ENV, email, _thread(session),
+            Div(H1(t("Not allowed")),
+                P(t("This page is not available for your role."))),
+            lang=lang,
+        )
+
+
+def _require(session, perm: str):
+    email = _auth(session)
+    if not email:
+        return None, RedirectResponse("/login", status_code=303)
+    if not access.can(email, perm):
+        return email, _denied(session, email)
+    return email, None
+
+
+def _guarded(active: str, builder, perm: str | None = None):
     def handler(session):
-        email = _auth(session)
-        if not email:
-            return RedirectResponse("/login", status_code=303)
+        email, denied = _require(session, perm or active)
+        if denied:
+            return denied
         lang = get_lang(session)
         with using_lang(lang):
             return page(active, CLINIC_ENV, email, _thread(session), builder(), lang=lang)
@@ -195,6 +221,8 @@ def get(session):
 def get(session, request):
     if not _auth(session):
         return landing_page(get_lang(session, request))
+    if access.role_of(_auth(session)) == "patient":
+        return RedirectResponse("/portal", status_code=303)
     return _guarded("dashboard", dash.overview_view)(session)
 
 
@@ -210,15 +238,19 @@ def get(session, pid: int):
         return RedirectResponse("/login", status_code=303)
     lang = get_lang(session)
     with using_lang(lang):
-        return page("patients", CLINIC_ENV, _auth(session), _thread(session),
+        email = _auth(session)
+        if not access.can(email, "patients"):
+            return _denied(session, email)
+        access.audit(email, "read", "subject", pid)
+        return page("patients", CLINIC_ENV, email, _thread(session),
                     dash.patient_detail_view(pid), lang=lang)
 
 
 @rt("/my-records")
 def get(session):
-    email = _auth(session)
-    if not email:
-        return RedirectResponse("/login", status_code=303)
+    email, denied = _require(session, "my-records")
+    if denied:
+        return denied
     lang = get_lang(session)
     with using_lang(lang):
         return page("my-records", CLINIC_ENV, email, _thread(session),
@@ -227,9 +259,9 @@ def get(session):
 
 @rt("/my-records/{bundle_id}/download")
 def get(session, bundle_id: str):
-    email = _auth(session)
-    if not email:
-        return RedirectResponse("/login", status_code=303)
+    email, denied = _require(session, "my-records")
+    if denied:
+        return denied
     content = fhir_portal.xml_for_email(email, bundle_id)
     if content is None:
         return Response("Not found", status_code=404)
@@ -247,15 +279,276 @@ def get(session, bundle_id: str):
 
 @rt("/my-records/{bundle_id}")
 def get(session, bundle_id: str):
-    email = _auth(session)
-    if not email:
-        return RedirectResponse("/login", status_code=303)
+    email, denied = _require(session, "my-records")
+    if denied:
+        return denied
     view = fhir_portal.record_view(email, bundle_id)
     if view is None:
         return Response("Not found", status_code=404)
     lang = get_lang(session)
     with using_lang(lang):
         return page("my-records", CLINIC_ENV, email, _thread(session), view, lang=lang)
+
+
+@rt("/patients/{pid}/chart")
+def get(session, pid: int, notice: str = ""):
+    email, denied = _require(session, "chart")
+    if denied:
+        return denied
+    access.audit(email, "read", "chart", pid)
+    lang = get_lang(session)
+    with using_lang(lang):
+        return page("chart", CLINIC_ENV, email, _thread(session),
+                    clinical_views.chart_view(pid, notice), lang=lang)
+
+
+@rt("/patients/{pid}/chart/open")
+def post(session, pid: int, reason: str = "", clinician_id: int = 0):
+    email, denied = _require(session, "chart")
+    if denied:
+        return denied
+    try:
+        clinical.open_encounter(
+            pid, clinician_id=clinician_id or None, reason=reason, actor=email,
+        )
+        notice = "Encounter opened"
+    except clinical.ClinicalError as exc:
+        notice = str(exc)
+    return RedirectResponse(f"/patients/{pid}/chart?notice={notice}", status_code=303)
+
+
+@rt("/patients/{pid}/chart/finish")
+def post(session, pid: int):
+    email, denied = _require(session, "chart")
+    if denied:
+        return denied
+    open_enc = clinical.active_encounter(pid)
+    if open_enc:
+        clinical.finish_encounter(open_enc["id"], actor=email)
+    return RedirectResponse(f"/patients/{pid}/chart?notice=Encounter+finished", status_code=303)
+
+
+@rt("/patients/{pid}/chart/note")
+def post(session, pid: int, encounter_id: int = 0, subjective: str = "",
+         objective: str = "", assessment: str = "", plan: str = ""):
+    email, denied = _require(session, "chart")
+    if denied:
+        return denied
+    try:
+        clinical.add_note(
+            pid, encounter_id=encounter_id or None, subjective=subjective,
+            objective=objective, assessment=assessment, plan=plan, actor=email,
+        )
+        notice = "Note saved"
+    except clinical.ClinicalError as exc:
+        notice = str(exc)
+    return RedirectResponse(f"/patients/{pid}/chart?notice={notice}", status_code=303)
+
+
+@rt("/patients/{pid}/chart/order")
+def post(session, pid: int, kind: str = "lab", name: str = "", code: str = "",
+         encounter_id: int = 0):
+    email, denied = _require(session, "orders")
+    if denied:
+        return denied
+    try:
+        clinical.place_order(
+            pid, kind, name, encounter_id=encounter_id or None, code=code, actor=email,
+        )
+        notice = "Order placed"
+    except clinical.ClinicalError as exc:
+        notice = str(exc)
+    return RedirectResponse(f"/patients/{pid}/chart?notice={notice}", status_code=303)
+
+
+@rt("/patients/{pid}/chart/task")
+def post(session, pid: int, title: str = "", due_date: str = "", encounter_id: int = 0):
+    email, denied = _require(session, "tasks")
+    if denied:
+        return denied
+    try:
+        clinical.add_task(
+            pid, title, encounter_id=encounter_id or None, due_date=due_date, actor=email,
+        )
+        notice = "Task added"
+    except clinical.ClinicalError as exc:
+        notice = str(exc)
+    return RedirectResponse(f"/patients/{pid}/chart?notice={notice}", status_code=303)
+
+
+@rt("/patients/{pid}/chart/coverage")
+def post(session, pid: int, payor: str = "", member_id: str = ""):
+    email, denied = _require(session, "chart")
+    if denied:
+        return denied
+    try:
+        clinical.add_coverage(pid, payor, member_id=member_id, actor=email)
+        notice = "Coverage saved"
+    except clinical.ClinicalError as exc:
+        notice = str(exc)
+    return RedirectResponse(f"/patients/{pid}/chart?notice={notice}", status_code=303)
+
+
+@rt("/orders")
+def get(session, kind: str = "", status: str = "active"):
+    return _guarded("orders", lambda: clinical_views.orders_view(kind, status))(session)
+
+
+@rt("/orders/{order_id}/complete")
+def post(session, order_id: int):
+    email, denied = _require(session, "orders")
+    if denied:
+        return denied
+    try:
+        row = clinical.set_order_status(order_id, "completed", actor=email)
+        return RedirectResponse(f"/patients/{row['subject_id']}/chart?notice=Order+completed", status_code=303)
+    except clinical.ClinicalError:
+        return RedirectResponse("/orders", status_code=303)
+
+
+@rt("/tasks")
+def get(session, status: str = "requested"):
+    return _guarded("tasks", lambda: clinical_views.tasks_view(status))(session)
+
+
+@rt("/tasks/{task_id}/complete")
+def post(session, task_id: int):
+    email, denied = _require(session, "tasks")
+    if denied:
+        return denied
+    try:
+        row = clinical.set_task_status(task_id, "completed", actor=email)
+        return RedirectResponse(f"/patients/{row['subject_id']}/chart?notice=Task+completed", status_code=303)
+    except clinical.ClinicalError:
+        return RedirectResponse("/tasks", status_code=303)
+
+
+@rt("/messages")
+def get(session, thread_id: int = 0, notice: str = ""):
+    email, denied = _require(session, "messages")
+    if denied:
+        return denied
+    prof = access.profile(email)
+    sid = prof["subject_id"] if prof["role"] == "patient" else None
+    lang = get_lang(session)
+    with using_lang(lang):
+        return page(
+            "messages", CLINIC_ENV, email, _thread(session),
+            clinical_views.messages_view(sid, thread_id or None, notice),
+            lang=lang,
+        )
+
+
+@rt("/messages/new")
+def post(session, title: str = "", body: str = "", subject_id: int = 0):
+    email, denied = _require(session, "messages")
+    if denied:
+        return denied
+    prof = access.profile(email)
+    sid = subject_id or prof.get("subject_id")
+    try:
+        th = clinical.start_thread(
+            title, subject_id=sid or None, body=body,
+            sender_email=email, sender_role=prof["role"],
+        )
+        return RedirectResponse(f"/messages?thread_id={th['id']}&notice=Sent", status_code=303)
+    except clinical.ClinicalError as exc:
+        return RedirectResponse(f"/messages?notice={exc}", status_code=303)
+
+
+@rt("/messages/{thread_id}/reply")
+def post(session, thread_id: int, body: str = ""):
+    email, denied = _require(session, "messages")
+    if denied:
+        return denied
+    prof = access.profile(email)
+    if prof["role"] == "patient":
+        th = clinical.thread(thread_id)
+        if not th or th.get("subject_id") != prof.get("subject_id"):
+            return _denied(session, email)
+    try:
+        clinical.post_message(thread_id, body, sender_email=email, sender_role=prof["role"])
+        return RedirectResponse(f"/messages?thread_id={thread_id}&notice=Sent", status_code=303)
+    except clinical.ClinicalError as exc:
+        return RedirectResponse(f"/messages?notice={exc}", status_code=303)
+
+
+@rt("/portal")
+def get(session, notice: str = ""):
+    email, denied = _require(session, "portal")
+    if denied:
+        return denied
+    lang = get_lang(session)
+    with using_lang(lang):
+        return page("portal", CLINIC_ENV, email, _thread(session),
+                    portal_views.portal_view(email, notice), lang=lang)
+
+
+@rt("/portal/book")
+def post(session, clinician_id: int = 1, start_at: str = "", reason: str = ""):
+    email, denied = _require(session, "portal")
+    if denied:
+        return denied
+    sid = access.profile(email).get("subject_id")
+    if not sid or not start_at:
+        return RedirectResponse("/portal?notice=Unable+to+book", status_code=303)
+    try:
+        appt.book(sid, clinician_id, start_at, reason=reason)
+        notice = "Appointment booked"
+    except Exception as exc:
+        notice = str(exc)
+    return RedirectResponse(f"/portal?notice={notice}", status_code=303)
+
+
+@rt("/portal/intake")
+def post(session, allergies: str = "", medications: str = "", reason: str = ""):
+    email, denied = _require(session, "portal")
+    if denied:
+        return denied
+    sid = access.profile(email).get("subject_id")
+    if not sid:
+        return RedirectResponse("/portal?notice=Account+is+not+linked", status_code=303)
+    clinical.save_intake(
+        sid,
+        {"allergies": allergies, "medications": medications, "reason": reason},
+        actor=email,
+    )
+    return RedirectResponse("/portal?notice=Intake+submitted", status_code=303)
+
+
+@rt("/settings/roles")
+def get(session, notice: str = ""):
+    return _guarded("settings-roles", lambda: clinical_views.staff_view(notice))(session)
+
+
+@rt("/settings/roles")
+def post(session, email: str = "", role: str = "patient",
+         subject_id: int = 0, clinician_id: int = 0):
+    actor, denied = _require(session, "settings-roles")
+    if denied:
+        return denied
+    try:
+        access.set_profile(
+            email, role,
+            subject_id=subject_id or None,
+            clinician_id=clinician_id or None,
+        )
+        access.audit(actor, "assign", "access_profile", email)
+        notice = "Role saved"
+    except ValueError as exc:
+        notice = str(exc)
+    return RedirectResponse(f"/settings/roles?notice={notice}", status_code=303)
+
+
+@rt("/admin/staff")
+def get(session):
+    _, denied = _require(session, "settings-roles")
+    return denied or RedirectResponse("/settings/roles", status_code=303)
+
+
+@rt("/admin/audit")
+def get(session):
+    return _guarded("audit", clinical_views.audit_view)(session)
 
 
 @rt("/treatments")
@@ -296,7 +589,8 @@ def get(session):
 
 @rt("/billing/invoice")
 def post(session, consultation_id: int = 0):
-    if not _auth(session):
+    _, denied = _require(session, "billing")
+    if denied:
         return ""
     if consultation_id:
         billing.raise_invoice(consultation_id)
@@ -305,7 +599,8 @@ def post(session, consultation_id: int = 0):
 
 @rt("/billing/{invoice_id}/pay")
 def post(session, invoice_id: int, amount: float = 0.0):
-    if not _auth(session):
+    _, denied = _require(session, "billing")
+    if denied:
         return ""
     inv = billing.query("SELECT total, paid FROM invoice WHERE id=?", (invoice_id,))
     pay = amount if amount > 0 else (inv[0]["total"] - inv[0]["paid"] if inv else 0)
@@ -321,7 +616,8 @@ def get(session):
 
 @rt("/activation/reminders/enqueue")
 def post(session):
-    if not _auth(session):
+    _, denied = _require(session, "act-loop")
+    if denied:
         return ""
     n = aloop.enqueue_due_reminders()
     logger.info("Enqueued %s reminders", n)
@@ -337,7 +633,8 @@ def get(session, clinician_id: int = 0, day: str = ""):
 @rt("/appointments/book")
 def post(session, subject_id: int = 0, clinician_id: int = 0, start_at: str = "",
          reason: str = "", day: str = ""):
-    if not _auth(session):
+    _, denied = _require(session, "appointments")
+    if denied:
         return ""
     day = day or (start_at[:10] if start_at else act.reference_date()[:10])
     if subject_id and clinician_id and start_at:
@@ -350,7 +647,8 @@ def post(session, subject_id: int = 0, clinician_id: int = 0, start_at: str = ""
 
 @rt("/appointments/{appt_id}/status")
 def post(session, appt_id: int, to: str = "", clinician_id: int = 0, day: str = ""):
-    if not _auth(session):
+    _, denied = _require(session, "appointments")
+    if denied:
         return ""
     row = appt.get(appt_id)
     if to:
@@ -365,8 +663,9 @@ def post(session, appt_id: int, to: str = "", clinician_id: int = 0, day: str = 
 
 @rt("/activation/{engine}/csv")
 def get(session, engine: str, cat: str = "all", months: int = 12, days: int = 14):
-    if not _auth(session):
-        return RedirectResponse("/login", status_code=303)
+    _, denied = _require(session, f"act-{engine}")
+    if denied:
+        return denied
     with using_lang(get_lang(session)):
         body, fname = act.campaign_csv(engine, cat=cat, months=months, days=days)
     if body is None:
@@ -377,8 +676,9 @@ def get(session, engine: str, cat: str = "all", months: int = 12, days: int = 14
 
 @rt("/activation/{engine}/xlsx")
 def get(session, engine: str, cat: str = "all", months: int = 12, days: int = 14):
-    if not _auth(session):
-        return RedirectResponse("/login", status_code=303)
+    _, denied = _require(session, f"act-{engine}")
+    if denied:
+        return denied
     with using_lang(get_lang(session)):
         body, fname = act.campaign_xlsx(engine, cat=cat, months=months, days=days)
     if body is None:
@@ -396,7 +696,8 @@ def get(session):
 
 @rt("/api/sms/send")
 def post(session, provider: str = "", phone: str = "", message: str = ""):
-    if not _auth(session):
+    _, denied = _require(session, "sms")
+    if denied:
         return ""
     phone, message = phone.strip(), message.strip()
     if not phone or not message:
@@ -434,7 +735,8 @@ def get(session):
 
 @rt("/api/email/send")
 def post(session, to: str = "", subject: str = "", body: str = ""):
-    if not _auth(session):
+    _, denied = _require(session, "email")
+    if denied:
         return ""
     to, subject, body = to.strip(), subject.strip(), body.strip()
     if not to or not subject or not body:
@@ -482,9 +784,9 @@ def get(session):
 
 @rt("/admin/fhir")
 def get(session, subject_id: int = 0, nhs_number: str = "", release: str = "r4"):
-    email = _auth(session)
-    if not email:
-        return RedirectResponse("/login", status_code=303)
+    email, denied = _require(session, "fhir-admin")
+    if denied:
+        return denied
     lang = get_lang(session)
     with using_lang(lang):
         return page(
@@ -501,9 +803,9 @@ def get(session, subject_id: int = 0, nhs_number: str = "", release: str = "r4")
 # --- AI assistant ---
 @rt("/ai")
 def get(session):
-    email = _auth(session)
-    if not email:
-        return RedirectResponse("/login", status_code=303)
+    email, denied = _require(session, "chat-full")
+    if denied:
+        return denied
     tid = _thread(session)
     lang = get_lang(session)
     with using_lang(lang):
@@ -527,8 +829,9 @@ def get(session):
 
 @rt("/seo/run-all")
 def post(session, site_url: str = SEO_SITE):
-    if not _auth(session):
-        return RedirectResponse("/login", status_code=303)
+    _, denied = _require(session, "seo")
+    if denied:
+        return denied
     logger.info(f"Running full SEO audit suite for {site_url}")
     content = seo.fetch_site_context(site_url)
     for comp in seo.load_config():
@@ -541,55 +844,60 @@ def post(session, site_url: str = SEO_SITE):
 
 @rt("/seo/{slug}")
 def get(session, slug: str):
-    if not _auth(session):
-        return RedirectResponse("/login", status_code=303)
+    email, denied = _require(session, "seo")
+    if denied:
+        return denied
     if not seo.component(slug):
         return RedirectResponse("/seo", status_code=303)
     lang = get_lang(session)
     with using_lang(lang):
-        return page(slug, CLINIC_ENV, _auth(session), _thread(session),
+        return page(slug, CLINIC_ENV, email, _thread(session),
                     seo_views.component_view(slug), lang=lang)
 
 
 @rt("/seo/{slug}/prompt")
 def get(session, slug: str):
-    if not _auth(session):
-        return RedirectResponse("/login", status_code=303)
+    email, denied = _require(session, "seo")
+    if denied:
+        return denied
     if not seo.component(slug):
         return RedirectResponse("/seo", status_code=303)
     lang = get_lang(session)
     with using_lang(lang):
-        return page(slug, CLINIC_ENV, _auth(session), _thread(session),
+        return page(slug, CLINIC_ENV, email, _thread(session),
                     seo_views.prompt_editor_view(slug), lang=lang)
 
 
 @rt("/seo/{slug}/prompt")
 def post(session, slug: str, prompt: str = ""):
-    if not _auth(session):
-        return RedirectResponse("/login", status_code=303)
+    email, denied = _require(session, "seo")
+    if denied:
+        return denied
     if not seo.component(slug):
         return RedirectResponse("/seo", status_code=303)
     seo.write_prompt(slug, prompt)
     lang = get_lang(session)
     with using_lang(lang):
-        return page(slug, CLINIC_ENV, _auth(session), _thread(session),
+        return page(slug, CLINIC_ENV, email, _thread(session),
                     seo_views.prompt_editor_view(slug, saved=True), lang=lang)
 
 
 @rt("/seo/{slug}/run-confirm")
 def get(session, slug: str, site_url: str | None = None):
-    if not _auth(session):
-        return RedirectResponse("/login", status_code=303)
+    email, denied = _require(session, "seo")
+    if denied:
+        return denied
     lang = get_lang(session)
     with using_lang(lang):
-        return page(slug, CLINIC_ENV, _auth(session), _thread(session),
+        return page(slug, CLINIC_ENV, email, _thread(session),
                     seo_views.run_confirm_view(slug, site_url or SEO_SITE), lang=lang)
 
 
 @rt("/seo/{slug}/run")
 def post(session, slug: str, site_url: str = SEO_SITE):
-    if not _auth(session):
-        return RedirectResponse("/login", status_code=303)
+    _, denied = _require(session, "seo")
+    if denied:
+        return denied
     if not seo.component(slug):
         return RedirectResponse("/seo", status_code=303)
     logger.info(f"Running SEO audit {slug} for {site_url}")
@@ -600,8 +908,9 @@ def post(session, slug: str, site_url: str = SEO_SITE):
 
 @rt("/seo/{slug}/csv")
 def get(session, slug: str):
-    if not _auth(session):
-        return RedirectResponse("/login", status_code=303)
+    _, denied = _require(session, "seo")
+    if denied:
+        return denied
     p = seo.latest_csv_path(slug)
     if not p:
         return "no data", 404
@@ -611,8 +920,9 @@ def get(session, slug: str):
 
 @rt("/seo/{slug}/xlsx")
 def get(session, slug: str):
-    if not _auth(session):
-        return RedirectResponse("/login", status_code=303)
+    _, denied = _require(session, "seo")
+    if denied:
+        return denied
     header, rows = seo.load_csv(slug)
     if not header:
         return Response("no data", status_code=404, media_type="text/plain")
@@ -625,6 +935,9 @@ def get(session, slug: str):
 # --- chat ---
 @rt("/chat/new")
 def get(session):
+    email, denied = _require(session, "chat-full")
+    if denied:
+        return denied
     session["thread_id"] = f"fastclinic_{uuid.uuid4().hex[:12]}"
     return _localized(session, lambda: Div(
         Div(NotStr("New conversation started. Ask the AI anything or type <code>/help</code>."),
@@ -637,7 +950,8 @@ def get(session):
 async def post(session, message: str = "", thread_id: str = ""):
     """SSE streaming chat: slash-commands answer instantly; free-form streams the
     LangGraph agent token-by-token with a tool trace."""
-    if not _auth(session):
+    _, denied = _require(session, "chat-full")
+    if denied:
         return Response("unauthorized", status_code=401)
     from web.sse import sse
     msg = (message or "").strip()
@@ -689,7 +1003,8 @@ async def post(session, message: str = "", thread_id: str = ""):
 
 @rt("/chat/send")
 def post(session, message: str = "", thread_id: str = ""):
-    if not _auth(session):
+    _, denied = _require(session, "chat-full")
+    if denied:
         return _localized(session, lambda: Div("Unauthorized", cls="msg system"))
     # The session owns the thread. Never let a forged hidden-field value attach
     # one signed-in user to another user's persisted clinical conversation.

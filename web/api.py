@@ -152,13 +152,26 @@ API_GROUPS = (
             ("GET POST", "/api/v1/adapters/EE/*", "TIS CDA, MPI R5 and X-Road synthetic sandbox", "Public fixture · token submit"),
         ),
     ),
+    (
+        "Clinical workspace",
+        "Writable encounters, SOAP notes, diagnostic/medication orders, tasks, coverage, and in-app messages.",
+        (
+            ("GET POST", "/api/v1/chart/encounters", "Open a chart encounter", "Token required"),
+            ("POST", "/api/v1/chart/encounters/{id}/finish", "Finish an encounter", "Token required"),
+            ("GET POST", "/api/v1/chart/notes", "SOAP notes", "Token required"),
+            ("GET POST PATCH", "/api/v1/orders", "Lab, imaging, referral, medication orders", "Token required"),
+            ("GET POST PATCH", "/api/v1/care-tasks", "Care-coordination tasks", "Token required"),
+            ("GET POST", "/api/v1/coverage", "Insurance / payor coverage", "Token required"),
+            ("GET POST", "/api/v1/messages", "In-clinic message threads", "Token required"),
+        ),
+    ),
 )
 
 
 backend = DatabaseBackend(db.database_target(), RESOURCES)
 api = create_database_api(
     product="FastClinic",
-    version="1.3.0",
+    version="1.4.0",
     description=(
         "Typed integration access across FastClinic's synthetic clinical model, "
         "scheduling, activation, consent, billing, and analytics."
@@ -1191,3 +1204,203 @@ def ee_sandbox_reconcile(exchange_id: str):
     if not result:
         _problem(404, "not_found", "Estonian sandbox exchange was not found")
     return result
+# --------------------------------------------------- clinical workspace --
+class EncounterCreate(StrictModel):
+    subject_id: int = Field(gt=0)
+    clinician_id: int | None = Field(default=None, gt=0)
+    reason: str = Field(default="", max_length=500)
+    consultation_id: int | None = Field(default=None, gt=0)
+
+
+class ChartNoteCreate(StrictModel):
+    subject_id: int = Field(gt=0)
+    encounter_id: int | None = Field(default=None, gt=0)
+    subjective: str = ""
+    objective: str = ""
+    assessment: str = ""
+    plan: str = ""
+
+
+class OrderCreate(StrictModel):
+    subject_id: int = Field(gt=0)
+    kind: Literal["lab", "imaging", "referral", "medication"]
+    name: str = Field(min_length=1, max_length=240)
+    code: str = Field(default="", max_length=80)
+    details: str = Field(default="", max_length=2000)
+    encounter_id: int | None = Field(default=None, gt=0)
+
+
+class OrderStatusUpdate(StrictModel):
+    status: Literal["draft", "active", "completed", "cancelled"]
+
+
+class CareTaskCreate(StrictModel):
+    subject_id: int = Field(gt=0)
+    title: str = Field(min_length=1, max_length=240)
+    due_date: str = Field(default="", max_length=20)
+    encounter_id: int | None = Field(default=None, gt=0)
+
+
+class CareTaskStatusUpdate(StrictModel):
+    status: Literal["requested", "in-progress", "completed", "cancelled"]
+
+
+class CoverageCreate(StrictModel):
+    subject_id: int = Field(gt=0)
+    payor: str = Field(min_length=1, max_length=160)
+    member_id: str = Field(default="", max_length=80)
+
+
+class ThreadCreate(StrictModel):
+    title: str = Field(min_length=1, max_length=200)
+    subject_id: int | None = Field(default=None, gt=0)
+    body: str = Field(default="", max_length=8000)
+
+
+class MessageCreate(StrictModel):
+    body: str = Field(min_length=1, max_length=8000)
+
+
+def _clinical_error(exc: Exception):
+    from web.clinical import ClinicalError
+    if isinstance(exc, ClinicalError):
+        _problem(409, "clinical_error", str(exc))
+    raise exc
+
+
+@api.get("/v1/chart/encounters", dependencies=[Depends(require_write_token)], tags=["Chart"])
+def list_chart_encounters(subject_id: int = Query(gt=0)):
+    from web import clinical as clinic
+    return {"data": clinic.encounters_for(subject_id)}
+
+
+@api.post("/v1/chart/encounters", status_code=201, dependencies=[Depends(require_write_token)], tags=["Chart"])
+def create_chart_encounter(payload: EncounterCreate):
+    from web import clinical as clinic
+    try:
+        return clinic.open_encounter(**payload.model_dump())
+    except clinic.ClinicalError as exc:
+        _clinical_error(exc)
+
+@api.post("/v1/chart/encounters/{encounter_id}/finish", dependencies=[Depends(require_write_token)], tags=["Chart"])
+def finish_chart_encounter(encounter_id: int):
+    from web import clinical as clinic
+    try:
+        return clinic.finish_encounter(encounter_id)
+    except clinic.ClinicalError as exc:
+        _clinical_error(exc)
+
+
+@api.get("/v1/chart/notes", dependencies=[Depends(require_write_token)], tags=["Chart"])
+def list_chart_notes(subject_id: int = Query(gt=0)):
+    from web import clinical as clinic
+    return {"data": clinic.notes_for(subject_id)}
+
+
+@api.post("/v1/chart/notes", status_code=201, dependencies=[Depends(require_write_token)], tags=["Chart"])
+def create_chart_note(payload: ChartNoteCreate):
+    from web import clinical as clinic
+    try:
+        return clinic.add_note(**payload.model_dump())
+    except clinic.ClinicalError as exc:
+        _clinical_error(exc)
+
+
+@api.get("/v1/orders", dependencies=[Depends(require_write_token)], tags=["Orders"])
+def list_clinical_orders(
+    subject_id: int | None = Query(default=None, gt=0),
+    status: str | None = None,
+    kind: str | None = None,
+):
+    from web import clinical as clinic
+    return {"data": clinic.orders(subject_id=subject_id, status=status, kind=kind)}
+
+
+@api.post("/v1/orders", status_code=201, dependencies=[Depends(require_write_token)], tags=["Orders"])
+def create_clinical_order(payload: OrderCreate):
+    from web import clinical as clinic
+    try:
+        return clinic.place_order(**payload.model_dump())
+    except clinic.ClinicalError as exc:
+        _clinical_error(exc)
+
+
+@api.patch("/v1/orders/{order_id}", dependencies=[Depends(require_write_token)], tags=["Orders"])
+def patch_clinical_order(order_id: int, payload: OrderStatusUpdate):
+    from web import clinical as clinic
+    try:
+        return clinic.set_order_status(order_id, payload.status)
+    except clinic.ClinicalError as exc:
+        _clinical_error(exc)
+
+
+@api.get("/v1/care-tasks", dependencies=[Depends(require_write_token)], tags=["Tasks"])
+def list_care_tasks(subject_id: int | None = Query(default=None, gt=0), status: str | None = None):
+    from web import clinical as clinic
+    return {"data": clinic.tasks(subject_id=subject_id, status=status)}
+
+
+@api.post("/v1/care-tasks", status_code=201, dependencies=[Depends(require_write_token)], tags=["Tasks"])
+def create_care_task(payload: CareTaskCreate):
+    from web import clinical as clinic
+    try:
+        return clinic.add_task(**payload.model_dump())
+    except clinic.ClinicalError as exc:
+        _clinical_error(exc)
+
+
+@api.patch("/v1/care-tasks/{task_id}", dependencies=[Depends(require_write_token)], tags=["Tasks"])
+def patch_care_task(task_id: int, payload: CareTaskStatusUpdate):
+    from web import clinical as clinic
+    try:
+        return clinic.set_task_status(task_id, payload.status)
+    except clinic.ClinicalError as exc:
+        _clinical_error(exc)
+
+
+@api.get("/v1/coverage", dependencies=[Depends(require_write_token)], tags=["Coverage"])
+def list_coverage(subject_id: int = Query(gt=0)):
+    from web import clinical as clinic
+    return {"data": clinic.coverages_for(subject_id)}
+
+
+@api.post("/v1/coverage", status_code=201, dependencies=[Depends(require_write_token)], tags=["Coverage"])
+def create_coverage(payload: CoverageCreate):
+    from web import clinical as clinic
+    try:
+        return clinic.add_coverage(**payload.model_dump())
+    except clinic.ClinicalError as exc:
+        _clinical_error(exc)
+
+
+@api.get("/v1/messages", dependencies=[Depends(require_write_token)], tags=["Messages"])
+def list_message_threads(subject_id: int | None = Query(default=None, gt=0)):
+    from web import clinical as clinic
+    return {"data": clinic.threads(subject_id=subject_id)}
+
+
+@api.post("/v1/messages", status_code=201, dependencies=[Depends(require_write_token)], tags=["Messages"])
+def create_message_thread(payload: ThreadCreate):
+    from web import clinical as clinic
+    try:
+        return clinic.start_thread(**payload.model_dump())
+    except clinic.ClinicalError as exc:
+        _clinical_error(exc)
+
+
+@api.get("/v1/messages/{thread_id}", dependencies=[Depends(require_write_token)], tags=["Messages"])
+def get_message_thread(thread_id: int):
+    from web import clinical as clinic
+    row = clinic.thread(thread_id)
+    if not row:
+        _problem(404, "not_found", "Thread was not found")
+    return {"thread": row, "messages": clinic.messages(thread_id)}
+
+
+@api.post("/v1/messages/{thread_id}", status_code=201, dependencies=[Depends(require_write_token)], tags=["Messages"])
+def reply_message_thread(thread_id: int, payload: MessageCreate):
+    from web import clinical as clinic
+    try:
+        return clinic.post_message(thread_id, payload.body)
+    except clinic.ClinicalError as exc:
+        _clinical_error(exc)
