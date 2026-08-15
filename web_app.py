@@ -134,6 +134,40 @@ def developers(session, request):
     return developer_page(get_lang(session, request))
 
 
+@rt("/download/android", methods=["GET"])
+def download_android():
+    """Redirect to the newest APK asset published by fastclinic-mobile."""
+    import time
+    import requests
+
+    releases_api = (
+        "https://api.github.com/repos/predictivelabsai/fastclinic-mobile/releases/latest"
+    )
+    fallback = "https://github.com/predictivelabsai/fastclinic-mobile/releases/latest"
+    cache = getattr(download_android, "_apk_cache", {"url": None, "at": 0.0})
+    now = time.time()
+    if cache["url"] and now - cache["at"] < 300:
+        return RedirectResponse(cache["url"], status_code=302)
+    url = fallback
+    try:
+        response = requests.get(
+            releases_api,
+            timeout=8,
+            headers={"Accept": "application/vnd.github+json"},
+        )
+        assets = response.json().get("assets", []) if response.ok else []
+        apk = next(
+            (asset for asset in assets if asset.get("name", "").lower().endswith(".apk")),
+            None,
+        )
+        if apk and apk.get("browser_download_url"):
+            url = apk["browser_download_url"]
+    except Exception:
+        pass
+    download_android._apk_cache = {"url": url, "at": now}
+    return RedirectResponse(url, status_code=302)
+
+
 @rt("/compliance", methods=["GET"])
 def compliance(session, request):
     return compliance_page(get_lang(session, request))

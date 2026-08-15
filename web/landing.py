@@ -29,6 +29,13 @@ FEATURES = (
     ("Billing and balanced ledgers", "Fee invoices, payer tracking, payments, revenue, and balanced double-entry accounting."),
 )
 
+ANDROID_SVG = (
+    '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path '
+    'd="m17.6 9.48 1.84-3.18a.4.4 0 0 0-.69-.4l-1.86 3.23a11.4 11.4 0 0 0-9.78 0L5.25 5.9a.4.4 '
+    '0 1 0-.69.4L6.4 9.48A10.8 10.8 0 0 0 1 18.13h22a10.8 10.8 0 0 0-5.4-8.65ZM7 15.25a1.1 1.1 0 '
+    '1 1 0-2.2 1.1 1.1 0 0 1 0 2.2Zm10 0a1.1 1.1 0 1 1 0-2.2 1.1 1.1 0 0 1 0 2.2Z"/></svg>'
+)
+
 CSS = """
 :root{--accent:#1e6fb8;--tint:#eef7ff;--ink:#111827;--muted:#667085;--line:#e7eaf0}
 *{box-sizing:border-box} body{margin:0;background:#fff;color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
@@ -38,6 +45,7 @@ CSS = """
 .lp-lang{position:relative}.lp-lang-trigger{border:1px solid transparent;border-radius:6px;padding:4px 7px;font-size:16px;line-height:1;background:transparent;cursor:pointer}.lp-lang-trigger:hover{border-color:var(--line)}.lp-lang-trigger:focus{outline:2px solid color-mix(in srgb,var(--accent) 30%,white)}
 .lp-lang-menu{display:none;position:absolute;right:0;top:calc(100% + 7px);z-index:60;min-width:142px;padding:4px 0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 18px 45px rgba(17,24,39,.14)}.lp-lang-menu.open{display:block}.lp-lang-item{display:flex;align-items:center;gap:9px;padding:7px 12px;color:var(--muted);font-size:12px;text-decoration:none}.lp-lang-item:hover,.lp-lang-item:focus{background:var(--tint);color:var(--ink);outline:0}.lp-lang-item.active{background:var(--tint);color:var(--ink);font-weight:700}.lp-lang-flag{font-size:16px;line-height:1}
 .lp-signin,.lp-primary{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:10px 17px;text-decoration:none;font-weight:650;font-size:14px;cursor:pointer} .lp-signin{border:1px solid var(--line);color:var(--ink);background:white} .lp-primary{background:var(--accent);color:white;border:0}
+.lp-apk{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:12px;padding:9px 14px;color:var(--ink);background:#fff;text-decoration:none;font-size:13px;font-weight:700}.lp-apk:hover{border-color:var(--accent);color:var(--accent);background:var(--tint)}.lp-apk svg{width:21px;height:21px;color:var(--accent)}
 .lp-hero{max-width:1180px;margin:auto;padding:104px 24px 76px} .lp-kicker{color:var(--accent);font-size:12px;font-weight:750;text-transform:uppercase;letter-spacing:.16em}
 .lp-hero h1{font-size:clamp(42px,7vw,78px);line-height:1.02;letter-spacing:-.055em;max-width:920px;margin:22px 0} .lp-lede{font-size:20px;line-height:1.65;color:var(--muted);max-width:720px}
 .lp-actions{display:flex;gap:12px;margin-top:32px;flex-wrap:wrap} .lp-secondary{color:var(--ink);font-weight:650;text-decoration:none;padding:10px 4px}
@@ -125,6 +133,10 @@ def landing_page(lang="en", *, auth_open: bool = False, auth_error: str = ""):
                 Section(Span(T("Clinic operations"), cls="lp-kicker"), H1(T("Modern clinical care, made personal.")),
                         P(description, cls="lp-lede"),
                         Div(Button(T("Sign In or Register"), type="button", onclick="authOpen('login')", cls="lp-primary"),
+                            A(NotStr(ANDROID_SVG),
+                              Span(T("Download Android APK")), href="/download/android",
+                              download="fastclinic-mobile.apk", cls="lp-apk",
+                              title=T("Download the FastClinic Android test app")),
                             A(T("Explore the open-source suite →"), href="https://fastsme.com/products", cls="lp-secondary"),
                             cls="lp-actions"), cls="lp-hero"),
                 Section(Div(Img(src="/static/product-demo.gif", alt="FastClinic product tour",
