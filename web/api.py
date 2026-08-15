@@ -182,6 +182,9 @@ API_GROUPS = (
 
 
 backend = DatabaseBackend(db.database_target(), RESOURCES)
+_api_public_url = (os.getenv("FASTCLINIC_API_PUBLIC_URL") or "").strip()
+if not _api_public_url.startswith(("http://", "https://")):
+    _api_public_url = "https://api.fastclinic.dev"
 api = create_database_api(
     product="FastClinic",
     version="1.5.0",
@@ -190,7 +193,7 @@ api = create_database_api(
         "scheduling, mobile patient booking, activation, consent, billing, and analytics."
     ),
     base_url="https://fastclinic.dev",
-    server_url=os.getenv("FASTCLINIC_API_PUBLIC_URL") or "https://api.fastclinic.dev",
+    server_url=_api_public_url,
     backend=backend,
     resources=RESOURCES,
     on_mutation=activation_loop.log_api_audit,
