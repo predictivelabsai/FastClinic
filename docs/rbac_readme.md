@@ -8,6 +8,11 @@ Navigation visibility is a presentation concern, not an authorization control.
 Every server-rendered route, HTMX mutation, API operation, download, and export
 must enforce both an action capability and a record scope.
 
+Native mobile routes use a separately documented MedBackend OAuth 2.0/PKCE
+bearer boundary. FastAPI verifies the JWT against MedBackend JWKS, resolves the
+verified email to `access_profile`, and derives patient identity server-side;
+see [mobile_app_api.md](mobile_app_api.md).
+
 ## Role workspaces
 
 | Role | Primary workspace | Default record scope |
@@ -89,7 +94,41 @@ from a submitted patient identifier.
 | Users, roles, audit, settings | Full | None | None | None | None |
 | Export | Full and audited | Assigned clinical data | None | Financial data | Own records |
 
-## Booking and calendar domain
+## Conversational booking and calendar domain
+
+Patient booking is conversational by default. The patient describes the need,
+practitioner or specialty, and preferred day in natural language. A dedicated
+LangGraph booking agent interprets the request, checks live availability, offers
+times, and asks for an explicit confirmation before the deterministic booking
+service creates anything.
+
+The booking workspace keeps FastClinic's three-pane layout:
+
+- left: patient navigation and conversation context;
+- centre: the booking conversation and confirmation exchange; and
+- right: live practitioner availability and calendar context.
+
+The model may interpret language and call read-only availability tools, but it
+cannot select a different patient or bypass conflict checks. Appointment
+creation occurs only after an explicit confirmation of a server-held proposal
+for the authenticated patient's `subject_id`. Every confirmed booking is
+audited. When no model provider is configured, the same LangGraph workflow uses
+safe date/time heuristics and remains fully functional.
+
+The agent also uses [`sql/schema.json`](../sql/schema.json) as its ingested
+semantic and operational schema contract. FastBI-style text-to-SQL is restricted
+to a single bounded `SELECT`/`WITH` over four scheduling tables. The validator
+blocks mutation/DDL, multiple statements, comments, wildcards, unapproved
+tables, dangerous database functions, and patient/contact/free-text columns.
+Generated SQL can ground treatment and availability reasoning only; it can
+never create, update, cancel, or confirm an appointment.
+
+An **Assistant / Classical** tab switcher keeps an accessible conventional
+workflow. Classical mode provides practitioner/treatment search and the full
+calendar without requiring chat. Both modes use the same availability and
+booking services, policies, authorization, and conflict controls.
+
+### Booking storage and scheduling
 
 The prototype's global working hours and fixed clinician are replaced with:
 
@@ -101,7 +140,10 @@ The prototype's global working hours and fixed clinician are replaced with:
 - participant and notification records; and
 - conflict-safe PostgreSQL transactions for practitioners and rooms.
 
-Times are stored in UTC and rendered in `Europe/Tallinn` by default. Patient
+The operational schema now includes all of the entities above. Room and
+practitioner overlap checks execute inside the same serialized transaction;
+appointment participants and queued notification intent are written alongside
+the booking. Times are stored in UTC and rendered in `Europe/Tallinn` by default. Patient
 booking selects a service, optional practitioner, available slot, reason,
 contact details, and reminder preference. Patients can reschedule or cancel
 within policy. Practitioners receive day/week/agenda views and can confirm,

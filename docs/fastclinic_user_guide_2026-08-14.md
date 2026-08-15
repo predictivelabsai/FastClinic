@@ -337,10 +337,17 @@ changes automatically.
 | Clinical reads & analytics | `/api/v1/...` | Public synthetic reads |
 | Clinical CRUD | Patients, parties, relationships, notes | Bearer token |
 | Operations | Appointments, recall, communications, billing, audit | Bearer token |
+| Patient mobile | `/api/v1/mobile/*` | MedBackend OAuth 2.0 + PKCE |
 
 The API is typed and versioned. Destructive verbs use domain-safe semantics:
 archive, cancel, refund, or reverse rather than bypassing clinical and financial
 history. FastBooking uses a separate least-privilege token.
+
+The patient mobile contract includes identity/bootstrap, Assistant and
+Classical booking, own appointment cancellation/rescheduling, and owned FHIR R4
+JSON/XML records. Patient identity always comes from the verified OAuth token,
+not a submitted identifier. See `docs/mobile_app_api.md` for the native-client
+flow and security requirements.
 
 ---
 

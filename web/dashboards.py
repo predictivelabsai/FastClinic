@@ -176,11 +176,14 @@ def _no_data_view():
 
 
 # ---------- Patients ----------
-def patients_view(search: str = ""):
+def patients_view(search: str = "", allowed_subject_ids: set[int] | frozenset[int] | None = None,
+                  minimum_necessary: bool = False):
     from web.db import db_exists
     if not db_exists():
         return _no_data_view()
     rows = q.patient_list(search)
+    if allowed_subject_ids is not None:
+        rows = [row for row in rows if int(row["id"]) in allowed_subject_ids]
     search_form = Form(
         Input(type="text", name="q", value=search, placeholder="Search id / name / city / NHS no…",
               style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;width:280px;"),
@@ -194,7 +197,7 @@ def patients_view(search: str = ""):
         status = "—"
         if p["deceased_at"]:
             status = Span("deceased", cls="status-pill cancelled")
-        table_rows.append([
+        base = [
             A(f"#{pid}", href=f"/patients/{pid}", style="font-weight:600;"),
             preserve(p["official_name"] or "—"),
             preserve(p["city"] or "—"),
@@ -203,14 +206,17 @@ def patients_view(search: str = ""):
             preserve(p["nhs_number"] or "—"),
             p["visits"] or 0,
             _date(p["last_visit"]),
-            _eur(p["lifetime_value"]),
-            preserve(p["critical_notes"]) if p["critical_notes"] else status,
+        ]
+        table_rows.append(base if minimum_necessary else base + [
+            _eur(p["lifetime_value"]), preserve(p["critical_notes"]) if p["critical_notes"] else status,
         ])
+    headers = ["Patient", "Name", "City", "Sex", "Age", "NHS no.", "Visits", "Last visit"]
+    if not minimum_necessary:
+        headers += ["Lifetime £", "Notes"]
     return Div(
         _page_title("Patients", t("{count} shown", count=format_number(len(rows))), actions=search_form),
         Div(
-            _table(["Patient", "Name", "City", "Sex", "Age", "NHS no.", "Visits", "Last visit", "Lifetime £", "Notes"],
-                   table_rows) if table_rows else P("No patients match."),
+            _table(headers, table_rows) if table_rows else P("No patients match."),
             cls="card",
         ),
     )
@@ -274,6 +280,25 @@ def patient_detail_view(pid: int):
         cards,
         Div(profile, history, cls="grid-2"),
         spend,
+    )
+
+
+def patient_demographics_view(pid: int):
+    """Minimum-necessary non-clinical patient view for front desk and billing."""
+    p = q.patient_detail(pid)
+    if not p:
+        return Div(_page_title("Patient not found"), Div(P(t("No patient #{id}.", id=pid)), cls="card"))
+    rows = [
+        ["Patient ID", p.get("id")],
+        ["Name", preserve(p.get("official_name") or "—")],
+        ["Date of birth", p.get("date_of_birth") or "—"],
+        ["Gender", t(gender_label(p.get("gender")))],
+        ["City", preserve(p.get("city") or "—")],
+        ["NHS number", preserve(p.get("nhs_number") or "—")],
+    ]
+    return Div(
+        _page_title(t("Patient demographics"), t("Minimum necessary administrative information")),
+        Div(Div(H3(t("Profile")), cls="card-header"), _table(["Field", "Value"], rows), cls="card"),
     )
 
 

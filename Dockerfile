@@ -17,7 +17,9 @@ COPY . .
 # The source SQLite database remains available as a rollback path.
 EXPOSE 5005
 
+# Exercise the dedicated API hostname through the same monolith process. This
+# catches both FastAPI mount failures and host-routing regressions.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD curl --fail http://localhost:5005/login || exit 1
+  CMD curl --fail --header 'Host: api.fastclinic.dev' http://localhost:5005/v1/health || exit 1
 
 ENTRYPOINT ["python", "web_app.py"]

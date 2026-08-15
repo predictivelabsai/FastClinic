@@ -73,6 +73,10 @@ a:hover { text-decoration: underline; }
   text-transform: uppercase; letter-spacing: 0.5px;
 }
 .topbar .actions { display: flex; gap: 10px; align-items: center; }
+.role-preview-form { display:flex; align-items:center; gap:6px; margin:0; }
+.role-preview-form select { width:auto; margin:0; padding:5px 26px 5px 8px; font-size:12px; }
+.preview-pill { background:#fff3cd; color:#7a5600; border:1px solid #efd98b;
+  padding:4px 9px; border-radius:999px; font-size:11px; font-weight:700; }
 .app-lang-select { width:auto; max-width:150px; margin:0; padding:5px 26px 5px 8px;
   font-size:12px; border:1px solid var(--border); border-radius:6px; background-color:var(--surface); }
 
@@ -87,6 +91,15 @@ a:hover { text-decoration: underline; }
   margin: 6px 16px 4px; font-size: 11px; text-transform: uppercase;
   letter-spacing: 0.8px; color: var(--text-mute); font-weight: 700;
 }
+.nav-section-header { display:flex; align-items:center; justify-content:space-between;
+  margin:6px 10px 4px 16px; }
+.nav-section-header h4 { margin:0; }
+.collapse-toggle { border:0; background:transparent; color:var(--text-mute); cursor:pointer;
+  padding:3px 6px; border-radius:5px; font-size:14px; line-height:1; }
+.collapse-toggle:hover { color:var(--accent); background:var(--surface-2); }
+.card.is-collapsed > :not(.card-header), .nav-section.is-collapsed > :not(.nav-section-header) { display:none !important; }
+@media print { .card.is-collapsed > :not(.card-header), .nav-section.is-collapsed > :not(.nav-section-header) { display:revert !important; }
+  .collapse-toggle { display:none !important; } }
 .nav-item {
   display: flex; align-items: center; gap: 8px;
   padding: 8px 16px; color: var(--text-dim); cursor: pointer;
@@ -146,6 +159,26 @@ a:hover { text-decoration: underline; }
 .clinical-narrative th { background:var(--surface-2); }
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.booking-week { display:grid; grid-template-columns:repeat(5,minmax(120px,1fr)); gap:10px; overflow-x:auto; }
+.calendar-day { min-width:120px; background:var(--surface-2); border:1px solid var(--border);
+  border-radius:8px; padding:10px; }
+.calendar-day form { display:inline-block; margin:2px; }
+.calendar-day .btn { min-width:54px; padding:5px 8px; }
+.calendar-time { display:inline-block; background:var(--accent-light); color:var(--accent-hover);
+  border-radius:6px; padding:4px 7px; margin:2px; font-size:12px; font-weight:600; }
+.booking-chat { min-height:58vh; display:flex; flex-direction:column; }
+.booking-chat-messages { flex:1; overflow:auto; padding:8px 0 16px; }
+.booking-message { max-width:82%; padding:10px 12px; border-radius:10px; margin:8px 0;
+  white-space:pre-wrap; line-height:1.45; }
+.booking-message.user { margin-left:auto; background:var(--accent); color:white; }
+.booking-message.assistant { background:var(--surface-2); border:1px solid var(--border); }
+.booking-composer { display:flex; gap:8px; align-items:end; border-top:1px solid var(--border); padding-top:12px; }
+.booking-composer textarea { flex:1; margin:0; }
+.booking-right-panel { grid-area:right; padding:16px; overflow:auto; background:var(--surface);
+  border-left:1px solid var(--border); }
+.booking-calendar-rail { display:grid; gap:8px; margin-bottom:12px; }
+.booking-calendar-rail .calendar-day { min-width:0; }
+@media (max-width:900px) { .booking-week { grid-template-columns:repeat(5,150px); } }
 
 /* tables */
 table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -467,15 +500,26 @@ def _language_selector(lang: str):
     )
 
 
-def topbar(env: str, user_email: str | None, lang: str | None = None):
-    from web.access import can, role_of
+def topbar(env: str, user_email: str | None, lang: str | None = None,
+           effective_role: str | None = None):
+    from web.access import ROLES, can_as, role_of
     lang = lang or current_lang()
     ver = _read_version()
-    role = role_of(user_email) if user_email else ""
+    actual_role = role_of(user_email) if user_email else ""
+    role = effective_role or actual_role
+    preview = bool(user_email and actual_role == "admin" and role != "admin")
+    role_select = Form(
+        Label(t("Viewing as"), **{"for": "role-preview-select"}),
+        Select(*[Option(t(r.title()), value=r, selected=(r == role)) for r in ROLES],
+               id="role-preview-select", name="role", onchange="this.form.submit()"),
+        method="post", action="/settings/view-as", cls="role-preview-form",
+    ) if actual_role == "admin" else None
     right = Div(
         Button(NotStr("&laquo; Chat"), id="copilot-topbar-toggle", cls="btn copilot-toggle",
                onclick="toggleCopilot()", title="Show / hide the AI assistant")
-        if user_email and can(user_email, "chat-full") else None,
+        if user_email and can_as(user_email, "chat-full", role) else None,
+        role_select,
+        Span(t("Preview: {role}", role=role.title()), cls="preview-pill") if preview else None,
         _language_selector(lang),
         Span(env, cls="env-pill"),
         Span(t(role.title()), cls="status-pill ok") if role else None,
@@ -550,11 +594,11 @@ def _seo_subnav() -> list[tuple[str, str, str, str]]:
         return []
 
 
-def left_pane(active: str, user_email: str | None = None):
+def left_pane(active: str, user_email: str | None = None, effective_role: str | None = None):
     from web.access import visible_nav
     sections = []
     for section_name, items in NAV_ITEMS:
-        visible = visible_nav(items, user_email)
+        visible = visible_nav(items, user_email, effective_role)
         if not visible:
             continue
         links = [
@@ -575,7 +619,10 @@ def left_pane(active: str, user_email: str | None = None):
                     cls=f"nav-item {'active' if active == key else ''}",
                     style="padding-left:26px;",  # indent drilldowns
                 ))
-        sections.append(Div(H4(t(section_name)), *links, cls="nav-section"))
+        sections.append(Div(
+            Div(H4(t(section_name)), cls="nav-section-header"), *links,
+            cls="nav-section", data_section=section_name.lower().replace(" ", "-"),
+        ))
     return Div(*sections, cls="left-pane")
 
 
@@ -714,6 +761,42 @@ def right_pane_reference():
 
 LAYOUT_JS = """
 function _tr(key){ return (window.FASTCLINIC_I18N||{})[key]||key; }
+function _collapseKey(el,index){
+  var app=document.querySelector('.app');
+  var role=app?app.dataset.effectiveRole:'unknown';
+  var own=el.dataset.section||el.id||('section-'+index);
+  return 'fastclinic:collapse:'+role+':'+location.pathname+':'+own;
+}
+function initCollapsibles(root){
+  root=root||document;
+  var nodes=[].slice.call(root.querySelectorAll('.card, .nav-section'));
+  nodes.forEach(function(el,index){
+    if(el.dataset.collapsibleReady==='1') return;
+    var header=el.querySelector(':scope > .card-header, :scope > .nav-section-header');
+    if(!header) return;
+    el.dataset.collapsibleReady='1';
+    if(!el.dataset.section){
+      var title=(header.textContent||'section').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+      el.dataset.section=title||('section-'+index);
+    }
+    var key=_collapseKey(el,index), collapsed=el.dataset.collapsed==='true';
+    try{ var saved=localStorage.getItem(key); if(saved!==null) collapsed=saved==='1'; }catch(e){}
+    var btn=document.createElement('button');
+    btn.type='button'; btn.className='collapse-toggle';
+    btn.setAttribute('aria-label',_tr('Collapse or expand section'));
+    function render(){
+      el.classList.toggle('is-collapsed',collapsed);
+      btn.textContent=collapsed?'\u2304':'\u2303';
+      btn.setAttribute('aria-expanded',collapsed?'false':'true');
+      btn.title=collapsed?_tr('Expand section'):_tr('Collapse section');
+    }
+    btn.addEventListener('click',function(){
+      collapsed=!collapsed; render();
+      try{ localStorage.setItem(key,collapsed?'1':'0'); }catch(e){}
+    });
+    header.appendChild(btn); render();
+  });
+}
 function _syncCopilotBtns(){
   var app=document.querySelector('.app'); if(!app) return;
   var ex=app.classList.contains('right-expanded');
@@ -751,7 +834,7 @@ function toggleExpand(){
     else if(localStorage.getItem('copilotExpanded')==='1') app.classList.add('right-expanded');
   }catch(e){}
 })();
-document.addEventListener('DOMContentLoaded', _syncCopilotBtns);
+document.addEventListener('DOMContentLoaded', function(){ _syncCopilotBtns(); initCollapsibles(document); });
 function insertCmd(c){
   var el=document.getElementById('chat-input'); el.value=c+' '; el.focus();
 }
@@ -863,6 +946,7 @@ async function streamChat(ev){
 document.body.addEventListener('htmx:afterSwap', function(e){
   var cb=document.getElementById('chat-body');
   if(cb){ cb.scrollTop=cb.scrollHeight; enhanceTables(cb); }
+  initCollapsibles(e.target||document);
 });
 // CSV copy/download for tables (pehero-style)
 function tableToCSV(table){
@@ -966,11 +1050,13 @@ JS_I18N_KEYS = (
 
 
 def page(active: str, env: str, user_email: str, thread_id: str, *content,
-         right_override=None, lang: str | None = None):
-    from web.access import can
+         right_override=None, lang: str | None = None, effective_role: str | None = None):
+    from web.access import can_as, effective_role as resolve_effective_role
     lang = lang or current_lang()
-    assistant = can(user_email, "chat-full")
-    right = (right_override if right_override is not None else right_pane_chat(thread_id)) if assistant else None
+    role = resolve_effective_role(user_email, effective_role)
+    assistant = can_as(user_email, "chat-full", role)
+    right = right_override if right_override is not None else (right_pane_chat(thread_id) if assistant else None)
+    has_right = right is not None
     result = (
         Title("FastClinic Cockpit"),
         Link(rel="icon", type="image/svg+xml", href="/favicon.svg"),
@@ -981,13 +1067,14 @@ def page(active: str, env: str, user_email: str, thread_id: str, *content,
         Script(NotStr("window.FASTCLINIC_I18N=" +
                       json.dumps(js_translations(lang, JS_I18N_KEYS), ensure_ascii=False) + ";")),
         Div(
-            topbar(env, user_email, lang),
-            left_pane(active, user_email),
+            topbar(env, user_email, lang, role),
+            left_pane(active, user_email, role),
             Div(*content, cls="center-pane"),
             right,
             Div(NotStr("&lsaquo; AI Assistant"), id="copilot-reopen", onclick="toggleCopilot()",
                 title="Show assistant") if assistant else None,
-            cls=f"app{' right-collapsed' if not assistant else ''}",
+            cls=f"app{' right-collapsed' if not has_right else ''}",
+            data_effective_role=role,
         ),
         Script(LAYOUT_JS),
     )

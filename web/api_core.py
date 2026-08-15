@@ -428,6 +428,7 @@ def create_database_api(
     version: str,
     description: str,
     base_url: str,
+    server_url: str | None = None,
     backend: DatabaseBackend,
     resources: tuple[Resource, ...],
     on_mutation: Callable[[str, str, str, dict[str, Any] | None, dict[str, Any] | None], None] | None = None,
@@ -447,7 +448,8 @@ def create_database_api(
         docs_url="/docs",
         redoc_url="/redoc",
         openapi_url="/openapi.json",
-        servers=[{"url": f"{base_url.rstrip('/')}/api", "description": "Production"}],
+        servers=[{"url": (server_url or f"{base_url.rstrip('/')}/api").rstrip('/'),
+                  "description": "Production"}],
         contact={"name": "FastSME", "url": "https://fastsme.com"},
         license_info={"name": "MIT"},
     )

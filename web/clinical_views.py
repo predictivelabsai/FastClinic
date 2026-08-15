@@ -149,9 +149,15 @@ def chart_view(pid: int, notice: str = ""):
     )
 
 
-def orders_view(kind: str = "", status: str = "active"):
+def orders_view(kind: str = "", status: str = "active",
+                allowed_subject_ids: set[int] | frozenset[int] | None = None):
     rows = clinical.orders(kind=kind or None, status=status or None, limit=200)
-    counts = clinical.order_counts()
+    if allowed_subject_ids is not None:
+        rows = [row for row in rows if row.get("subject_id") in allowed_subject_ids]
+        counts = {state: sum(row["status"] == state for row in rows)
+                  for state in clinical.ORDER_STATUSES}
+    else:
+        counts = clinical.order_counts()
     table = [
         [A(f"#{r['subject_id']}", href=f"/patients/{r['subject_id']}/chart"),
          r["kind"], preserve(r["name"]), _pill(r["status"]),
@@ -183,8 +189,11 @@ def orders_view(kind: str = "", status: str = "active"):
     )
 
 
-def tasks_view(status: str = "requested"):
+def tasks_view(status: str = "requested",
+               allowed_subject_ids: set[int] | frozenset[int] | None = None):
     rows = clinical.tasks(status=status or None, limit=200)
+    if allowed_subject_ids is not None:
+        rows = [row for row in rows if row.get("subject_id") in allowed_subject_ids]
     table = [
         [A(f"#{r['subject_id']}", href=f"/patients/{r['subject_id']}/chart"),
          preserve(r["title"]), _pill(r["status"]), r.get("due_date") or "—",
@@ -211,9 +220,14 @@ def tasks_view(status: str = "requested"):
     )
 
 
-def messages_view(subject_id: int | None = None, thread_id: int | None = None, notice: str = ""):
+def messages_view(subject_id: int | None = None, thread_id: int | None = None, notice: str = "",
+                  allowed_subject_ids: set[int] | frozenset[int] | None = None):
     items = clinical.threads(subject_id=subject_id)
+    if allowed_subject_ids is not None:
+        items = [item for item in items if item.get("subject_id") in allowed_subject_ids]
     current = clinical.thread(thread_id) if thread_id else (items[0] if items else None)
+    if current and allowed_subject_ids is not None and current.get("subject_id") not in allowed_subject_ids:
+        current = None
     msgs = clinical.messages(current["id"]) if current else []
     thread_rows = [
         [A(preserve(th["title"]), href=f"/messages?thread_id={th['id']}"),

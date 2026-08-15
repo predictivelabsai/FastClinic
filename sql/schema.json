@@ -259,6 +259,100 @@
     "referrals.user_id -> user.id",
     "referrals.hospital_treatment_id -> hospital_treatments.id"
   ],
+  "fastclinic_booking_context": {
+    "description": "Read-only operational tables exposed to the FastClinic booking text-to-SQL agent. Patient identity, contact details, clinical notes, billing and authentication tables are deliberately excluded.",
+    "dialect": "portable SQLite/PostgreSQL SELECT subset",
+    "tables": {
+      "appointment_type": {
+        "description": "Bookable treatments and consultation types",
+        "columns": {
+          "code": "text primary business identifier",
+          "name": "text patient-facing treatment name",
+          "duration_min": "integer duration in minutes",
+          "description": "text patient-facing description",
+          "active": "boolean/integer active flag"
+        }
+      },
+      "clinic_location": {
+        "description": "Active clinic sites available for booking",
+        "columns": {
+          "code": "text location business identifier",
+          "name": "text patient-facing location name",
+          "timezone": "IANA timezone",
+          "address_text": "patient-facing address",
+          "active": "boolean/integer active flag"
+        }
+      },
+      "clinic_room": {
+        "description": "Bookable rooms belonging to clinic locations",
+        "columns": {
+          "location_id": "integer clinic_location identifier",
+          "code": "text room business identifier",
+          "name": "text patient-facing room name",
+          "active": "boolean/integer active flag"
+        }
+      },
+      "booking_policy": {
+        "description": "Non-sensitive booking timing and timezone policy",
+        "columns": {
+          "code": "text policy identifier",
+          "hold_seconds": "integer temporary slot hold duration",
+          "minimum_notice_minutes": "integer minimum booking notice",
+          "cancellation_notice_minutes": "integer cancellation notice",
+          "timezone": "IANA timezone",
+          "active": "boolean/integer active flag"
+        }
+      },
+      "practitioner_availability_rule": {
+        "description": "Recurring practitioner working windows; weekday 0 is Monday",
+        "columns": {
+          "clinician_id": "integer practitioner identifier",
+          "weekday": "integer 0-6",
+          "start_time": "HH:MM local clinic time",
+          "end_time": "HH:MM local clinic time",
+          "slot_minutes": "integer slot cadence",
+          "location": "text clinic location",
+          "active": "boolean/integer active flag"
+        }
+      },
+      "practitioner_availability_exception": {
+        "description": "Dated practitioner leave or extra availability",
+        "columns": {
+          "clinician_id": "integer practitioner identifier",
+          "exception_date": "YYYY-MM-DD",
+          "start_time": "optional HH:MM",
+          "end_time": "optional HH:MM",
+          "available": "boolean/integer; false closes the window",
+          "reason": "administrative reason"
+        }
+      },
+      "appointment": {
+        "description": "Sanitized scheduling state. Queries must aggregate or filter without selecting subject_id or party_id.",
+        "columns": {
+          "clinician_id": "integer practitioner identifier",
+          "start_at": "local clinic timestamp",
+          "end_at": "local clinic timestamp",
+          "start_at_utc": "canonical UTC timestamp",
+          "end_at_utc": "canonical UTC timestamp",
+          "status": "scheduled, confirmed, checked-in, cancelled, completed, no-show",
+          "appointment_type_code": "FK-like code to appointment_type.code",
+          "room": "text room identifier",
+          "location": "text clinic location",
+          "timezone": "IANA timezone"
+        }
+      }
+    },
+    "allowed_tables": [
+      "appointment_type",
+      "clinic_location",
+      "clinic_room",
+      "booking_policy",
+      "practitioner_availability_rule",
+      "practitioner_availability_exception",
+      "appointment"
+    ],
+    "forbidden_columns": ["appointment.subject_id", "appointment.party_id", "appointment.reason"]
+  },
   "useful_queries": {
     "hospitals_with_specialists": "SELECT h.name, htt.head_of_specialty, htt.head_bio, tt.name AS speciality FROM hospital h JOIN hospital_treatment_type htt ON h.id = htt.hospital_id JOIN treatment_type tt ON htt.treatment_type_id = tt.id WHERE htt.head_of_specialty IS NOT NULL",
     "treatment_prices_by_country": "SELECT l.name AS country, t.name AS treatment, hgt.price FROM hospital_group_treatments hgt JOIN hospital_group hg ON hgt.hospital_group_id = hg.id JOIN hospital h ON h.hospital_group_id = hg.id JOIN location l ON h.contry_id = l.id JOIN treatment t ON hgt.treatment_id = t.id",

@@ -16,8 +16,19 @@ def test_sqlite_operational_schema_and_generated_ids(tmp_path, monkeypatch):
             "SELECT role FROM access_role ORDER BY sort_order"
         ).fetchall()
         assert [row["role"] for row in roles] == [
-            "admin", "doctor", "receptionist", "billing", "patient",
+            "admin", "practitioner", "receptionist", "billing", "patient",
         ]
+        for table in (
+            "clinic_location", "clinic_room", "booking_policy",
+            "appointment_participant", "appointment_notification",
+        ):
+            found = connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,),
+            ).fetchone()
+            assert found is not None
+        assert connection.execute(
+            "SELECT timezone FROM booking_policy WHERE code='default'"
+        ).fetchone()["timezone"] == "Europe/Tallinn"
 
 
 def test_explicit_ops_path_keeps_tests_off_postgres(tmp_path, monkeypatch):

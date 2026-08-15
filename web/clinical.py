@@ -195,6 +195,10 @@ def set_task_status(task_id: int, status: str, *, actor: str = "") -> dict:
     return _row("care_task", task_id) or {}
 
 
+def task(task_id: int) -> dict | None:
+    return _row("care_task", task_id)
+
+
 def tasks(*, subject_id: int | None = None, status: str | None = None,
           limit: int = 100) -> list[dict]:
     where, params = ["1=1"], []

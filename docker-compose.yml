@@ -9,6 +9,13 @@ services:
     environment:
       # Point the cockpit at the data volume so the database lives outside the image.
       FASTCLINIC_DB: /data/fastclinic.sqlite
+      FASTCLINIC_API_PUBLIC_URL: https://api.fastclinic.dev
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--header", "Host: api.fastclinic.dev", "http://localhost:5005/v1/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
     volumes:
       # Persist the SQLite DB + place PMS exports here. Build with:
       #   docker compose exec fastclinic python -m pms.importer /data/export.xlsx /data/fastclinic.sqlite

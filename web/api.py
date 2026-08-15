@@ -20,12 +20,14 @@ from pydantic import BaseModel, ConfigDict, Field
 from web import (
     activation,
     activation_loop,
+    access,
     api_store,
     appointments,
     billing,
     clinic_queries,
     consent,
     db,
+    mobile_auth,
 )
 
 from .api_core import (
@@ -111,6 +113,17 @@ API_GROUPS = (
         ),
     ),
     (
+        "Mobile patient app",
+        "MedBackend OAuth/PKCE identity, own-record bootstrap, conversational booking, and appointment lifecycle.",
+        (
+            ("GET", "/api/v1/mobile/me · /bootstrap", "Authenticated profile and app startup data", "MedBackend OAuth token"),
+            ("GET", "/api/v1/mobile/availability", "Patient-safe live availability", "MedBackend OAuth token"),
+            ("GET POST", "/api/v1/mobile/appointments", "Own appointments and deterministic booking", "MedBackend OAuth token"),
+            ("POST", "/api/v1/mobile/booking/chat", "LangGraph booking conversation", "MedBackend OAuth token"),
+            ("GET", "/api/v1/mobile/records", "Own FHIR R4 records in JSON or XML", "MedBackend OAuth token"),
+        ),
+    ),
+    (
         "Activation & communications",
         "Consent-filtered recall lists, persistent reminders, immutable delivery logs, and outcome attribution.",
         (
@@ -171,12 +184,13 @@ API_GROUPS = (
 backend = DatabaseBackend(db.database_target(), RESOURCES)
 api = create_database_api(
     product="FastClinic",
-    version="1.4.0",
+    version="1.5.0",
     description=(
         "Typed integration access across FastClinic's synthetic clinical model, "
-        "scheduling, activation, consent, billing, and analytics."
+        "scheduling, mobile patient booking, activation, consent, billing, and analytics."
     ),
     base_url="https://fastclinic.dev",
+    server_url=os.getenv("FASTCLINIC_API_PUBLIC_URL") or "https://api.fastclinic.dev",
     backend=backend,
     resources=RESOURCES,
     on_mutation=activation_loop.log_api_audit,
@@ -236,6 +250,24 @@ class AppointmentUpdate(StrictModel):
     reason: str | None = Field(default=None, max_length=500)
     room: str | None = Field(default=None, max_length=120)
     status: Literal["scheduled", "confirmed", "cancelled", "completed"] | None = None
+
+
+class MobileBookingCreate(StrictModel):
+    clinician_id: int = Field(gt=0)
+    starts_at: str = Field(examples=["2026-08-17 09:00"])
+    appointment_type_code: str = Field(default="general", max_length=80)
+    reason: str = Field(default="", max_length=500)
+    room: str = Field(default="", max_length=120)
+    timezone: str = Field(default="Europe/Tallinn", max_length=80)
+
+
+class MobileReschedule(StrictModel):
+    starts_at: str = Field(examples=["2026-08-18 10:00"])
+
+
+class MobileBookingChat(StrictModel):
+    message: str = Field(min_length=1, max_length=500)
+    pending: dict[str, Any] = Field(default_factory=dict)
 
 
 class ReminderCreate(StrictModel):
@@ -531,6 +563,170 @@ def cancel_appointment(appointment_id: int):
     after = appointments.update(appointment_id, status="cancelled")
     _audit("cancel", "appointments", appointment_id, before, after)
     return Response(status_code=204)
+
+
+# --------------------------------------------------------- mobile patient --
+def _mobile_patient(principal: dict) -> tuple[str, int]:
+    if principal.get("role") != "patient" or not principal.get("subject_id"):
+        _problem(403, "patient_role_required", "This mobile operation requires a linked patient role")
+    return principal["email"], int(principal["subject_id"])
+
+
+@api.get("/v1/mobile/me", tags=["Mobile patient"])
+def mobile_me(principal: dict = Depends(mobile_auth.require_mobile_principal)):
+    capabilities = access.ROLE_CAPABILITIES.get(principal["role"], frozenset())
+    return {
+        "email": principal["email"], "role": principal["role"],
+        "subject_id": principal.get("subject_id"),
+        "clinician_id": principal.get("clinician_id"),
+        "capabilities": sorted(capabilities),
+    }
+
+
+@api.get("/v1/mobile/bootstrap", tags=["Mobile patient"])
+def mobile_bootstrap(principal: dict = Depends(mobile_auth.require_mobile_principal)):
+    email, subject_id = _mobile_patient(principal)
+    own = activation_loop.query(
+        "SELECT * FROM appointment WHERE subject_id=? ORDER BY start_at DESC LIMIT 50",
+        (subject_id,),
+    )
+    return {
+        "profile": {"email": email, "role": "patient", "subject_id": subject_id},
+        "appointment_types": appointments.appointment_types(),
+        "clinicians": appointments.clinicians(),
+        "locations": appointments.locations(),
+        "rooms": appointments.rooms(),
+        "appointments": own,
+        "booking_modes": ["assistant", "classical"],
+        "timezone": appointments.booking_policy()["timezone"],
+    }
+
+
+@api.get("/v1/mobile/availability", tags=["Mobile patient"])
+def mobile_availability(
+    clinician_id: int = Query(gt=0), day: date = Query(),
+    appointment_type_code: str = Query(default="general"),
+    principal: dict = Depends(mobile_auth.require_mobile_principal),
+):
+    _mobile_patient(principal)
+    item = appointments.appointment_type(appointment_type_code)
+    return {
+        "clinician_id": clinician_id, "day": day.isoformat(),
+        "appointment_type": item,
+        "timezone": appointments.booking_policy()["timezone"],
+        "slots": [
+            {"starts_at": slot["start_at"], "duration_min": int(item["duration_min"])}
+            for slot in appointments.day_schedule(clinician_id, day) if slot["free"]
+        ],
+    }
+
+
+@api.get("/v1/mobile/appointments", tags=["Mobile patient"])
+def mobile_appointments(principal: dict = Depends(mobile_auth.require_mobile_principal)):
+    _, subject_id = _mobile_patient(principal)
+    rows = activation_loop.query(
+        "SELECT * FROM appointment WHERE subject_id=? ORDER BY start_at DESC LIMIT 100",
+        (subject_id,),
+    )
+    return {"data": rows, "meta": {"total": len(rows)}}
+
+
+@api.post("/v1/mobile/appointments", status_code=201, tags=["Mobile patient"])
+def mobile_create_appointment(
+    payload: MobileBookingCreate,
+    principal: dict = Depends(mobile_auth.require_mobile_principal),
+):
+    email, subject_id = _mobile_patient(principal)
+    if not _clinician_exists(payload.clinician_id):
+        _problem(404, "clinician_not_found", "Clinician was not found", id=payload.clinician_id)
+    item = appointments.appointment_type(payload.appointment_type_code)
+    try:
+        appointment_id = appointments.book(
+            subject_id, payload.clinician_id, payload.starts_at,
+            duration_min=int(item["duration_min"]), reason=payload.reason,
+            room=payload.room, appointment_type_code=item["code"],
+            timezone=payload.timezone,
+        )
+    except appointments.SlotTaken as exc:
+        _problem(409, "slot_taken", str(exc))
+    except ValueError as exc:
+        _problem(422, "invalid_appointment", str(exc))
+    row = appointments.get(appointment_id) or {}
+    _audit("mobile-create", "appointments", appointment_id, None, {**row, "actor": email})
+    return row
+
+
+@api.post("/v1/mobile/appointments/{appointment_id}/cancel", tags=["Mobile patient"])
+def mobile_cancel_appointment(
+    appointment_id: int,
+    principal: dict = Depends(mobile_auth.require_mobile_principal),
+):
+    email, subject_id = _mobile_patient(principal)
+    if not appointments.cancel_for_subject(appointment_id, subject_id, actor=email):
+        _problem(404, "appointment_not_found", "An active appointment was not found")
+    return appointments.get(appointment_id)
+
+
+@api.post("/v1/mobile/appointments/{appointment_id}/reschedule", tags=["Mobile patient"])
+def mobile_reschedule_appointment(
+    appointment_id: int, payload: MobileReschedule,
+    principal: dict = Depends(mobile_auth.require_mobile_principal),
+):
+    email, subject_id = _mobile_patient(principal)
+    try:
+        changed = appointments.reschedule_for_subject(
+            appointment_id, subject_id, payload.starts_at, actor=email,
+        )
+    except appointments.SlotTaken as exc:
+        _problem(409, "slot_taken", str(exc))
+    if not changed:
+        _problem(404, "appointment_not_found", "An active appointment was not found")
+    return appointments.get(appointment_id)
+
+
+@api.post("/v1/mobile/booking/chat", tags=["Mobile patient"])
+def mobile_booking_chat(
+    payload: MobileBookingChat,
+    principal: dict = Depends(mobile_auth.require_mobile_principal),
+):
+    email, subject_id = _mobile_patient(principal)
+    from graph.booking_agent import respond
+    return respond(payload.message, subject_id, email, payload.pending)
+
+
+@api.get("/v1/mobile/records", tags=["Mobile patient"])
+def mobile_records(principal: dict = Depends(mobile_auth.require_mobile_principal)):
+    email, _ = _mobile_patient(principal)
+    from web import fhir_portal
+    rows = fhir_portal.records_for_email(email)
+    return {"data": rows, "meta": {"total": len(rows), "fhir_version": "R4"}}
+
+
+@api.get("/v1/mobile/records/{bundle_id}", tags=["Mobile patient"])
+def mobile_record(bundle_id: str, principal: dict = Depends(mobile_auth.require_mobile_principal)):
+    email, _ = _mobile_patient(principal)
+    from web import fhir_portal
+    row = fhir_portal.record_for_email(email, bundle_id)
+    if not row:
+        _problem(404, "record_not_found", "FHIR record was not found")
+    payload = row["payload"]
+    if isinstance(payload, str):
+        import json
+        payload = json.loads(payload)
+    return payload
+
+
+@api.get("/v1/mobile/records/{bundle_id}/xml", tags=["Mobile patient"])
+def mobile_record_xml(bundle_id: str, principal: dict = Depends(mobile_auth.require_mobile_principal)):
+    email, _ = _mobile_patient(principal)
+    from web import fhir_portal
+    content = fhir_portal.xml_for_email(email, bundle_id)
+    if content is None:
+        _problem(404, "record_not_found", "FHIR record was not found")
+    return Response(
+        content=content, media_type=fhir_portal.FHIR_XML_MEDIA_TYPE,
+        headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"},
+    )
 
 
 # ------------------------------------------------ activation and messaging --

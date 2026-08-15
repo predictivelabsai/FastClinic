@@ -153,6 +153,28 @@ def db_exists() -> bool:
         return False
 
 
+def table_exists(name: str) -> bool:
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+        return False
+    try:
+        with connection() as conn:
+            if is_postgres():
+                row = execute(
+                    conn,
+                    "SELECT COUNT(*) AS n FROM information_schema.tables "
+                    "WHERE table_schema=? AND table_name=?",
+                    (_schema(), name),
+                ).fetchone()
+            else:
+                row = execute(
+                    conn, "SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table' AND name=?",
+                    (name,),
+                ).fetchone()
+            return bool(row and row["n"])
+    except Exception:
+        return False
+
+
 def query(sql_text: str, params: tuple = ()) -> list[dict]:
     with connection() as conn:
         rows = execute(conn, sql_text, params).fetchall()

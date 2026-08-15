@@ -7,7 +7,7 @@ import shutil
 import pytest
 from fastapi.testclient import TestClient
 
-from web import activation_loop, api_store, db
+from web import access, activation_loop, api_store, db, mobile_auth
 from web.api import api, backend
 
 
@@ -36,12 +36,15 @@ def _first(client, resource):
 
 def test_openapi_documents_deep_surface_and_consistent_errors(client, monkeypatch):
     schema = client.get("/openapi.json").json()
-    assert schema["info"]["version"] == "1.4.0"
+    assert schema["info"]["version"] == "1.5.0"
+    assert schema["servers"][0]["url"] == "https://api.fastclinic.dev"
     assert len(schema["paths"]) >= 47
     assert "post" in schema["paths"]["/v1/patients"]
     assert {"get", "patch", "delete"} <= set(schema["paths"]["/v1/patients/{item_id}"])
     assert "/v1/analytics/specialties" in schema["paths"]
     assert "/v1/trial-balance" in schema["paths"]
+    assert "/v1/mobile/bootstrap" in schema["paths"]
+    assert "/v1/mobile/booking/chat" in schema["paths"]
 
     health = client.get("/v1/health").json()
     assert health["database_backend"] == "sqlite"
@@ -191,6 +194,45 @@ def test_appointment_crud_detects_conflicts_and_cancels(client):
     assert moved.json()["start_at"] == "2027-01-04 10:00"
     assert client.delete(f"/v1/appointments/{appointment_id}", headers=AUTH).status_code == 204
     assert client.get(f"/v1/appointments/{appointment_id}").json()["status"] == "cancelled"
+
+
+def test_mobile_patient_contract_is_identity_scoped(client, monkeypatch):
+    patient = _first(client, "patients")
+    clinician = client.get("/v1/clinicians").json()["data"][0]
+    access.set_profile("mobile.patient@example.com", "patient", subject_id=patient["id"])
+    principal = access.profile("mobile.patient@example.com")
+    api.dependency_overrides[mobile_auth.require_mobile_principal] = lambda: principal
+    monkeypatch.setenv("MODEL_PROVIDER", "")
+    monkeypatch.delenv("XAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    try:
+        me = client.get("/v1/mobile/me")
+        assert me.status_code == 200 and me.json()["subject_id"] == patient["id"]
+        bootstrap = client.get("/v1/mobile/bootstrap")
+        assert bootstrap.status_code == 200
+        assert bootstrap.json()["booking_modes"] == ["assistant", "classical"]
+        availability = client.get(
+            "/v1/mobile/availability",
+            params={"clinician_id": clinician["id"], "day": "2027-01-05"},
+        )
+        assert availability.status_code == 200 and availability.json()["slots"]
+        payload = {
+            "clinician_id": clinician["id"], "starts_at": "2027-01-05 09:00",
+            "appointment_type_code": "general", "reason": "Mobile booking",
+        }
+        created = client.post("/v1/mobile/appointments", json=payload)
+        assert created.status_code == 201, created.text
+        assert created.json()["subject_id"] == patient["id"]
+        injected = client.post(
+            "/v1/mobile/appointments", json={**payload, "subject_id": patient["id"] + 1},
+        )
+        assert injected.status_code == 422
+        own = client.get("/v1/mobile/appointments").json()["data"]
+        assert {row["id"] for row in own} == {created.json()["id"]}
+        cancelled = client.post(f"/v1/mobile/appointments/{created.json()['id']}/cancel")
+        assert cancelled.status_code == 200 and cancelled.json()["status"] == "cancelled"
+    finally:
+        api.dependency_overrides.pop(mobile_auth.require_mobile_principal, None)
 
 
 def test_reminders_consent_and_immutable_blocked_communication(client):

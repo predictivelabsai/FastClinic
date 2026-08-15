@@ -20,28 +20,34 @@ def _email(value: str) -> str:
 
 
 def records_for_email(email: str) -> list[dict]:
-    return db.query(
-        """SELECT b.bundle_id,b.document_date,b.title,b.source_format
-           FROM fhir_document_bundle b
-           JOIN fhir_patient_access a
-             ON a.patient_identifier_system=b.patient_identifier_system
-            AND a.patient_identifier_value=b.patient_identifier_value
-          WHERE a.account_email=?
-          ORDER BY b.document_date DESC NULLS LAST,b.imported_at DESC""",
-        (_email(email),),
-    )
+    try:
+        return db.query(
+            """SELECT b.bundle_id,b.document_date,b.title,b.source_format
+               FROM fhir_document_bundle b
+               JOIN fhir_patient_access a
+                 ON a.patient_identifier_system=b.patient_identifier_system
+                AND a.patient_identifier_value=b.patient_identifier_value
+              WHERE a.account_email=?
+              ORDER BY b.document_date DESC NULLS LAST,b.imported_at DESC""",
+            (_email(email),),
+        )
+    except db.db_errors():
+        return []
 
 
 def record_for_email(email: str, bundle_id: str) -> dict | None:
-    return db.query_one(
-        """SELECT b.bundle_id,b.document_date,b.title,b.source_format,b.payload
-           FROM fhir_document_bundle b
-           JOIN fhir_patient_access a
-             ON a.patient_identifier_system=b.patient_identifier_system
-            AND a.patient_identifier_value=b.patient_identifier_value
-          WHERE a.account_email=? AND b.bundle_id=?""",
-        (_email(email), bundle_id),
-    )
+    try:
+        return db.query_one(
+            """SELECT b.bundle_id,b.document_date,b.title,b.source_format,b.payload
+               FROM fhir_document_bundle b
+               JOIN fhir_patient_access a
+                 ON a.patient_identifier_system=b.patient_identifier_system
+                AND a.patient_identifier_value=b.patient_identifier_value
+              WHERE a.account_email=? AND b.bundle_id=?""",
+            (_email(email), bundle_id),
+        )
+    except db.db_errors():
+        return None
 
 
 def _narrative(payload: dict[str, Any]) -> str:

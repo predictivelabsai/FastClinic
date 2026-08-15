@@ -124,6 +124,18 @@ the user guide and the FastHTML audit.
 `fastclinic-data` volume at `/data` so the database lives outside the image.
 Configure via `.env` (see `.env.sample`).
 
+The same container serves both public hosts through host-based routing:
+
+- `https://fastclinic.dev` — monolith web application;
+- `https://api.fastclinic.dev/docs` — FastAPI Swagger UI;
+- `https://api.fastclinic.dev/openapi.json` — OpenAPI 3 contract;
+- `https://api.fastclinic.dev/v1/health` — container/API health.
+
+Add both domains to the same Coolify application and set
+`FASTCLINIC_API_PUBLIC_URL=https://api.fastclinic.dev`. No second container or
+port is required. The Docker health check sends `Host: api.fastclinic.dev` so it
+verifies the API-host router as well as the process.
+
 The clinical model defaults to `FASTCLINIC_DATABASE_BACKEND=postgresql` and can
 be explicitly switched to `sqlite` for isolated development/tests. PostgreSQL
 reads `DATABASE_URL_PROD` (with `DATABASE_URL` as a
@@ -157,6 +169,12 @@ tests. See the consolidated
 [national health registry adapter guide](docs/national_health_registry_adapters.md),
 plus the detailed [Lithuania](docs/adapters/LITHUANIA_ESPBI.md) and
 [Estonia](docs/adapters/ESTONIA_TIS.md) notes.
+
+API 1.5 also exposes a patient-scoped mobile surface at `/api/v1/mobile/*` for
+MedBackend OAuth/PKCE identity, app bootstrap, conversational or Classical
+booking, own appointment lifecycle, and owned FHIR R4 JSON/XML records. See the
+[mobile app API guide](docs/mobile_app_api.md). Mobile clients never embed the
+clinic integration token or an OAuth client secret.
 
 Public reads operate only over the synthetic demo surface. Operational reads and
 all mutations require `Authorization: Bearer <FASTSME_API_TOKEN>` and remain

@@ -76,7 +76,11 @@ class Connection:
         cursor.execute(statement.replace("?", "%s"), params)
         lastrowid = None
         serial_tables = {
-            "REMINDER", "COMMUNICATION", "APPOINTMENT", "INVOICE", "GL_ENTRY",
+            "REMINDER", "COMMUNICATION", "APPOINTMENT", "APPOINTMENT_TYPE",
+            "CLINIC_LOCATION", "CLINIC_ROOM", "BOOKING_POLICY",
+            "APPOINTMENT_PARTICIPANT", "APPOINTMENT_NOTIFICATION",
+            "PRACTITIONER_AVAILABILITY_RULE", "PRACTITIONER_AVAILABILITY_EXCEPTION",
+            "APPOINTMENT_STATUS_HISTORY", "INVOICE", "GL_ENTRY",
             "PAYMENT", "API_AUDIT", "CHAT_MESSAGE",
             "ACCOUNTS", "AUTH_TOKENS",
             "CHART_ENCOUNTER", "CHART_NOTE", "CLINICAL_ORDER", "COVERAGE",
@@ -154,6 +158,44 @@ _TABLES = (
     """CREATE TABLE IF NOT EXISTS appointment (id {id}, subject_id INTEGER, party_id INTEGER,
        clinician_id INTEGER, start_at TEXT, end_at TEXT, status TEXT DEFAULT 'scheduled',
        reason TEXT, room TEXT, created_at TEXT)""",
+    """CREATE TABLE IF NOT EXISTS appointment_type (id {id}, code TEXT NOT NULL UNIQUE,
+       name TEXT NOT NULL, duration_min INTEGER NOT NULL DEFAULT 20,
+       description TEXT, active INTEGER NOT NULL DEFAULT 1)""",
+    """CREATE TABLE IF NOT EXISTS clinic_location (id {id}, code TEXT NOT NULL UNIQUE,
+       name TEXT NOT NULL, timezone TEXT NOT NULL DEFAULT 'Europe/Tallinn',
+       address_text TEXT, active INTEGER NOT NULL DEFAULT 1)""",
+    """CREATE TABLE IF NOT EXISTS clinic_room (id {id}, location_id INTEGER NOT NULL,
+       code TEXT NOT NULL UNIQUE, name TEXT NOT NULL,
+       active INTEGER NOT NULL DEFAULT 1)""",
+    """CREATE TABLE IF NOT EXISTS booking_policy (id {id}, code TEXT NOT NULL UNIQUE,
+       hold_seconds INTEGER NOT NULL DEFAULT 300,
+       minimum_notice_minutes INTEGER NOT NULL DEFAULT 0,
+       cancellation_notice_minutes INTEGER NOT NULL DEFAULT 120,
+       timezone TEXT NOT NULL DEFAULT 'Europe/Tallinn', active INTEGER NOT NULL DEFAULT 1)""",
+    """CREATE TABLE IF NOT EXISTS practitioner_availability_rule (id {id},
+       clinician_id INTEGER NOT NULL, weekday INTEGER NOT NULL,
+       start_time TEXT NOT NULL, end_time TEXT NOT NULL,
+       slot_minutes INTEGER NOT NULL DEFAULT 20, location TEXT,
+       active INTEGER NOT NULL DEFAULT 1)""",
+    """CREATE TABLE IF NOT EXISTS practitioner_availability_exception (id {id},
+       clinician_id INTEGER NOT NULL, exception_date TEXT NOT NULL,
+       start_time TEXT, end_time TEXT, available INTEGER NOT NULL DEFAULT 0,
+       reason TEXT)""",
+    """CREATE TABLE IF NOT EXISTS appointment_status_history (id {id},
+       appointment_id INTEGER NOT NULL, from_status TEXT, to_status TEXT NOT NULL,
+       actor_email TEXT, reason TEXT, changed_at TEXT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS appointment_hold (token_hash TEXT PRIMARY KEY,
+       subject_id INTEGER NOT NULL, clinician_id INTEGER NOT NULL,
+       start_at TEXT NOT NULL, end_at TEXT NOT NULL, expires_at BIGINT NOT NULL,
+       consumed_at BIGINT, created_at TEXT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS appointment_participant (id {id},
+       appointment_id INTEGER NOT NULL, participant_type TEXT NOT NULL,
+       participant_ref TEXT NOT NULL, response_status TEXT NOT NULL DEFAULT 'accepted',
+       created_at TEXT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS appointment_notification (id {id},
+       appointment_id INTEGER NOT NULL, channel TEXT NOT NULL,
+       status TEXT NOT NULL DEFAULT 'queued', scheduled_at TEXT,
+       sent_at TEXT, created_at TEXT NOT NULL)""",
     """CREATE TABLE IF NOT EXISTS external_booking (idempotency_key TEXT PRIMARY KEY,
        appointment_id INTEGER NOT NULL UNIQUE, guest_name TEXT NOT NULL, guest_email TEXT NOT NULL,
        guest_phone TEXT, service_id TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'confirmed',
@@ -234,6 +276,13 @@ _INDEXES = (
     "CREATE INDEX IF NOT EXISTS idx_reminder_subject ON reminder(subject_id)",
     "CREATE INDEX IF NOT EXISTS idx_appt_clinician ON appointment(clinician_id,start_at)",
     "CREATE INDEX IF NOT EXISTS idx_appt_subject ON appointment(subject_id)",
+    "CREATE INDEX IF NOT EXISTS idx_availability_clinician ON practitioner_availability_rule(clinician_id,weekday)",
+    "CREATE INDEX IF NOT EXISTS idx_availability_exception ON practitioner_availability_exception(clinician_id,exception_date)",
+    "CREATE INDEX IF NOT EXISTS idx_appt_status_history ON appointment_status_history(appointment_id,changed_at)",
+    "CREATE INDEX IF NOT EXISTS idx_appt_hold_slot ON appointment_hold(clinician_id,start_at,expires_at)",
+    "CREATE INDEX IF NOT EXISTS idx_room_location ON clinic_room(location_id,active)",
+    "CREATE INDEX IF NOT EXISTS idx_appt_participant ON appointment_participant(appointment_id,participant_type)",
+    "CREATE INDEX IF NOT EXISTS idx_appt_notification ON appointment_notification(appointment_id,status)",
     "CREATE INDEX IF NOT EXISTS idx_payment_invoice ON payment(invoice_id)",
     "CREATE INDEX IF NOT EXISTS idx_api_audit_resource ON api_audit(resource,item_id,created_at)",
     "CREATE INDEX IF NOT EXISTS idx_chat_thread ON chat_message(owner_hash,thread_id,id)",
@@ -256,9 +305,28 @@ def initialize(connection: Connection) -> None:
     identity = "BIGSERIAL PRIMARY KEY" if connection.postgres else "INTEGER PRIMARY KEY AUTOINCREMENT"
     for statement in _TABLES:
         connection.execute(statement.format(id=identity))
+    if connection.postgres:
+        columns = {
+            row["column_name"] for row in connection.execute(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_schema=? AND table_name='appointment'", (_schema(),)
+            ).fetchall()
+        }
+    else:
+        columns = {row["name"] for row in connection.execute("PRAGMA table_info(appointment)").fetchall()}
+    for name, definition in (
+        ("appointment_type_code", "TEXT"),
+        ("location", "TEXT"),
+        ("timezone", "TEXT NOT NULL DEFAULT 'Europe/Tallinn'"),
+        ("start_at_utc", "TEXT"),
+        ("end_at_utc", "TEXT"),
+        ("version", "INTEGER NOT NULL DEFAULT 1"),
+    ):
+        if name not in columns:
+            connection.execute(f"ALTER TABLE appointment ADD COLUMN {name} {definition}")
     for role, label, sort_order in (
         ("admin", "Administrator", 10),
-        ("doctor", "Doctor", 20),
+        ("practitioner", "Practitioner", 20),
         ("receptionist", "Receptionist", 30),
         ("billing", "Billing", 40),
         ("patient", "Patient", 50),
@@ -268,6 +336,41 @@ def initialize(connection: Connection) -> None:
             "ON CONFLICT(role) DO UPDATE SET label=excluded.label,sort_order=excluded.sort_order",
             (role, label, sort_order),
         )
+    # Migrate the historical internal name without invalidating existing users.
+    connection.execute("UPDATE access_profile SET role='practitioner' WHERE role='doctor'")
+    connection.execute("DELETE FROM access_role WHERE role='doctor'")
+    for code, name, duration, description in (
+        ("general", "General consultation", 20, "Standard clinic appointment"),
+        ("dermatology", "Dermatology consultation", 30, "Skin and allergy consultation"),
+        ("vaccination", "Vaccination", 20, "Vaccination appointment"),
+        ("driver-medical", "Driver medical examination", 40, "Driving licence health examination"),
+    ):
+        connection.execute(
+            "INSERT INTO appointment_type(code,name,duration_min,description,active) "
+            "VALUES(?,?,?,?,1) ON CONFLICT(code) DO UPDATE SET "
+            "name=excluded.name,duration_min=excluded.duration_min,description=excluded.description",
+            (code, name, duration, description),
+        )
+    connection.execute(
+        "INSERT INTO clinic_location(code,name,timezone,address_text,active) "
+        "VALUES(?,?,?,?,1) ON CONFLICT(code) DO UPDATE SET "
+        "name=excluded.name,timezone=excluded.timezone",
+        ("main", "FastClinic", "Europe/Tallinn", ""),
+    )
+    location = connection.execute(
+        "SELECT id FROM clinic_location WHERE code=?", ("main",)
+    ).fetchone()
+    connection.execute(
+        "INSERT INTO clinic_room(location_id,code,name,active) VALUES(?,?,?,1) "
+        "ON CONFLICT(code) DO UPDATE SET location_id=excluded.location_id,name=excluded.name",
+        (location["id"], "room-1", "Consultation room 1"),
+    )
+    connection.execute(
+        "INSERT INTO booking_policy(code,hold_seconds,minimum_notice_minutes,"
+        "cancellation_notice_minutes,timezone,active) VALUES(?,?,?,?,?,1) "
+        "ON CONFLICT(code) DO UPDATE SET timezone=excluded.timezone",
+        ("default", 300, 0, 120, "Europe/Tallinn"),
+    )
     for statement in _INDEXES:
         connection.execute(statement)
     connection.commit()
