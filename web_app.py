@@ -64,7 +64,13 @@ CLINIC_ENV = os.getenv("FASTCLINIC_ENV_LABEL", "FastClinic")
 SECRET = os.getenv("FASTCLINIC_SECRET", os.getenv("MMG_COCKPIT_SECRET", secrets.token_hex(32)))
 PORT = int(os.getenv("FASTCLINIC_PORT", os.getenv("MMG_COCKPIT_PORT", "5005")))
 PUBLIC_URL = os.getenv("FASTSME_PUBLIC_URL", "https://fastclinic.dev").rstrip("/")
-PUBLIC_HOSTS = {"fastclinic.dev", "www.fastclinic.dev", "clinic.fastsme.com"}
+PUBLIC_HOSTS = {
+    "fastclinic.dev",
+    "www.fastclinic.dev",
+    "clinic.fastsme.com",
+    "fastclinic.health",
+    "www.fastclinic.health",
+}
 API_PUBLIC_URL = os.getenv("FASTCLINIC_API_PUBLIC_URL", "https://api.fastclinic.dev").rstrip("/")
 API_HOSTS = {host for host in {urlsplit(API_PUBLIC_URL).hostname, "api.fastclinic.dev"} if host}
 
