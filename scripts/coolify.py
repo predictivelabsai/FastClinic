@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CONTROL = Path(os.getenv("FASTDEVOPS_DIR", ROOT.parent / "FastDevOps")).resolve()
+CONTROL = Path(os.getenv("FASTDEVOPS_DIR", ROOT.parent / "FastDevops")).resolve()
 if not (CONTROL / "cli.py").is_file():
     raise SystemExit("FastDevOps not found; set FASTDEVOPS_DIR to its checkout")
 sys.path.insert(0, str(CONTROL))

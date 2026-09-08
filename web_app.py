@@ -55,6 +55,7 @@ from web import clinical_views
 from web import portal_views
 from web import medbackend_oauth
 from web.api import api
+import byok
 
 logger = logging.getLogger("fastclinic")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
@@ -247,6 +248,12 @@ def _require_subject(session, perm: str, subject_id: int):
         access.audit(email, "scope-denied", "subject", subject_id)
         return email, _denied(session, email)
     return email, None
+
+
+# BYOK: per-org free-query gate + encrypted key settings at /byok. The FastClinic
+# session identifies the ops user by "user_email" (no separate org id), so key the
+# free-query counter on that address.
+byok.register(rt, app, app_name="FastClinic", get_org=lambda s: s.get("user_email"))
 
 
 def _guarded(active: str, builder, perm: str | None = None):
@@ -1293,8 +1300,9 @@ def get(session, slug: str):
 
 # --- chat ---
 @rt("/chat/new")
-def get(session):
-    email, denied = _require(session, "chat-full")
+def get(session, page_context: str = ""):
+    is_market = page_context in {"market", "market-map", "market-config", "search-provider"}
+    email, denied = _require(session, "market" if is_market else "chat-full")
     if denied:
         return denied
     session["thread_id"] = f"fastclinic_{uuid.uuid4().hex[:12]}"
@@ -1306,10 +1314,11 @@ def get(session):
 
 
 @rt("/chat/stream")
-async def post(session, message: str = "", thread_id: str = ""):
+async def post(session, message: str = "", thread_id: str = "", page_context: str = "", page_url: str = ""):
     """SSE streaming chat: slash-commands answer instantly; free-form streams the
     LangGraph agent token-by-token with a tool trace."""
-    _, denied = _require(session, "chat-full")
+    is_market = page_context in {"market", "market-map", "market-config", "search-provider"}
+    _, denied = _require(session, "market" if is_market else "chat-full")
     if denied:
         return Response("unauthorized", status_code=401)
     from web.sse import sse
@@ -1322,6 +1331,23 @@ async def post(session, message: str = "", thread_id: str = ""):
         if not msg:
             yield sse("done", {})
             return
+        if is_market:
+            gate = byok.begin_query(session)
+            if gate.blocked:
+                yield sse("token", {"text": gate.gate_markdown})
+                yield sse("done", {})
+                return
+            from web.market_assistant import answer_stream as market_answer
+            try:
+                async for event, content in market_answer(msg, page_context, page_url, tid, owner_id, lang,
+                                                        gate.llm if gate.used_byok else None):
+                    yield sse(event, {"text": content})
+                gate.commit()
+            except Exception:
+                logger.exception("Market assistant failed")
+                yield sse("error", {"message": "Market assistant unavailable; please try again."})
+            yield sse("done", {})
+            return
         with using_lang(lang):
             kind, payload = cmd.dispatch(msg)
         if kind == "local":
@@ -1330,12 +1356,18 @@ async def post(session, message: str = "", thread_id: str = ""):
             yield sse("token", {"text": payload})
             yield sse("done", {"local": True})
             return
+        gate = byok.begin_query(session)
+        if gate.blocked:
+            yield sse("token", {"text": gate.gate_markdown})
+            yield sse("done", {})
+            return
         from graph.clinic_assistant import answer_stream
         prompt = payload if payload is not None else msg
         got = False
         try:
             async for ev, data in answer_stream(
                 prompt, thread_id=tid, lang=lang, owner_id=owner_id,
+                model=gate.llm if gate.used_byok else None,
             ):
                 if ev == "token":
                     got = True
@@ -1346,6 +1378,8 @@ async def post(session, message: str = "", thread_id: str = ""):
                     yield sse("tool_end", data)
                 elif ev == "error":
                     yield sse("error", {"message": data})
+            if got:
+                gate.commit()
         except Exception as e:  # noqa: BLE001
             logger.exception("chat stream failed")
             yield sse("error", {"message": str(e)})
@@ -1452,6 +1486,15 @@ def _ensure_db():
 # --- boot ---
 
 register_seo_routes(app)
+
+from web import market_views
+
+def _market_render(session, active, content):
+    email = _auth(session)
+    return page(active, CLINIC_ENV, email, _thread(session), Style(market_views.MARKET_CSS), Div(content, cls="market-shell"),
+                lang=get_lang(session), effective_role=_effective_role(session, email))
+
+market_views.register(rt, app, _require, _market_render)
 
 if __name__ == "__main__":
     _ensure_db()

@@ -14,6 +14,7 @@ _TEST_ROOT = Path(_TEST_STORAGE.name)
 # paths before test modules are collected prevents a local Docker path such as
 # /data from leaking into unit tests, regardless of collection order. The
 # committed synthetic clinical database remains the read-only test fixture.
+os.environ.setdefault("FASTCLINIC_MARKET_WORKER_ENABLED", "false")
 os.environ.setdefault("FASTCLINIC_OPS_DB", str(_TEST_ROOT / "operations.sqlite"))
 os.environ.setdefault("FASTSME_AUTH_DB", str(_TEST_ROOT / "accounts.sqlite"))
 os.environ.setdefault("FASTCLINIC_DATABASE_BACKEND", "sqlite")

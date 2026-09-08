@@ -157,8 +157,16 @@ _agent = None
 _agent_signature: tuple | None = None
 
 
-def _get_agent():
-    """Build (and cache) the LangGraph ReAct agent for the current provider config."""
+def _get_agent(model=None):
+    """Build (and cache) the LangGraph ReAct agent for the current provider config.
+
+    When ``model`` is provided (e.g. a BYOK chat model), build a FRESH agent with
+    that model and bypass the module-global cache. When ``model`` is None, keep the
+    exact cached house behaviour.
+    """
+    if model is not None:
+        from langgraph.prebuilt import create_react_agent
+        return create_react_agent(model, _build_tools(), prompt=SYSTEM_PROMPT)
     global _agent, _agent_signature
     sig = (os.getenv("MODEL_PROVIDER"), os.getenv("MODEL_NAME"))
     if _agent is not None and _agent_signature == sig:
@@ -266,17 +274,21 @@ async def answer_stream(
     thread_id: str | None = None,
     lang: str = "en",
     owner_id: str | None = None,
+    model=None,
 ):
     """Async generator of (kind, data) events for the streaming chat endpoint.
 
     kinds: ('token', str) | ('tool_start', {name,args}) | ('tool_end', {name})
            | ('error', str). Falls back to a single token when no provider is set.
+
+    When ``model`` is provided (a BYOK chat model), the agent is built fresh with
+    it; otherwise the cached house agent is used.
     """
     if not (message or "").strip():
         yield ("token", _fallback(lang))
         return
     try:
-        agent = _get_agent()
+        agent = _get_agent(model)
     except Exception as e:
         yield ("token", f"⚠ assistant unavailable: `{e}`\n\n" + _fallback(lang))
         return

@@ -567,12 +567,20 @@ NAV_ITEMS = [
         ("email", "Email", "✉️", "/ops/email"),
         ("seo", "Web Presence", "🔍", "/seo"),
     ]),
+    ("MARKET", [
+        ("market", "Competitive Intelligence", "📈", "/market/competitive-intelligence"),
+        ("market-map", "Market Map", "🗺️", "/market/map"),
+    ]),
+    ("INTEGRATIONS", [
+        ("search-provider", "search_provider", "🔎", "/integrations/search-provider"),
+    ]),
     ("HELP", [
         ("help-shortcuts", "Shortcuts", "⌨️", "/help/shortcuts"),
         ("help-guide", "User Guide", "📖", "/help/guide"),
         ("developers", "Developers", "⌘", "/developers"),
     ]),
     ("ADMIN", [
+        ("market-config", "Market Configuration", "📈", "/admin/market"),
         ("data-admin", "Data & Import", "🗂️", "/admin/data"),
         ("fhir-admin", "FHIR R4", "🔗", "/admin/fhir"),
         ("audit", "Access audit", "📜", "/admin/audit"),
@@ -634,9 +642,10 @@ SAMPLE_QUESTIONS = [
 ]
 
 
-def _sample_cards():
+def _sample_cards(active="dashboard"):
+    from web.market_assistant import PAGE_QUESTIONS
     """Free-form example questions below the chat input. Shortcuts live in /help."""
-    translated = [(q, t(q)) for q in SAMPLE_QUESTIONS]
+    translated = [(q, t(q)) for q in PAGE_QUESTIONS.get(active, SAMPLE_QUESTIONS)]
     cards = [
         Button(
             Span(label, cls="sample-card-text"),
@@ -659,13 +668,13 @@ def _sample_cards():
     )
 
 
-def right_pane_chat(thread_id: str):
+def right_pane_chat(thread_id: str, active: str = "dashboard"):
     """Always-visible chat cockpit in the right rail."""
     return Div(
         Div(
             H3("AI Assistant"),
             Div(
-                Button("New", cls="btn", hx_get=f"/chat/new", hx_target="#chat-body",
+                Button("New", cls="btn", hx_get=f"/chat/new?page_context={active}", hx_target="#chat-body",
                        hx_swap="innerHTML", title="Start new thread"),
                 Button(NotStr("&laquo;"), id="copilot-exp-btn", cls="copilot-exp",
                        onclick="toggleExpand()", title="Expand / shrink assistant"),
@@ -677,16 +686,17 @@ def right_pane_chat(thread_id: str):
         ),
         Div(
             Div(
-                P("Ask about patients, immunisations due, revenue — or tap a question below.",
+                P("Ask about competitor clinics, regular prices, locations and weekly changes." if active in {"market", "market-map", "market-config", "search-provider"} else "Ask about patients, immunisations due, revenue — or tap a question below.",
                   cls="chat-empty-hint"),
                 id="chat-body", cls="chat-body",
             ),
             Form(
                 Input(type="hidden", name="thread_id", value=thread_id, id="thread-id"),
+                Input(type="hidden", name="page_context", value=active, id="chat-page-context"),
                 Div(
                     Input(
                         type="text", name="message", id="chat-input",
-                        placeholder=t("Ask a question or type /due /lapsed /help …"),
+                        placeholder=t("Ask about the competition …" if active in {"market", "market-map", "market-config", "search-provider"} else "Ask a question or type /due /lapsed /help …"),
                         autocomplete="off",
                     ),
                     Button("Send", type="submit", cls="chat-send-btn", id="chat-send-btn"),
@@ -695,7 +705,7 @@ def right_pane_chat(thread_id: str):
                 onsubmit="return streamChat(event)",
                 cls="chat-input",
             ),
-            _sample_cards(),
+            _sample_cards(active),
             style="display:flex; flex-direction:column; flex:1; overflow:hidden;",
         ),
         cls="right-pane",
@@ -905,7 +915,7 @@ async function streamChat(ev){
   try{
     var resp=await fetch('/chat/stream', {method:'POST',
       headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:new URLSearchParams({message:msg, thread_id:tid})});
+      body:new URLSearchParams({message:msg, thread_id:tid, page_context:(document.getElementById('chat-page-context')||{}).value||'', page_url:window.location.pathname+window.location.search})});
     if(!resp.ok){ hideThinking(); addBubble('assistant',_tr('Error')+': '+resp.status);
       _streaming=false; if(sendBtn) sendBtn.disabled=false; return false; }
     var reader=resp.body.getReader(), dec=new TextDecoder(), buf='';
@@ -1054,8 +1064,8 @@ def page(active: str, env: str, user_email: str, thread_id: str, *content,
     from web.access import can_as, effective_role as resolve_effective_role
     lang = lang or current_lang()
     role = resolve_effective_role(user_email, effective_role)
-    assistant = can_as(user_email, "chat-full", role)
-    right = right_override if right_override is not None else (right_pane_chat(thread_id) if assistant else None)
+    assistant = can_as(user_email, "chat-full", role) or (active in {"market", "market-map", "market-config", "search-provider"} and can_as(user_email, "market", role))
+    right = right_override if right_override is not None else (right_pane_chat(thread_id, active) if assistant else None)
     has_right = right is not None
     result = (
         Title("FastClinic Cockpit"),

@@ -17,6 +17,9 @@ openai
 langgraph
 langchain-core
 langchain-openai
+# BYOK bring-your-own-key providers (xAI/OpenAI via langchain-openai above).
+langchain-anthropic
+# langchain-google-genai  (optional Gemini provider for BYOK)
 # Agent/chat evaluation harness and LLM-as-judge metrics.
 deepeval==4.0.2
 # Optional extra providers (uncomment if MODEL_PROVIDER is set to them):

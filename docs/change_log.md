@@ -1,5 +1,17 @@
 # FastClinic change log
 
+## 0.5.0 — 2026-09-08
+
+- Add Baltic private-clinic competitive intelligence with regular service prices, filters, clinic drill-downs, source evidence and accumulating weekly history.
+- Add an interactive Leaflet/OpenStreetMap market map with evidenced clinic addresses.
+- Add Exa personal/shared credentials under Integrations, administrator Market Configuration, and weekly/manual background collection.
+- Make the Market AI Assistant aware of the active page and filters, with isolated read-only competitor tools; include the pending application AI/BYOK integration.
+- Seed 211 public service observations from four providers across Lithuania, Latvia and Estonia, with five mapped branches.
+- Keep Leaflet marker assets in the deployment image and exclude local SQLite/search scratch data.
+- Fix the local FastDevops deployment wrapper path.
+
+Validation: 71 tests and 38 subtests passed; three paid Exa checks passed separately. Browser checks covered map zoom/pan, clinic navigation, filtering and a live page-aware AI response. Legacy evaluation: 193/195, with pre-existing version-label and Staff-label expectations.
+
 ## 0.4.0 — 2026-08-15
 
 - Added five role-specific workspaces with canonical Administrator,

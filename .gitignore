@@ -243,3 +243,10 @@ docs/demo/frames/
 
 # operational activation-loop state (not the PMS replica)
 fastclinic_ops.sqlite
+
+# Raw public search evaluation scratch output; reviewed seed and report are tracked.
+data/market/probe_*.json
+data/market/extracted_*.json
+data/market/seed_exa_*.json
+data/market/live-tests/
+!static/vendor/leaflet/images/*.png

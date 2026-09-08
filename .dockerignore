@@ -26,3 +26,12 @@ did/output
 *.gif
 !static/product-demo.gif
 !web/static/**
+
+# Keep bundled Leaflet markers and the reviewed market seed; exclude local search scratch and state.
+!static/vendor/leaflet/images/*.png
+*.sqlite
+*.sqlite3
+data/market/probe_*.json
+data/market/extracted_*.json
+data/market/seed_exa_*.json
+data/market/live-tests/

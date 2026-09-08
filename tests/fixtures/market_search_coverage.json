@@ -1,0 +1,962 @@
+[
+  {
+    "provider": "exa",
+    "country": "EE",
+    "rank": 1,
+    "query": "Eesti erakliinik erahaigla teenused hinnakiri",
+    "url": "https://kirurgia.ee/hinnakiri/",
+    "retrieved_at": "2026-09-08T14:00:24+00:00",
+    "text_characters": 4399,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "EE",
+    "rank": 2,
+    "query": "Eesti erakliinik erahaigla teenused hinnakiri",
+    "url": "https://www.elitekliinik.ee/hinnakirjad/",
+    "retrieved_at": "2026-09-08T14:00:24+00:00",
+    "text_characters": 6659,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "EE",
+    "rank": 3,
+    "query": "Eesti erakliinik erahaigla teenused hinnakiri",
+    "url": "https://www.elitekliinik.ee/en/hinnakiri/",
+    "retrieved_at": "2026-09-08T14:00:24+00:00",
+    "text_characters": 6205,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "EE",
+    "rank": 4,
+    "query": "Eesti erakliinik erahaigla teenused hinnakiri",
+    "url": "https://healkliinik.ee/hinnakiri/",
+    "retrieved_at": "2026-09-08T14:00:24+00:00",
+    "text_characters": 2902,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "EE",
+    "rank": 5,
+    "query": "Eesti erakliinik erahaigla teenused hinnakiri",
+    "url": "https://www.medex.ee/hinnakiri",
+    "retrieved_at": "2026-09-08T14:00:24+00:00",
+    "text_characters": 2171,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "EE",
+    "rank": 6,
+    "query": "Eesti erakliinik erahaigla teenused hinnakiri",
+    "url": "https://healkliinik.ee/en/hinnakiri/",
+    "retrieved_at": "2026-09-08T14:00:24+00:00",
+    "text_characters": 2910,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "EE",
+    "rank": 7,
+    "query": "Eesti erakliinik erahaigla teenused hinnakiri",
+    "url": "https://www.eriarstikeskus.ee/hinnakiri/",
+    "retrieved_at": "2026-09-08T14:00:24+00:00",
+    "text_characters": 12033,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "EE",
+    "rank": 8,
+    "query": "Eesti erakliinik erahaigla teenused hinnakiri",
+    "url": "https://www.eliteclinic.ee/hinnakirjad/",
+    "retrieved_at": "2026-09-08T14:00:24+00:00",
+    "text_characters": 6659,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "EE",
+    "rank": 1,
+    "query": "Estonia private hospitals clinics treatment service prices",
+    "url": "https://kirurgia.ee/en/price-list/",
+    "retrieved_at": "2026-09-08T14:00:36+00:00",
+    "text_characters": 4257,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "EE",
+    "rank": 2,
+    "query": "Estonia private hospitals clinics treatment service prices",
+    "url": "https://medemis.ee/en/pricelist/",
+    "retrieved_at": "2026-09-08T14:00:36+00:00",
+    "text_characters": 11565,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "EE",
+    "rank": 3,
+    "query": "Estonia private hospitals clinics treatment service prices",
+    "url": "https://estmedica.ee/en/prices/",
+    "retrieved_at": "2026-09-08T14:00:36+00:00",
+    "text_characters": 13319,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "EE",
+    "rank": 4,
+    "query": "Estonia private hospitals clinics treatment service prices",
+    "url": "https://kirurgiakeskus.ee/en/price-list/",
+    "retrieved_at": "2026-09-08T14:00:36+00:00",
+    "text_characters": 1633,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "EE",
+    "rank": 5,
+    "query": "Estonia private hospitals clinics treatment service prices",
+    "url": "https://www.medita.ee/for-the-patient/cost-of-the-services",
+    "retrieved_at": "2026-09-08T14:00:36+00:00",
+    "text_characters": 5765,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "EE",
+    "rank": 6,
+    "query": "Estonia private hospitals clinics treatment service prices",
+    "url": "https://esteetilinemeditsiin.ee/en/price-list/",
+    "retrieved_at": "2026-09-08T14:00:36+00:00",
+    "text_characters": 6529,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "EE",
+    "rank": 7,
+    "query": "Estonia private hospitals clinics treatment service prices",
+    "url": "https://www.medex.ee/en/hinnakiri",
+    "retrieved_at": "2026-09-08T14:00:36+00:00",
+    "text_characters": 2235,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "EE",
+    "rank": 8,
+    "query": "Estonia private hospitals clinics treatment service prices",
+    "url": "https://estendo.ee/en/price-list/",
+    "retrieved_at": "2026-09-08T14:00:36+00:00",
+    "text_characters": 4416,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LT",
+    "rank": 1,
+    "query": "Lietuva privačios ligoninės klinikos kainynas paslaugos",
+    "url": "https://medklinika.lt/kainynas/",
+    "retrieved_at": "2026-09-08T14:00:21+00:00",
+    "text_characters": 5992,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LT",
+    "rank": 2,
+    "query": "Lietuva privačios ligoninės klinikos kainynas paslaugos",
+    "url": "https://medicinosnamai.lt/wp-content/uploads/2026/05/KLINIKOS-MEDICINOS-NAMAI-PASLAUGU-KAINYNAS-2026-M.-.pdf",
+    "retrieved_at": "2026-09-08T14:00:21+00:00",
+    "text_characters": 40000,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LT",
+    "rank": 3,
+    "query": "Lietuva privačios ligoninės klinikos kainynas paslaugos",
+    "url": "https://bioklinika.lt/kainos/",
+    "retrieved_at": "2026-09-08T14:00:21+00:00",
+    "text_characters": 40000,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LT",
+    "rank": 4,
+    "query": "Lietuva privačios ligoninės klinikos kainynas paslaugos",
+    "url": "https://www.aumclinic.lt/kainos/",
+    "retrieved_at": "2026-09-08T14:00:21+00:00",
+    "text_characters": 24874,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LT",
+    "rank": 5,
+    "query": "Lietuva privačios ligoninės klinikos kainynas paslaugos",
+    "url": "https://unavita.lt/lt/kainorastis/paslaugos-imonems",
+    "retrieved_at": "2026-09-08T14:00:21+00:00",
+    "text_characters": 40000,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LT",
+    "rank": 6,
+    "query": "Lietuva privačios ligoninės klinikos kainynas paslaugos",
+    "url": "https://www.manodaktaras.lt/paslaugos",
+    "retrieved_at": "2026-09-08T14:00:21+00:00",
+    "text_characters": 3969,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "exa",
+    "country": "LT",
+    "rank": 7,
+    "query": "Lietuva privačios ligoninės klinikos kainynas paslaugos",
+    "url": "https://www.bbklinika.lt/kainorastis/",
+    "retrieved_at": "2026-09-08T14:00:21+00:00",
+    "text_characters": 3605,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LT",
+    "rank": 8,
+    "query": "Lietuva privačios ligoninės klinikos kainynas paslaugos",
+    "url": "https://dropsclinic.lt/kainos/",
+    "retrieved_at": "2026-09-08T14:00:21+00:00",
+    "text_characters": 21728,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LT",
+    "rank": 1,
+    "query": "Lithuania private hospitals clinics treatment service prices",
+    "url": "https://www.hila.lt/en/about-prices/",
+    "retrieved_at": "2026-09-08T14:00:32+00:00",
+    "text_characters": 10884,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LT",
+    "rank": 2,
+    "query": "Lithuania private hospitals clinics treatment service prices",
+    "url": "https://gpklinika.lt/en/service-prices/",
+    "retrieved_at": "2026-09-08T14:00:32+00:00",
+    "text_characters": 7656,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LT",
+    "rank": 3,
+    "query": "Lithuania private hospitals clinics treatment service prices",
+    "url": "https://www.tavoklinika.lt/en/prices/",
+    "retrieved_at": "2026-09-08T14:00:32+00:00",
+    "text_characters": 4548,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LT",
+    "rank": 4,
+    "query": "Lithuania private hospitals clinics treatment service prices",
+    "url": "https://unavita.lt/en/price-list",
+    "retrieved_at": "2026-09-08T14:00:32+00:00",
+    "text_characters": 40000,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LT",
+    "rank": 5,
+    "query": "Lithuania private hospitals clinics treatment service prices",
+    "url": "https://posiunoklinika.lt/en/prices/",
+    "retrieved_at": "2026-09-08T14:00:32+00:00",
+    "text_characters": 12592,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LT",
+    "rank": 6,
+    "query": "Lithuania private hospitals clinics treatment service prices",
+    "url": "https://www.aumclinic.lt/wp-content/uploads/2025/09/Naujas_EN_AUM-MENIU-3.pdf",
+    "retrieved_at": "2026-09-08T14:00:32+00:00",
+    "text_characters": 8637,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LT",
+    "rank": 7,
+    "query": "Lithuania private hospitals clinics treatment service prices",
+    "url": "https://us-uk.bookimed.com/clinics/country=lithuania/",
+    "retrieved_at": "2026-09-08T14:00:32+00:00",
+    "text_characters": 25370,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "exa",
+    "country": "LT",
+    "rank": 8,
+    "query": "Lithuania private hospitals clinics treatment service prices",
+    "url": "https://www.balticlinic.com/hip-replacement",
+    "retrieved_at": "2026-09-08T14:00:32+00:00",
+    "text_characters": 15991,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "exa",
+    "country": "LV",
+    "rank": 1,
+    "query": "Latvija privātās slimnīcas klīnikas pakalpojumu cenrādis",
+    "url": "https://vitolaklinika.lv/cenas/",
+    "retrieved_at": "2026-09-08T14:00:25+00:00",
+    "text_characters": 13933,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LV",
+    "rank": 2,
+    "query": "Latvija privātās slimnīcas klīnikas pakalpojumu cenrādis",
+    "url": "https://rigasveseliba.lv/wp-content/uploads/2026/01/RVC_Maksas_pakalpojumu_cenradis_13_01_2026.pdf",
+    "retrieved_at": "2026-09-08T14:00:25+00:00",
+    "text_characters": 40000,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "exa",
+    "country": "LV",
+    "rank": 3,
+    "query": "Latvija privātās slimnīcas klīnikas pakalpojumu cenrādis",
+    "url": "https://www.stradini.lv/lv/price-list",
+    "retrieved_at": "2026-09-08T14:00:25+00:00",
+    "text_characters": 40000,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "exa",
+    "country": "LV",
+    "rank": 4,
+    "query": "Latvija privātās slimnīcas klīnikas pakalpojumu cenrādis",
+    "url": "https://mbclinic.lv/cenas/",
+    "retrieved_at": "2026-09-08T14:00:25+00:00",
+    "text_characters": 10773,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LV",
+    "rank": 5,
+    "query": "Latvija privātās slimnīcas klīnikas pakalpojumu cenrādis",
+    "url": "https://aslimnica.lv/maksas-pakalpojumu-cenradis-2/",
+    "retrieved_at": "2026-09-08T14:00:25+00:00",
+    "text_characters": 8689,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "exa",
+    "country": "LV",
+    "rank": 6,
+    "query": "Latvija privātās slimnīcas klīnikas pakalpojumu cenrādis",
+    "url": "https://ziemelkurzemesslimnica.lv/pakalpojumu-cenradis/",
+    "retrieved_at": "2026-09-08T14:00:25+00:00",
+    "text_characters": 834,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "exa",
+    "country": "LV",
+    "rank": 7,
+    "query": "Latvija privātās slimnīcas klīnikas pakalpojumu cenrādis",
+    "url": "https://www.gasinaklinika.lv/prices",
+    "retrieved_at": "2026-09-08T14:00:25+00:00",
+    "text_characters": 7572,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LV",
+    "rank": 8,
+    "query": "Latvija privātās slimnīcas klīnikas pakalpojumu cenrādis",
+    "url": "https://jelgavasklinika.lv/maksas-pakalpojumu-cenradis/",
+    "retrieved_at": "2026-09-08T14:00:25+00:00",
+    "text_characters": 451,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "exa",
+    "country": "LV",
+    "rank": 1,
+    "query": "Latvia private hospitals clinics treatment service prices",
+    "url": "https://klinika.lv/en/prices/",
+    "retrieved_at": "2026-09-08T14:00:33+00:00",
+    "text_characters": 1620,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LV",
+    "rank": 2,
+    "query": "Latvia private hospitals clinics treatment service prices",
+    "url": "https://republikaslaukumaklinika.lv/en/pricing/",
+    "retrieved_at": "2026-09-08T14:00:33+00:00",
+    "text_characters": 4186,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LV",
+    "rank": 3,
+    "query": "Latvia private hospitals clinics treatment service prices",
+    "url": "https://kirurgi.lv/en/pricing/",
+    "retrieved_at": "2026-09-08T14:00:33+00:00",
+    "text_characters": 6420,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LV",
+    "rank": 4,
+    "query": "Latvia private hospitals clinics treatment service prices",
+    "url": "https://lorklinika.lv/en/price-list/",
+    "retrieved_at": "2026-09-08T14:00:33+00:00",
+    "text_characters": 6427,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LV",
+    "rank": 5,
+    "query": "Latvia private hospitals clinics treatment service prices",
+    "url": "https://www.prfklinika.lv/price-list/?lang=en",
+    "retrieved_at": "2026-09-08T14:00:33+00:00",
+    "text_characters": 3734,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LV",
+    "rank": 6,
+    "query": "Latvia private hospitals clinics treatment service prices",
+    "url": "https://kzsklinika.lv/en/prices/",
+    "retrieved_at": "2026-09-08T14:00:33+00:00",
+    "text_characters": 6669,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LV",
+    "rank": 7,
+    "query": "Latvia private hospitals clinics treatment service prices",
+    "url": "https://www.vivendicentrs.lv/en/price-list/",
+    "retrieved_at": "2026-09-08T14:00:33+00:00",
+    "text_characters": 10194,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "exa",
+    "country": "LV",
+    "rank": 8,
+    "query": "Latvia private hospitals clinics treatment service prices",
+    "url": "https://vitolaklinika.lv/en/pricing/",
+    "retrieved_at": "2026-09-08T14:00:33+00:00",
+    "text_characters": 14184,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "tavily",
+    "country": "EE",
+    "rank": 1,
+    "query": "Eesti erakliinik erahaigla teenused hinnakiri",
+    "url": "https://kirurgia.ee",
+    "retrieved_at": "2026-09-08T14:00:23+00:00",
+    "text_characters": 7748,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "tavily",
+    "country": "EE",
+    "rank": 2,
+    "query": "Eesti erakliinik erahaigla teenused hinnakiri",
+    "url": "https://www.fertilitas.ee",
+    "retrieved_at": "2026-09-08T14:00:23+00:00",
+    "text_characters": 159,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "tavily",
+    "country": "EE",
+    "rank": 3,
+    "query": "Eesti erakliinik erahaigla teenused hinnakiri",
+    "url": "https://www.leh.ee/vastuvott/tasulised-teenused",
+    "retrieved_at": "2026-09-08T14:00:23+00:00",
+    "text_characters": 6789,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "EE",
+    "rank": 4,
+    "query": "Eesti erakliinik erahaigla teenused hinnakiri",
+    "url": "https://www.telia.ee/hinnakiri",
+    "retrieved_at": "2026-09-08T14:00:23+00:00",
+    "text_characters": 166,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "EE",
+    "rank": 5,
+    "query": "Eesti erakliinik erahaigla teenused hinnakiri",
+    "url": "https://www.keskhaigla.ee/patsiendile-ja-kulastajale/uksused-ja-teenused/naistekliinik/hinnakiri",
+    "retrieved_at": "2026-09-08T14:00:23+00:00",
+    "text_characters": 127,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "EE",
+    "rank": 6,
+    "query": "Eesti erakliinik erahaigla teenused hinnakiri",
+    "url": "https://www.ovumia.com/et/et/hinnakiri",
+    "retrieved_at": "2026-09-08T14:00:23+00:00",
+    "text_characters": 26565,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "tavily",
+    "country": "EE",
+    "rank": 7,
+    "query": "Eesti erakliinik erahaigla teenused hinnakiri",
+    "url": "https://www.idona.ee/teenused-ja-hinnakiri",
+    "retrieved_at": "2026-09-08T14:00:23+00:00",
+    "text_characters": 145,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "tavily",
+    "country": "EE",
+    "rank": 8,
+    "query": "Eesti erakliinik erahaigla teenused hinnakiri",
+    "url": "https://www.confido.ee",
+    "retrieved_at": "2026-09-08T14:00:23+00:00",
+    "text_characters": 143,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "tavily",
+    "country": "EE",
+    "rank": 1,
+    "query": "Estonia private hospitals clinics treatment service prices",
+    "url": "https://tervisekassa.ee/en/kontaktpunkt/healthcare-estonia-european-union-insured-person/organization-health-care-system",
+    "retrieved_at": "2026-09-08T14:00:31+00:00",
+    "text_characters": 17115,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "EE",
+    "rank": 2,
+    "query": "Estonia private hospitals clinics treatment service prices",
+    "url": "https://www.expatfocus.com/estonia/articles/how-much-do-health-procedures-cost-in-estonia-5740",
+    "retrieved_at": "2026-09-08T14:00:31+00:00",
+    "text_characters": 8819,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "EE",
+    "rank": 3,
+    "query": "Estonia private hospitals clinics treatment service prices",
+    "url": "https://easyfind.ee/en/tervisekassa-ja-eraravikindlustuse-vordlus-eestis",
+    "retrieved_at": "2026-09-08T14:00:31+00:00",
+    "text_characters": 28497,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "EE",
+    "rank": 4,
+    "query": "Estonia private hospitals clinics treatment service prices",
+    "url": "https://www.zeumed.com/post/private-hospitals-and-public-funding-lessons-from-estonia-s-healthcare-reform",
+    "retrieved_at": "2026-09-08T14:00:31+00:00",
+    "text_characters": 9178,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "EE",
+    "rank": 5,
+    "query": "Estonia private hospitals clinics treatment service prices",
+    "url": "https://www.reddit.com/r/Eesti/comments/m58cfm/health_system_in_estonia",
+    "retrieved_at": "2026-09-08T14:00:31+00:00",
+    "text_characters": 142,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "EE",
+    "rank": 6,
+    "query": "Estonia private hospitals clinics treatment service prices",
+    "url": "https://meliva.ee/en",
+    "retrieved_at": "2026-09-08T14:00:31+00:00",
+    "text_characters": 2735,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "tavily",
+    "country": "EE",
+    "rank": 7,
+    "query": "Estonia private hospitals clinics treatment service prices",
+    "url": "https://en.wikipedia.org/wiki/Healthcare_in_Estonia",
+    "retrieved_at": "2026-09-08T14:00:31+00:00",
+    "text_characters": 36195,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "EE",
+    "rank": 8,
+    "query": "Estonia private hospitals clinics treatment service prices",
+    "url": "https://salu.md/blog/5-things-you-must-know-about-the-healthcare-in-estonia",
+    "retrieved_at": "2026-09-08T14:00:31+00:00",
+    "text_characters": 12710,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LT",
+    "rank": 1,
+    "query": "Lietuva privačios ligoninės klinikos kainynas paslaugos",
+    "url": "https://meliva.lt/paslaugos",
+    "retrieved_at": "2026-09-08T14:00:29+00:00",
+    "text_characters": 14698,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "tavily",
+    "country": "LT",
+    "rank": 2,
+    "query": "Lietuva privačios ligoninės klinikos kainynas paslaugos",
+    "url": "https://meliva.lt/pacientams/musu-paslaugos",
+    "retrieved_at": "2026-09-08T14:00:29+00:00",
+    "text_characters": 9384,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "tavily",
+    "country": "LT",
+    "rank": 3,
+    "query": "Lietuva privačios ligoninės klinikos kainynas paslaugos",
+    "url": "https://jusumn.lt/index.php/paslaugos/mokamu-paslaugu-kainynas",
+    "retrieved_at": "2026-09-08T14:00:29+00:00",
+    "text_characters": 7183,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LT",
+    "rank": 4,
+    "query": "Lietuva privačios ligoninės klinikos kainynas paslaugos",
+    "url": "https://www.vmkl.lt/paslaugu-kainos",
+    "retrieved_at": "2026-09-08T14:00:29+00:00",
+    "text_characters": 25084,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LT",
+    "rank": 5,
+    "query": "Lietuva privačios ligoninės klinikos kainynas paslaugos",
+    "url": "https://www.kul.lt/mokamu-paslaugu-kainynas",
+    "retrieved_at": "2026-09-08T14:00:29+00:00",
+    "text_characters": 31132,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LT",
+    "rank": 6,
+    "query": "Lietuva privačios ligoninės klinikos kainynas paslaugos",
+    "url": "https://kaunoligonine.lt/mokamos-paslaugos",
+    "retrieved_at": "2026-09-08T14:00:29+00:00",
+    "text_characters": 188802,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LT",
+    "rank": 7,
+    "query": "Lietuva privačios ligoninės klinikos kainynas paslaugos",
+    "url": "https://meliva.lt/pacientams/vlk-finansuojamos-paslaugos",
+    "retrieved_at": "2026-09-08T14:00:29+00:00",
+    "text_characters": 11459,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "tavily",
+    "country": "LT",
+    "rank": 8,
+    "query": "Lietuva privačios ligoninės klinikos kainynas paslaugos",
+    "url": "https://www.medicina.lt/paieska/PRIVA%C4%8CIOS+KLINIKOS/80-20",
+    "retrieved_at": "2026-09-08T14:00:29+00:00",
+    "text_characters": 55985,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LT",
+    "rank": 1,
+    "query": "Lithuania private hospitals clinics treatment service prices",
+    "url": "https://www.health-tourism.com/medical-tourism-lithuania",
+    "retrieved_at": "2026-09-08T14:00:37+00:00",
+    "text_characters": 145,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LT",
+    "rank": 2,
+    "query": "Lithuania private hospitals clinics treatment service prices",
+    "url": "https://micenter.lt/en/clinics-and-hospitals",
+    "retrieved_at": "2026-09-08T14:00:37+00:00",
+    "text_characters": 3913,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LT",
+    "rank": 3,
+    "query": "Lithuania private hospitals clinics treatment service prices",
+    "url": "https://www.treatmentabroad.com/destinations/lithuania/healthcare-system-lithuania",
+    "retrieved_at": "2026-09-08T14:00:37+00:00",
+    "text_characters": 29096,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LT",
+    "rank": 4,
+    "query": "Lithuania private hospitals clinics treatment service prices",
+    "url": "https://www.eu-healthcare.fi/country-specific-information-about-health-services/lithuania",
+    "retrieved_at": "2026-09-08T14:00:37+00:00",
+    "text_characters": 8918,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LT",
+    "rank": 5,
+    "query": "Lithuania private hospitals clinics treatment service prices",
+    "url": "https://investlithuania.com/blog/healthcare-in-lithuania-system-costs-quality-explained",
+    "retrieved_at": "2026-09-08T14:00:37+00:00",
+    "text_characters": 15365,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LT",
+    "rank": 6,
+    "query": "Lithuania private hospitals clinics treatment service prices",
+    "url": "https://www.eu-healthcare.fi/health-services-abroad/country-specific-information-about-health-services/lithuania",
+    "retrieved_at": "2026-09-08T14:00:37+00:00",
+    "text_characters": 505,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LT",
+    "rank": 7,
+    "query": "Lithuania private hospitals clinics treatment service prices",
+    "url": "https://expatfinancial.com/healthcare-information-by-region/european-healthcare-system/lithuania-healthcare-system-medical-insurance-options-for-expats",
+    "retrieved_at": "2026-09-08T14:00:37+00:00",
+    "text_characters": 13869,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LT",
+    "rank": 8,
+    "query": "Lithuania private hospitals clinics treatment service prices",
+    "url": "https://expatlife.ai/lithuania/healthcare",
+    "retrieved_at": "2026-09-08T14:00:37+00:00",
+    "text_characters": 8931,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LV",
+    "rank": 1,
+    "query": "Latvija privātās slimnīcas klīnikas pakalpojumu cenrādis",
+    "url": "https://www.bkus.lv/lv/maksas-pakalpojumi",
+    "retrieved_at": "2026-09-08T14:00:24+00:00",
+    "text_characters": 4163,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LV",
+    "rank": 2,
+    "query": "Latvija privātās slimnīcas klīnikas pakalpojumu cenrādis",
+    "url": "https://aslimnica.lv/maksas-pakalpojumu-cenradis-2",
+    "retrieved_at": "2026-09-08T14:00:24+00:00",
+    "text_characters": 8731,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LV",
+    "rank": 3,
+    "query": "Latvija privātās slimnīcas klīnikas pakalpojumu cenrādis",
+    "url": "https://ziemelkurzemesslimnica.lv/pakalpojumu-cenradis",
+    "retrieved_at": "2026-09-08T14:00:24+00:00",
+    "text_characters": 165,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LV",
+    "rank": 4,
+    "query": "Latvija privātās slimnīcas klīnikas pakalpojumu cenrādis",
+    "url": "https://vc4.lv/cenas",
+    "retrieved_at": "2026-09-08T14:00:24+00:00",
+    "text_characters": 153,
+    "provider_page_candidate": true
+  },
+  {
+    "provider": "tavily",
+    "country": "LV",
+    "rank": 5,
+    "query": "Latvija privātās slimnīcas klīnikas pakalpojumu cenrādis",
+    "url": "https://www.jrslimnica.lv/lv/cenradis/maksas-pakalpojumi/maksas-pakalpojumu-cenradis-no-15-09-2025-",
+    "retrieved_at": "2026-09-08T14:00:24+00:00",
+    "text_characters": 56888,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LV",
+    "rank": 6,
+    "query": "Latvija privātās slimnīcas klīnikas pakalpojumu cenrādis",
+    "url": "https://www.vmnvd.gov.lv/lv/valsts-apmaksati-veselibas-aprupes-pakalpojumi",
+    "retrieved_at": "2026-09-08T14:00:24+00:00",
+    "text_characters": 6826,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LV",
+    "rank": 7,
+    "query": "Latvija privātās slimnīcas klīnikas pakalpojumu cenrādis",
+    "url": "https://www.stradini.lv/lv/price-list",
+    "retrieved_at": "2026-09-08T14:00:24+00:00",
+    "text_characters": 159,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LV",
+    "rank": 8,
+    "query": "Latvija privātās slimnīcas klīnikas pakalpojumu cenrādis",
+    "url": "https://lvportals.lv/skaidrojumi/355969-stajas-speka-jaunais-nmpd-maksas-pakalpojumu-cenradis-2023",
+    "retrieved_at": "2026-09-08T14:00:24+00:00",
+    "text_characters": 144,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LV",
+    "rank": 1,
+    "query": "Latvia private hospitals clinics treatment service prices",
+    "url": "https://medrefund.co.uk/private-treatment-latvia",
+    "retrieved_at": "2026-09-08T14:00:32+00:00",
+    "text_characters": 10293,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LV",
+    "rank": 2,
+    "query": "Latvia private hospitals clinics treatment service prices",
+    "url": "https://expatfinancial.com/healthcare-information-by-region/european-healthcare-system/latvia-healthcare-system",
+    "retrieved_at": "2026-09-08T14:00:32+00:00",
+    "text_characters": 11302,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LV",
+    "rank": 3,
+    "query": "Latvia private hospitals clinics treatment service prices",
+    "url": "https://us-uk.bookimed.com/clinics/country=latvia/direction=orthopedics-and-traumatology",
+    "retrieved_at": "2026-09-08T14:00:32+00:00",
+    "text_characters": 11515,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LV",
+    "rank": 4,
+    "query": "Latvia private hospitals clinics treatment service prices",
+    "url": "https://www.liveriga.com/en/12265-healthcare-services",
+    "retrieved_at": "2026-09-08T14:00:32+00:00",
+    "text_characters": 4630,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LV",
+    "rank": 5,
+    "query": "Latvia private hospitals clinics treatment service prices",
+    "url": "https://www.globalcitizensolutions.com/healthcare-in-latvia",
+    "retrieved_at": "2026-09-08T14:00:32+00:00",
+    "text_characters": 45604,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LV",
+    "rank": 6,
+    "query": "Latvia private hospitals clinics treatment service prices",
+    "url": "https://uamt.com.ua/en/treatment/treatment-in-latvia.html",
+    "retrieved_at": "2026-09-08T14:00:32+00:00",
+    "text_characters": 162,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LV",
+    "rank": 7,
+    "query": "Latvia private hospitals clinics treatment service prices",
+    "url": "https://dzintari.lv/wp-content/uploads/2020/05/health_tourism_in_latvia.pdf",
+    "retrieved_at": "2026-09-08T14:00:32+00:00",
+    "text_characters": 87561,
+    "provider_page_candidate": false
+  },
+  {
+    "provider": "tavily",
+    "country": "LV",
+    "rank": 8,
+    "query": "Latvia private hospitals clinics treatment service prices",
+    "url": "https://us-uk.bookimed.com/clinics/country=latvia",
+    "retrieved_at": "2026-09-08T14:00:32+00:00",
+    "text_characters": 15878,
+    "provider_page_candidate": false
+  }
+]

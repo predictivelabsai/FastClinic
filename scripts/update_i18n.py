@@ -129,6 +129,9 @@ def source_strings() -> set[str]:
             strings.update((summary, access))
     strings.update(JS_I18N_KEYS)
     strings.update(SAMPLE_QUESTIONS)
+    from web.market_assistant import PAGE_QUESTIONS
+    for questions in PAGE_QUESTIONS.values():
+        strings.update(questions)
     strings.update(RECUR_LABELS.values())
     strings.update(AUTH_MESSAGES)
     strings.add(SUPPRESSED_MSG)

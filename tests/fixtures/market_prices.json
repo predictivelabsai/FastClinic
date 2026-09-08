@@ -1,0 +1,597 @@
+[
+  {
+    "source": {
+      "url": "https://gpklinika.lt/en/service-prices/",
+      "provider": "exa",
+      "retrieved_at": "2026-09-08T14:00:32+00:00",
+      "text": "GP Clinic is the first independently operating private facial and body aesthetic surgery clinic in restored Lithuania, founded in 2004 by Dr. Gintaras Papečkys.\nConsultation price in Kaunas | 80 EUR"
+    },
+    "extraction": {
+      "clinic": {
+        "name": "Gintaras Papečkio Aesthetic Surgery Clinic",
+        "country": "LT",
+        "ownership": "private",
+        "official_source": true,
+        "evidence": "GP Clinic is the first independently operating private facial and body aesthetic surgery clinic in restored Lithuania, founded in 2004 by Dr. Gintaras Papečkys."
+      },
+      "services": [
+        {
+          "name": "Consultation price in Kaunas",
+          "original_name": "Consultation price in Kaunas",
+          "price": "80",
+          "price_max": null,
+          "price_type": "exact",
+          "currency": "EUR",
+          "evidence": "Consultation price in Kaunas | 80 EUR"
+        }
+      ]
+    },
+    "expected": [
+      [
+        "Consultation price in Kaunas",
+        "80",
+        "exact"
+      ]
+    ]
+  },
+  {
+    "source": {
+      "url": "https://gpklinika.lt/en/service-prices/",
+      "provider": "exa",
+      "retrieved_at": "2026-09-08T14:00:32+00:00",
+      "text": "GP Clinic is the first independently operating private facial and body aesthetic surgery clinic in restored Lithuania, founded in 2004 by Dr. Gintaras Papečkys.\nConsultation price in Klaipėda | 90 EUR"
+    },
+    "extraction": {
+      "clinic": {
+        "name": "Gintaras Papečkio Aesthetic Surgery Clinic",
+        "country": "LT",
+        "ownership": "private",
+        "official_source": true,
+        "evidence": "GP Clinic is the first independently operating private facial and body aesthetic surgery clinic in restored Lithuania, founded in 2004 by Dr. Gintaras Papečkys."
+      },
+      "services": [
+        {
+          "name": "Consultation price in Klaipėda",
+          "original_name": "Consultation price in Klaipėda",
+          "price": "90",
+          "price_max": null,
+          "price_type": "exact",
+          "currency": "EUR",
+          "evidence": "Consultation price in Klaipėda | 90 EUR"
+        }
+      ]
+    },
+    "expected": [
+      [
+        "Consultation price in Klaipėda",
+        "90",
+        "exact"
+      ]
+    ]
+  },
+  {
+    "source": {
+      "url": "https://gpklinika.lt/en/service-prices/",
+      "provider": "exa",
+      "retrieved_at": "2026-09-08T14:00:32+00:00",
+      "text": "GP Clinic is the first independently operating private facial and body aesthetic surgery clinic in restored Lithuania, founded in 2004 by Dr. Gintaras Papečkys.\nCheek lift with tissue filler injections Juvederm Ultra 4 or Filorga Volume | from 400 EUR"
+    },
+    "extraction": {
+      "clinic": {
+        "name": "Gintaras Papečkio Aesthetic Surgery Clinic",
+        "country": "LT",
+        "ownership": "private",
+        "official_source": true,
+        "evidence": "GP Clinic is the first independently operating private facial and body aesthetic surgery clinic in restored Lithuania, founded in 2004 by Dr. Gintaras Papečkys."
+      },
+      "services": [
+        {
+          "name": "Cheek lift with tissue filler injections Juvederm Ultra 4 or Filorga Volume",
+          "original_name": "Cheek lift with tissue filler injections Juvederm Ultra 4 or Filorga Volume",
+          "price": "400",
+          "price_max": null,
+          "price_type": "from",
+          "currency": "EUR",
+          "evidence": "Cheek lift with tissue filler injections Juvederm Ultra 4 or Filorga Volume | from 400 EUR"
+        }
+      ]
+    },
+    "expected": [
+      [
+        "Cheek lift with tissue filler injections Juvederm Ultra 4 or Filorga Volume",
+        "400",
+        "from"
+      ]
+    ]
+  },
+  {
+    "source": {
+      "url": "https://gpklinika.lt/en/service-prices/",
+      "provider": "exa",
+      "retrieved_at": "2026-09-08T14:00:32+00:00",
+      "text": "GP Clinic is the first independently operating private facial and body aesthetic surgery clinic in restored Lithuania, founded in 2004 by Dr. Gintaras Papečkys.\nChin augmentation with Juvederm Volume tissue filler injections (1 or 2 ampoules required) | 270 / 450 EUR"
+    },
+    "extraction": {
+      "clinic": {
+        "name": "Gintaras Papečkio Aesthetic Surgery Clinic",
+        "country": "LT",
+        "ownership": "private",
+        "official_source": true,
+        "evidence": "GP Clinic is the first independently operating private facial and body aesthetic surgery clinic in restored Lithuania, founded in 2004 by Dr. Gintaras Papečkys."
+      },
+      "services": [
+        {
+          "name": "Chin augmentation with Juvederm Volume tissue filler injections (1 or 2 ampoules required)",
+          "original_name": "Chin augmentation with Juvederm Volume tissue filler injections (1 or 2 ampoules required)",
+          "price": "270",
+          "price_max": "450",
+          "price_type": "range",
+          "currency": "EUR",
+          "evidence": "Chin augmentation with Juvederm Volume tissue filler injections (1 or 2 ampoules required) | 270 / 450 EUR"
+        }
+      ]
+    },
+    "expected": [
+      [
+        "Chin augmentation with Juvederm Volume tissue filler injections (1 or 2 ampoules required)",
+        null,
+        "unavailable"
+      ]
+    ]
+  },
+  {
+    "source": {
+      "url": "https://gpklinika.lt/en/service-prices/",
+      "provider": "exa",
+      "retrieved_at": "2026-09-08T14:00:32+00:00",
+      "text": "GP Clinic is the first independently operating private facial and body aesthetic surgery clinic in restored Lithuania, founded in 2004 by Dr. Gintaras Papečkys.\nLower jaw contouring | 270 – 450 euros"
+    },
+    "extraction": {
+      "clinic": {
+        "name": "Gintaras Papečkio Aesthetic Surgery Clinic",
+        "country": "LT",
+        "ownership": "private",
+        "official_source": true,
+        "evidence": "GP Clinic is the first independently operating private facial and body aesthetic surgery clinic in restored Lithuania, founded in 2004 by Dr. Gintaras Papečkys."
+      },
+      "services": [
+        {
+          "name": "Lower jaw contouring",
+          "original_name": "Lower jaw contouring",
+          "price": "270",
+          "price_max": "450",
+          "price_type": "range",
+          "currency": "EUR",
+          "evidence": "Lower jaw contouring | 270 – 450 euros"
+        }
+      ]
+    },
+    "expected": [
+      [
+        "Lower jaw contouring",
+        "270",
+        "range"
+      ]
+    ]
+  },
+  {
+    "source": {
+      "url": "https://gpklinika.lt/en/service-prices/",
+      "provider": "exa",
+      "retrieved_at": "2026-09-08T14:00:32+00:00",
+      "text": "GP Clinic is the first independently operating private facial and body aesthetic surgery clinic in restored Lithuania, founded in 2004 by Dr. Gintaras Papečkys.\nUpper lip shortening and lifting with sedation/anesthesia | From 1400 EUR"
+    },
+    "extraction": {
+      "clinic": {
+        "name": "Gintaras Papečkio Aesthetic Surgery Clinic",
+        "country": "LT",
+        "ownership": "private",
+        "official_source": true,
+        "evidence": "GP Clinic is the first independently operating private facial and body aesthetic surgery clinic in restored Lithuania, founded in 2004 by Dr. Gintaras Papečkys."
+      },
+      "services": [
+        {
+          "name": "Upper lip shortening and lifting with sedation/anesthesia",
+          "original_name": "Upper lip shortening and lifting with sedation/anesthesia",
+          "price": "1400",
+          "price_max": null,
+          "price_type": "from",
+          "currency": "EUR",
+          "evidence": "Upper lip shortening and lifting with sedation/anesthesia | From 1400 EUR"
+        }
+      ]
+    },
+    "expected": [
+      [
+        "Upper lip shortening and lifting with sedation/anesthesia",
+        "1400",
+        "from"
+      ]
+    ]
+  },
+  {
+    "source": {
+      "url": "https://klinika.lv/en/prices/",
+      "provider": "exa",
+      "retrieved_at": "2026-09-08T14:00:33+00:00",
+      "text": "Neiroķirurgs Doc. Juris Puriņš- klīnikas īpašnieks un pirmais vadītājs.\nDoctor’s consultation | EUR 50"
+    },
+    "extraction": {
+      "clinic": {
+        "name": "Puriņa klīnika",
+        "country": "LV",
+        "ownership": "private",
+        "official_source": true,
+        "evidence": "Neiroķirurgs Doc. Juris Puriņš- klīnikas īpašnieks un pirmais vadītājs."
+      },
+      "services": [
+        {
+          "name": "Doctor’s consultation",
+          "original_name": "Doctor’s consultation",
+          "price": "50",
+          "price_max": null,
+          "price_type": "exact",
+          "currency": "EUR",
+          "evidence": "Doctor’s consultation | EUR 50"
+        }
+      ]
+    },
+    "expected": [
+      [
+        "Doctor’s consultation",
+        "50",
+        "exact"
+      ]
+    ]
+  },
+  {
+    "source": {
+      "url": "https://klinika.lv/en/prices/",
+      "provider": "exa",
+      "retrieved_at": "2026-09-08T14:00:33+00:00",
+      "text": "Neiroķirurgs Doc. Juris Puriņš- klīnikas īpašnieks un pirmais vadītājs.\nStay at hospital room (one day) | EUR 80-120"
+    },
+    "extraction": {
+      "clinic": {
+        "name": "Puriņa klīnika",
+        "country": "LV",
+        "ownership": "private",
+        "official_source": true,
+        "evidence": "Neiroķirurgs Doc. Juris Puriņš- klīnikas īpašnieks un pirmais vadītājs."
+      },
+      "services": [
+        {
+          "name": "Stay at hospital room (one day)",
+          "original_name": "Stay at hospital room (one day)",
+          "price": "80",
+          "price_max": "120",
+          "price_type": "range",
+          "currency": "EUR",
+          "evidence": "Stay at hospital room (one day) | EUR 80-120"
+        }
+      ]
+    },
+    "expected": [
+      [
+        "Stay at hospital room (one day)",
+        "80",
+        "range"
+      ]
+    ]
+  },
+  {
+    "source": {
+      "url": "https://klinika.lv/en/prices/",
+      "provider": "exa",
+      "retrieved_at": "2026-09-08T14:00:33+00:00",
+      "text": "Neiroķirurgs Doc. Juris Puriņš- klīnikas īpašnieks un pirmais vadītājs.\nSpine surgery | 1500-5500 EUR*"
+    },
+    "extraction": {
+      "clinic": {
+        "name": "Puriņa klīnika",
+        "country": "LV",
+        "ownership": "private",
+        "official_source": true,
+        "evidence": "Neiroķirurgs Doc. Juris Puriņš- klīnikas īpašnieks un pirmais vadītājs."
+      },
+      "services": [
+        {
+          "name": "Spine surgery",
+          "original_name": "Spine surgery",
+          "price": "1500",
+          "price_max": "5500",
+          "price_type": "range",
+          "currency": "EUR",
+          "evidence": "Spine surgery | 1500-5500 EUR*"
+        }
+      ]
+    },
+    "expected": [
+      [
+        "Spine surgery",
+        "1500",
+        "range"
+      ]
+    ]
+  },
+  {
+    "source": {
+      "url": "https://klinika.lv/en/prices/",
+      "provider": "exa",
+      "retrieved_at": "2026-09-08T14:00:33+00:00",
+      "text": "Neiroķirurgs Doc. Juris Puriņš- klīnikas īpašnieks un pirmais vadītājs.\nCarpal tunnel surgery | 690-950 EUR*"
+    },
+    "extraction": {
+      "clinic": {
+        "name": "Puriņa klīnika",
+        "country": "LV",
+        "ownership": "private",
+        "official_source": true,
+        "evidence": "Neiroķirurgs Doc. Juris Puriņš- klīnikas īpašnieks un pirmais vadītājs."
+      },
+      "services": [
+        {
+          "name": "Carpal tunnel surgery",
+          "original_name": "Carpal tunnel surgery",
+          "price": "690",
+          "price_max": "950",
+          "price_type": "range",
+          "currency": "EUR",
+          "evidence": "Carpal tunnel surgery | 690-950 EUR*"
+        }
+      ]
+    },
+    "expected": [
+      [
+        "Carpal tunnel surgery",
+        "690",
+        "range"
+      ]
+    ]
+  },
+  {
+    "source": {
+      "url": "https://www.medex.ee/hinnakiri",
+      "provider": "exa",
+      "retrieved_at": "2026-09-08T14:00:24+00:00",
+      "text": "PÄEVAKIRURGIA ERAKLIINIK AASTAST 1996\nArsti esmane vastuvõtt (Tallinnas) 70 €"
+    },
+    "extraction": {
+      "clinic": {
+        "name": "Medex Erakliinik",
+        "country": "EE",
+        "ownership": "private",
+        "official_source": true,
+        "evidence": "PÄEVAKIRURGIA ERAKLIINIK AASTAST 1996"
+      },
+      "services": [
+        {
+          "name": "Initial doctor appointment (Tallinn)",
+          "original_name": "Arsti esmane vastuvõtt (Tallinnas)",
+          "price": "70",
+          "price_max": null,
+          "price_type": "exact",
+          "currency": "EUR",
+          "evidence": "Arsti esmane vastuvõtt (Tallinnas) 70 €"
+        }
+      ]
+    },
+    "expected": [
+      [
+        "Arsti esmane vastuvõtt (Tallinnas)",
+        "70",
+        "exact"
+      ]
+    ]
+  },
+  {
+    "source": {
+      "url": "https://www.medex.ee/hinnakiri",
+      "provider": "exa",
+      "retrieved_at": "2026-09-08T14:00:24+00:00",
+      "text": "PÄEVAKIRURGIA ERAKLIINIK AASTAST 1996\nBiopsia 30 €"
+    },
+    "extraction": {
+      "clinic": {
+        "name": "Medex Erakliinik",
+        "country": "EE",
+        "ownership": "private",
+        "official_source": true,
+        "evidence": "PÄEVAKIRURGIA ERAKLIINIK AASTAST 1996"
+      },
+      "services": [
+        {
+          "name": "Biopsy",
+          "original_name": "Biopsia",
+          "price": "30",
+          "price_max": null,
+          "price_type": "exact",
+          "currency": "EUR",
+          "evidence": "Biopsia 30 €"
+        }
+      ]
+    },
+    "expected": [
+      [
+        "Biopsia",
+        "30",
+        "exact"
+      ]
+    ]
+  },
+  {
+    "source": {
+      "url": "https://www.medex.ee/hinnakiri",
+      "provider": "exa",
+      "retrieved_at": "2026-09-08T14:00:24+00:00",
+      "text": "PÄEVAKIRURGIA ERAKLIINIK AASTAST 1996\nOperatsioonijärgne taastusravi 30 min 30 €"
+    },
+    "extraction": {
+      "clinic": {
+        "name": "Medex Erakliinik",
+        "country": "EE",
+        "ownership": "private",
+        "official_source": true,
+        "evidence": "PÄEVAKIRURGIA ERAKLIINIK AASTAST 1996"
+      },
+      "services": [
+        {
+          "name": "Postoperative rehabilitation 30 min",
+          "original_name": "Operatsioonijärgne taastusravi 30 min",
+          "price": "30",
+          "price_max": null,
+          "price_type": "exact",
+          "currency": "EUR",
+          "evidence": "Operatsioonijärgne taastusravi 30 min 30 €"
+        }
+      ]
+    },
+    "expected": [
+      [
+        "Operatsioonijärgne taastusravi 30 min",
+        "30",
+        "exact"
+      ]
+    ]
+  },
+  {
+    "source": {
+      "url": "https://www.medex.ee/hinnakiri",
+      "provider": "exa",
+      "retrieved_at": "2026-09-08T14:00:24+00:00",
+      "text": "PÄEVAKIRURGIA ERAKLIINIK AASTAST 1996\nArtroskoopiline operatsiooni liigestel al. 950 €"
+    },
+    "extraction": {
+      "clinic": {
+        "name": "Medex Erakliinik",
+        "country": "EE",
+        "ownership": "private",
+        "official_source": true,
+        "evidence": "PÄEVAKIRURGIA ERAKLIINIK AASTAST 1996"
+      },
+      "services": [
+        {
+          "name": "Arthroscopic joint surgery",
+          "original_name": "Artroskoopiline operatsiooni liigestel",
+          "price": "950",
+          "price_max": null,
+          "price_type": "from",
+          "currency": "EUR",
+          "evidence": "Artroskoopiline operatsiooni liigestel al. 950 €"
+        }
+      ]
+    },
+    "expected": [
+      [
+        "Artroskoopiline operatsiooni liigestel",
+        "950",
+        "from"
+      ]
+    ]
+  },
+  {
+    "source": {
+      "url": "https://kirurgia.ee/hinnakiri/",
+      "provider": "exa",
+      "retrieved_at": "2026-09-08T14:00:24+00:00",
+      "text": "Kotka Private Hospital is one of Estonia’s leading private plastic surgery clinics\nKonsultatsioon 100 €"
+    },
+    "extraction": {
+      "clinic": {
+        "name": "Kotka Erahaigla Plastikakirurgia Keskus",
+        "country": "EE",
+        "ownership": "private",
+        "official_source": true,
+        "evidence": "Kotka Private Hospital is one of Estonia’s leading private plastic surgery clinics"
+      },
+      "services": [
+        {
+          "name": "Consultation",
+          "original_name": "Konsultatsioon",
+          "price": "100",
+          "price_max": null,
+          "price_type": "exact",
+          "currency": "EUR",
+          "evidence": "Konsultatsioon 100 €"
+        }
+      ]
+    },
+    "expected": [
+      [
+        "Konsultatsioon",
+        "100",
+        "exact"
+      ]
+    ]
+  },
+  {
+    "source": {
+      "url": "https://kirurgia.ee/hinnakiri/",
+      "provider": "exa",
+      "retrieved_at": "2026-09-08T14:00:24+00:00",
+      "text": "Kotka Private Hospital is one of Estonia’s leading private plastic surgery clinics\nRindade suurendamine ümmarguste või anatoomiliste (pisarakujuliste) implantaatidega alates 5200 €"
+    },
+    "extraction": {
+      "clinic": {
+        "name": "Kotka Erahaigla Plastikakirurgia Keskus",
+        "country": "EE",
+        "ownership": "private",
+        "official_source": true,
+        "evidence": "Kotka Private Hospital is one of Estonia’s leading private plastic surgery clinics"
+      },
+      "services": [
+        {
+          "name": "Breast augmentation with round or anatomical (teardrop-shaped) implants",
+          "original_name": "Rindade suurendamine ümmarguste või anatoomiliste (pisarakujuliste) implantaatidega",
+          "price": "5200",
+          "price_max": null,
+          "price_type": "from",
+          "currency": "EUR",
+          "evidence": "Rindade suurendamine ümmarguste või anatoomiliste (pisarakujuliste) implantaatidega alates 5200 €"
+        }
+      ]
+    },
+    "expected": [
+      [
+        "Rindade suurendamine ümmarguste või anatoomiliste (pisarakujuliste) implantaatidega",
+        "5200",
+        "from"
+      ]
+    ]
+  },
+  {
+    "source": {
+      "url": "https://kirurgia.ee/hinnakiri/",
+      "provider": "exa",
+      "retrieved_at": "2026-09-08T14:00:24+00:00",
+      "text": "Kotka Private Hospital is one of Estonia’s leading private plastic surgery clinics\nRindade tõstmine alates 5400 €"
+    },
+    "extraction": {
+      "clinic": {
+        "name": "Kotka Erahaigla Plastikakirurgia Keskus",
+        "country": "EE",
+        "ownership": "private",
+        "official_source": true,
+        "evidence": "Kotka Private Hospital is one of Estonia’s leading private plastic surgery clinics"
+      },
+      "services": [
+        {
+          "name": "Breast lift",
+          "original_name": "Rindade tõstmine",
+          "price": "5400",
+          "price_max": null,
+          "price_type": "from",
+          "currency": "EUR",
+          "evidence": "Rindade tõstmine alates 5400 €"
+        }
+      ]
+    },
+    "expected": [
+      [
+        "Rindade tõstmine",
+        "5400",
+        "from"
+      ]
+    ]
+  }
+]
