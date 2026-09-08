@@ -58,6 +58,7 @@ CSS = """
 .lp-partner-top{display:flex;align-items:center;justify-content:space-between;gap:12px} .lp-partner-logo{width:46px;height:46px;object-fit:contain} .lp-partner-type{color:var(--accent);font-size:10px;font-weight:750;text-transform:uppercase;letter-spacing:.1em;text-align:right} .lp-partner h3{font-size:18px;margin:18px 0 8px} .lp-partner p{color:var(--muted);font-size:13px;line-height:1.55;margin:0} .lp-partner-visit{display:block;color:var(--accent);font-size:12px;font-weight:700;margin-top:16px}
 .lp-developers{max-width:1180px;margin:auto;padding:72px 24px;display:grid;grid-template-columns:1fr auto;align-items:center;gap:32px} .lp-developers h2{font-size:32px;letter-spacing:-.03em;margin:8px 0 12px} .lp-developers p{color:var(--muted);line-height:1.65;max-width:680px;margin:0}
 .lp-footer{max-width:1180px;margin:auto;padding:30px 24px 48px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;gap:20px}
+.lp-pricing{max-width:1180px;margin:auto;padding:72px 24px;scroll-margin-top:80px} .lp-pricing-head{max-width:720px} .lp-pricing-head h2{font-size:32px;letter-spacing:-.03em;margin:10px 0 12px} .lp-pricing-head p{color:var(--muted);line-height:1.65;margin:0} .lp-pricing-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:32px} .lp-pricing-card{border:1px solid var(--line);border-radius:18px;padding:26px;background:#fff} .lp-pricing-eyebrow{color:var(--accent);font-size:10px;font-weight:750;text-transform:uppercase;letter-spacing:.1em} .lp-pricing-card h3{font-size:22px;margin:14px 0 8px} .lp-pricing-price{font-size:36px;font-weight:750;letter-spacing:-.03em;margin:8px 0 12px;color:var(--ink)} .lp-pricing-card>p:last-child{color:var(--muted);line-height:1.6;margin:0}@media(max-width:760px){.lp-pricing-grid{grid-template-columns:1fr}}
 @media(max-width:980px){.lp-partner-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.lp-nav{height:60px}.lp-nav-actions{gap:8px}.lp-nav-actions .lp-nav-link{display:none}.lp-signin{padding:9px 13px;font-size:13px}.lp-hero{padding-top:72px}.lp-grid,.lp-partner-grid{grid-template-columns:1fr}.lp-developers{grid-template-columns:1fr}.lp-footer{flex-direction:column}}
 @media(max-width:350px){.lp-brand-name{display:none}}
@@ -87,6 +88,36 @@ def language_switcher(lang="en", current="/"):
         cls="lp-lang",
     )
 
+
+
+def pricing_section(lang="en"):
+    T = lambda text: t(text, lang)
+    return Section(
+        Div(
+            Span(T("Pricing"), cls="lp-kicker"),
+            H2(T("Simple pricing for every FastSME product.")),
+            P(T("Every Fast* product uses the same two options: bring your own cloud for free, or host with us for €1 per month.")),
+            cls="lp-pricing-head",
+        ),
+        Div(
+            Article(
+                Span(T("BYOC"), cls="lp-pricing-eyebrow"),
+                H3(T("Bring Your Own Cloud")),
+                P(T("Free"), cls="lp-pricing-price"),
+                P(T("Self-host on your own infrastructure or cloud. Full control of data and upgrades. No per-seat platform fee.")),
+                cls="lp-pricing-card",
+            ),
+            Article(
+                Span(T("Hosted"), cls="lp-pricing-eyebrow"),
+                H3(T("Host with us")),
+                P(T("€1 / month"), cls="lp-pricing-price"),
+                P(T("We run the product for you on FastSME-managed infrastructure. €1 per product per month.")),
+                cls="lp-pricing-card",
+            ),
+            cls="lp-pricing-grid",
+        ),
+        id="pricing", cls="lp-pricing",
+    )
 
 def partner_section(lang="en"):
     T = lambda text: t(text, lang)
@@ -123,7 +154,8 @@ def landing_page(lang="en", *, auth_open: bool = False, auth_error: str = ""):
              Style(CSS + AUTH_CSS)),
         Body(
             Nav(A(Span("F", cls="lp-mark"), Span("FastClinic", cls="lp-brand-name"), href="/", cls="lp-brand"),
-                Div(A(T("Partners"), href="#partners", cls="lp-nav-link"),
+                Div(A(T("Pricing"), href="#pricing", cls="lp-nav-link"),
+                    A(T("Partners"), href="#partners", cls="lp-nav-link"),
                     A(T("Developers"), href="/developers", cls="lp-nav-link"),
                     A(T("Compliance"), href="/compliance", cls="lp-nav-link"),
                     language_switcher(lang),
@@ -146,6 +178,7 @@ def landing_page(lang="en", *, auth_open: bool = False, auth_error: str = ""):
                 Section(Div(*[Article(Span(f"0{i}", cls="lp-num"), H2(T(title)), P(T(body)),
                                       cls="lp-card") for i, (title, body) in enumerate(FEATURES, 1)],
                             cls="lp-grid"), cls="lp-band"),
+                pricing_section(lang),
                 partner_section(lang),
                 Section(Div(Span(T("Developers"), cls="lp-kicker"),
                             H2(T("Build on FastClinic.")),
