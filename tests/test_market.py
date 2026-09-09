@@ -405,3 +405,10 @@ def test_curated_provider_identity_never_crosses_domains():
         },
     }
     assert grounded_rows(result, {"clinic": {}, "services": []}) == []
+
+
+def test_branded_infusion_protocols_are_wellness_services():
+    from web.market_catalog import is_wellness_service
+
+    for name in ("After Party", "Leaky Gut", "Beauty & Glow", "Immune Shield", "Energy Boost", "Anti-Stress & Burnout Relax"):
+        assert is_wellness_service({"service": name})

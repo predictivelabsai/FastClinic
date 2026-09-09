@@ -171,7 +171,9 @@ TARGETS = [
 WELLNESS_TERMS = re.compile(
     r"intraven|infuz|laš(?:el|in)|las(?:el|in)|vitamin(?:ų|u|\s+drip)|"
     r"\biv\b|nad\+?|glutation|glutathion|hydration|detox|recovery|longevity|"
-    r"anti[ -]?aging|wellness|sveikating|ilgaamž",
+    r"anti[ -]?aging|wellness|sveikating|ilgaamž"
+    r"|after party|leaky gut|beauty\s*(?:&|and)\s*glow|immune shield|"
+    r"energy boost|anti[ -]?stress|burnout relax",
     re.IGNORECASE,
 )
 
