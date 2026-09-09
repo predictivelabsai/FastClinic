@@ -84,6 +84,16 @@ MANUAL_OVERRIDES = {
     lang: dict(zip(OVERRIDE_KEYS, values, strict=True))
     for lang, values in OVERRIDE_VALUES.items()
 }
+MANUAL_OVERRIDES["lt"].update({
+    "Lithuania Wellness Competition": "Lietuvos sveikatingumo klinikų konkurentai",
+    "Deep scrape now": "Vykdyti giluminį nuskaitymą",
+    "Active — include in discovery and deep scraping": "Aktyvus – įtraukti į paiešką ir giluminį nuskaitymą",
+    "Curated competitors": "Kuruojami konkurentai",
+    "Priority competitor watchlist": "Prioritetinių konkurentų stebėjimo sąrašas",
+    "Source-backed tariff evidence": "Šaltiniais pagrįsti kainų duomenys",
+    "Wellness & IV": "Sveikatingumas ir IV terapija",
+    "Refresh with Exa": "Atnaujinti naudojant „Exa“",
+})
 
 
 def _literal(node: ast.AST) -> list[str]:

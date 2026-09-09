@@ -19,20 +19,20 @@ DEFAULT_ADMIN_EMAILS = frozenset({
 _ROLE_KEYS: dict[str, frozenset[str]] = {
     "admin": frozenset(),  # empty means all
     "practitioner": frozenset({
-        "market", "market-map", "search-provider",
+        "market", "market-watchlist", "market-map", "search-provider",
         "dashboard", "chat-full", "patients", "appointments", "treatments",
         "clinical", "chart", "orders", "tasks", "messages", "act-reminders",
         "act-lapsed", "act-followup", "act-loop", "help-shortcuts",
         "help-guide", "developers", "my-records", "sms", "email",
     }),
     "receptionist": frozenset({
-        "market", "market-map", "search-provider",
+        "market", "market-watchlist", "market-map", "search-provider",
         "dashboard", "patients", "appointments", "tasks",
         "act-reminders", "act-lapsed", "act-followup", "act-loop",
         "help-shortcuts", "help-guide", "my-records", "sms", "email",
     }),
     "billing": frozenset({
-        "market", "market-map", "search-provider",
+        "market", "market-watchlist", "market-map", "search-provider",
         "dashboard", "patients", "billing", "revenue", "help-shortcuts",
         "help-guide",
     }),

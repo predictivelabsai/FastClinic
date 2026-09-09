@@ -5,16 +5,20 @@ from __future__ import annotations
 import json
 import os
 import re
+import socket
 import time
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urljoin, urlsplit, urlunsplit
 
 import requests
 
 COUNTRIES = {"LT": "Lithuania", "LV": "Latvia", "EE": "Estonia"}
 QUERIES = {
     "LT": [
+        "Lietuva intraveninė terapija vitaminų lašelinės infuzija kainos klinika",
+        "Lithuania IV therapy longevity wellness clinic drip prices Vilnius Kaunas Klaipeda",
+        "lašelinė NAD glutationas vitaminai hidratacija privati klinika kainynas Lietuva",
         "Lietuva privačios ligoninės klinikos kainynas paslaugos",
         "Lithuania private hospitals clinics treatment service prices",
         "privačios klinikos chirurgija odontologija diagnostika kainos Lietuva",
@@ -68,6 +72,80 @@ def safe_url(url):
 
 def domain(url):
     return (urlsplit(safe_url(url)).hostname or "").removeprefix("www.")
+
+
+def _public_dns(url):
+    """Resolve a direct-fetch target and reject every non-public address."""
+    host = urlsplit(safe_url(url)).hostname
+    if not host:
+        return False
+    import ipaddress
+
+    try:
+        addresses = {row[4][0] for row in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)}
+    except socket.gaierror:
+        return False
+    return bool(addresses) and all(ipaddress.ip_address(value).is_global for value in addresses)
+
+
+def scrape_url(url):
+    """Deep-fetch an identified public URL without using a discovery/search API."""
+    current = safe_url(url)
+    if not current or not _public_dns(current):
+        raise ValueError("URL must resolve only to public internet addresses")
+    response = None
+    for _ in range(5):
+        response = requests.get(
+            current,
+            timeout=(10, 45),
+            allow_redirects=False,
+            stream=True,
+            headers={"User-Agent": "FastClinic market monitor/1.0 (+https://fastclinic.dev)"},
+        )
+        if response.status_code in (301, 302, 303, 307, 308):
+            target = safe_url(urljoin(current, response.headers.get("Location", "")))
+            response.close()
+            if not target or not _public_dns(target):
+                raise RuntimeError("Unsafe redirect from watched URL")
+            current = target
+            continue
+        response.raise_for_status()
+        break
+    else:
+        raise RuntimeError("Too many redirects from watched URL")
+    content_type = response.headers.get("Content-Type", "").lower()
+    if not any(kind in content_type for kind in ("text/html", "text/plain", "application/xhtml")):
+        response.close()
+        raise RuntimeError("Watched URL is not an HTML/text page")
+    chunks, size = [], 0
+    for chunk in response.iter_content(65536):
+        size += len(chunk)
+        if size > 2_000_000:
+            response.close()
+            raise RuntimeError("Watched page exceeds the 2 MB safety limit")
+        chunks.append(chunk)
+    raw = b"".join(chunks)
+    encoding = response.encoding or "utf-8"
+    response.close()
+    html = raw.decode(encoding, errors="replace")
+    if "html" in content_type:
+        from markdownify import markdownify
+
+        text = markdownify(html, heading_style="ATX")
+    else:
+        text = html
+    text = re.sub(r"\n{4,}", "\n\n\n", text).strip()
+    if len(text) < 40:
+        raise RuntimeError("Watched page returned no useful text")
+    return {
+        "url": current,
+        "title": "",
+        "text": text,
+        "published_at": None,
+        "retrieved_at": now(),
+        "provider": "direct",
+        "query": "manual watchlist URL",
+    }
 
 
 def _post(url, key, payload, header="Authorization"):
@@ -175,32 +253,49 @@ def number(value):
 
 
 def grounded_rows(result, extracted):
-    """Require verbatim service/price evidence; uncertain ownership never enters prices."""
+    """Require verbatim service/price evidence and a verified provider identity."""
     text = re.sub(r"\s+", " ", result["text"]).strip()
     price_text = re.sub(r"\s+", " ", result.get("price_text", result["text"])).strip()
     clinic = extracted.get("clinic") or {}
     evidence = re.sub(r"\s+", " ", str(clinic.get("evidence", ""))).strip()
-    if (
-        clinic.get("country") not in COUNTRIES
-        or not clinic.get("name")
-        or clinic.get("ownership") != "private"
-        or not evidence
-        or evidence not in text
-        or not clinic.get("official_source")
-    ):
-        return []
-    if not re.search(
-        r"private|privat|privač|privāt|era(?:haigla|kliinik)|īpašniek", evidence, re.I
-    ):
-        return []
-    # Ownership quotes may come from a separately retained official about page.
+    curated = result.get("curated_target") or {}
+    host = domain(result["url"])
+    curated_provider = bool(
+        curated
+        and curated.get("country") in COUNTRIES
+        and host in curated.get("domains", ())
+        and curated.get("name")
+    )
+    if curated_provider:
+        clinic = {
+            **clinic,
+            "name": curated["name"],
+            "country": curated["country"],
+        }
+        evidence = f"Authenticated watchlist: {curated['name']} · {host}"
+    else:
+        if (
+            clinic.get("country") not in COUNTRIES
+            or not clinic.get("name")
+            or clinic.get("ownership") != "private"
+            or not evidence
+            or evidence not in text
+            or not clinic.get("official_source")
+        ):
+            return []
+        if not re.search(
+            r"private|privat|privač|privāt|era(?:haigla|kliinik)|īpašniek", evidence, re.I
+        ):
+            return []
+    # Provider quotes may come from a separately retained official about page.
     ownership_url = result["url"]
-    for source in result.get("ownership_sources", []):
-        if evidence in re.sub(r"\s+", " ", source["text"]) and domain(
-            source["url"]
-        ) == domain(result["url"]):
-            ownership_url = source["url"]
-            break
+    if not curated_provider:
+        for source in result.get("ownership_sources", []):
+            if evidence in re.sub(r"\s+", " ", source["text"]) and domain(
+                source["url"]
+            ) == host:
+                ownership_url = source["url"]
+                break
     rows = []
     for s in extracted.get("services", []):
         quote = re.sub(r"\s+", " ", str(s.get("evidence", ""))).strip()
@@ -257,7 +352,7 @@ def grounded_rows(result, extracted):
             dict(
                 clinic=clinic["name"],
                 country=clinic["country"],
-                domain=domain(result["url"]),
+                domain=host,
                 ownership_evidence=evidence,
                 ownership_url=ownership_url,
                 service=s.get("name") or original,
@@ -277,7 +372,7 @@ def grounded_rows(result, extracted):
 
 
 def extract_services(result):
-    """LLM proposes rows; grounding checks reject unsupported prices and ownership."""
+    """LLM proposes rows; grounding checks reject unsupported prices and providers."""
     key = os.getenv("MARKET_LLM_API_KEY") or os.getenv("XAI_API_KEY")
     base = os.getenv("MARKET_LLM_BASE_URL", "https://api.x.ai/v1")
     model = os.getenv("MARKET_LLM_MODEL", "grok-4-1-fast-non-reasoning")
@@ -290,11 +385,22 @@ Only an actual medical provider's official page qualifies. Directories, booking 
         "OFFICIAL ABOUT URL: " + s["url"] + "\n" + s["text"][:7000]
         for s in result.get("ownership_sources", [])
     )
+    curated = result.get("curated_target") or {}
+    curated_context = (
+        "\nAUTHENTICATED WATCHLIST TARGET: "
+        + curated.get("name", "")
+        + " ("
+        + curated.get("country", "")
+        + ")\n"
+        if curated
+        else ""
+    )
     # Overlapping chunks retain table headers and bound response size for long price lists.
     for offset in range(0, min(len(text), 120000), 14000):
         chunk = text[offset : offset + 16000]
         context = (
             (text[:2500] + "\n" + chunk if offset else chunk)
+            + curated_context
             + "\nOWNERSHIP CONTEXT (use only for clinic ownership, not services):\n"
             + ownership_context
         )

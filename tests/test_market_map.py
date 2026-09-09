@@ -173,6 +173,21 @@ def test_assistant_questions_and_context_match_market_page():
     assert market_assistant.context_filters("/patients?hospital=abc") == {}
 
 
+def test_dashboard_and_watchlist_editor_render_visual_first_workspace():
+    from fasthtml.common import to_xml
+    from web.market_views import watchlist_editor, workspace
+
+    dashboard = to_xml(workspace("csrf"))
+    assert "Lithuania Wellness Competition" in dashboard
+    assert "priority-competitors" in dashboard
+    assert "market-chart-grid" in dashboard
+    assert "Apply filters" not in dashboard
+    editor = to_xml(watchlist_editor("csrf"))
+    assert "Watchlist Editor" in editor
+    assert "Deep scrape now" in editor
+    assert "SYNC Longevity Clinic" in editor
+
+
 def test_seed_has_all_countries_and_only_regular_source_backed_prices():
     data = json.loads(
         (Path(__file__).parents[1] / "data/market/baseline.json").read_text()

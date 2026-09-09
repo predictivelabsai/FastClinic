@@ -258,3 +258,150 @@ def test_collection_uses_exa_and_applies_country_service_scope(monkeypatch):
     assert calls == [("exa", "requester-key")]
     assert stats["queries"] <= cfg["max_queries"] and stats["pages"] == 1
     assert {r["country"] for r in market.observations()} == {"EE"}
+
+
+def test_watchlist_is_seeded_editable_and_pause_preserves_entry():
+    from web import market_watchlist
+
+    entries = market_watchlist.items()
+    assert {r["name"] for r in entries} >= {
+        "SYNC Longevity Clinic",
+        "AUM Wellness Clinic",
+        "Northway",
+        "Meliva",
+    }
+    ident = market_watchlist.save(
+        "",
+        name="New Wellness Clinic",
+        country="LT",
+        segment="IV / longevity specialist",
+        cities="Vilnius, Kaunas",
+        positioning="Manually curated target",
+        urls="https://wellness.example/services\nhttps://wellness.example/about",
+        priority=2,
+        active=True,
+        actor="staff@example.test",
+    )
+    saved = market_watchlist.get(ident)
+    assert saved["origin"] == "manual" and len(saved["urls"]) == 2
+    market_watchlist.save(
+        ident,
+        name=saved["name"],
+        country=saved["country"],
+        segment=saved["segment"],
+        cities=", ".join(saved["cities"]),
+        positioning=saved["positioning"],
+        urls="\n".join(saved["urls"]),
+        priority=saved["priority"],
+        active=False,
+        actor="staff@example.test",
+    )
+    assert not market_watchlist.get(ident)["active"]
+    assert ident not in {r["id"] for r in market_watchlist.items(active_only=True)}
+
+
+def test_direct_watchlist_scrape_uses_no_exa_search(monkeypatch):
+    from web import market_map, market_search, market_watchlist
+
+    item = market_watchlist.get("sync")
+    cfg = {
+        **market.config(),
+        "mode": "direct",
+        "watchlist_ids": [item["id"]],
+        "countries": ["LT"],
+        "max_pages": len(item["urls"]),
+        "max_queries": 24,
+    }
+    stamp = market.now()
+    fetched = []
+
+    def scrape(url):
+        fetched.append(url)
+        return {
+            "url": url,
+            "text": "Private clinic. Vitamin IV 99 EUR",
+            "provider": "direct",
+            "retrieved_at": stamp,
+            "published_at": None,
+        }
+
+    monkeypatch.setattr(market_search, "scrape_url", scrape)
+    monkeypatch.setattr(market, "search", lambda *a, **k: pytest.fail("Exa search used"))
+    monkeypatch.setattr(
+        market,
+        "extract_services",
+        lambda source: [
+            {
+                **observation(stamp, "99", name="Vitamin IV"),
+                "country": "LT",
+                "domain": "syncclinic.lt",
+                "clinic": "SYNC Longevity Clinic",
+                "provider": "direct",
+            }
+        ],
+    )
+    monkeypatch.setattr(market_map, "refresh", lambda *a: None)
+    stats = market.collect("direct-run", cfg, "worker", "staff@example.test")
+    assert stats["queries"] == 0
+    assert fetched == list(item["urls"])
+    assert market.observations()[0]["provider"] == "direct"
+
+
+def test_curated_official_domain_replaces_private_ownership_gate():
+    from web.market_search import grounded_rows
+
+    result = {
+        "url": "https://syncclinic.lt/laselines-iv-terapijos/",
+        "text": "Vitaminų lašelinė 99 EUR",
+        "retrieved_at": market.now(),
+        "published_at": None,
+        "provider": "direct",
+        "curated_target": {
+            "id": "sync",
+            "name": "SYNC Longevity Clinic",
+            "country": "LT",
+            "domains": ("syncclinic.lt",),
+        },
+    }
+    proposed = {
+        "clinic": {
+            "name": "Unknown",
+            "country": "LT",
+            "ownership": "unknown",
+            "official_source": False,
+            "evidence": "",
+        },
+        "services": [
+            {
+                "name": "Vitamin IV",
+                "original_name": "Vitaminų lašelinė",
+                "price": "99",
+                "price_max": None,
+                "price_type": "exact",
+                "currency": "EUR",
+                "evidence": "Vitaminų lašelinė 99 EUR",
+            }
+        ],
+    }
+
+    rows = grounded_rows(result, proposed)
+    assert len(rows) == 1
+    assert rows[0]["clinic"] == "SYNC Longevity Clinic"
+    assert rows[0]["ownership_evidence"].startswith("Authenticated watchlist:")
+
+
+def test_curated_provider_identity_never_crosses_domains():
+    from web.market_search import grounded_rows
+
+    result = {
+        "url": "https://unrelated.example/prices",
+        "text": "Vitamin IV 99 EUR",
+        "retrieved_at": market.now(),
+        "provider": "direct",
+        "curated_target": {
+            "name": "SYNC Longevity Clinic",
+            "country": "LT",
+            "domains": ("syncclinic.lt",),
+        },
+    }
+    assert grounded_rows(result, {"clinic": {}, "services": []}) == []

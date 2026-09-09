@@ -1,5 +1,15 @@
 # FastClinic change log
 
+## 0.6.0 — 2026-09-09
+
+- Replace the form-heavy Competition workspace with a Lithuania wellness dashboard: positioning landscape, collection coverage, capability heatmap, IV/wellness price chart, and compact in-table filters.
+- Add a PostgreSQL-backed, authenticated **Market → Watchlist Editor** seeded with 12 named Lithuanian IV/longevity and multi-specialty competitors.
+- Support two collection inputs through one evidence pipeline: Exa URL discovery and manually curated official URLs.
+- Deep-scrape watched URLs directly without Exa, and deep-fetch Exa-discovered URLs with retained live-crawl content as a bounded fallback.
+- Stream deterministic, stored-data Plotly charts alongside Market AI Assistant answers.
+- Preserve strict verbatim grounding for every extracted service and price while allowing authenticated watchlist inclusion to identify a provider on its verified official domain.
+- Expand Lithuanian wellness discovery queries, staff permissions, documentation, tests, and all 11 non-English locale catalogues.
+
 ## 0.5.0 — 2026-09-08
 
 - Add Baltic private-clinic competitive intelligence with regular service prices, filters, clinic drill-downs, source evidence and accumulating weekly history.

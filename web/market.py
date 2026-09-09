@@ -101,9 +101,9 @@ def week(stamp):
     return (dt.date() - timedelta(days=dt.weekday())).isoformat()
 
 
-def enqueue(actor, trigger="manual", at=None):
+def enqueue(actor, trigger="manual", at=None, config_override=None):
     stamp = at or now()
-    cfg = config()
+    cfg = {**config(), **(config_override or {})}
     scheduled = week(stamp) if trigger == "weekly" else None
     with connect() as c:
         # Serialize enqueue requests independently of the long-running worker lease.
@@ -270,45 +270,71 @@ def _lease(owner):
 
 def collect(run_id, cfg, owner, actor=None):
     from web.search_provider import resolve
+    from web import market_watchlist
+    from web.market_search import scrape_url
 
-    api_key = resolve(actor)
     cfg = {**cfg, "providers": ["exa"]}
-    if not api_key:
+    direct_only = cfg.get("mode") == "direct"
+    api_key = None if direct_only else resolve(actor)
+    if not api_key and not direct_only:
         raise ValueError("Configure an Exa key under Integrations → search_provider")
-    stats = dict(queries=0, pages=0, observations=0, errors=0, truncated_pages=0)
+    stats = dict(
+        queries=0,
+        pages=0,
+        observations=0,
+        errors=0,
+        truncated_pages=0,
+        direct_fetches=0,
+        discovery_content_fallbacks=0,
+    )
     candidates = {}
-    jobs = [
-        (p, c, QUERIES[c][i], None)
-        for i in range(3)
-        for c in cfg["countries"]
-        for p in cfg["providers"]
-    ]
     hospitals = rows("SELECT * FROM market_hospital ORDER BY first_seen")
     if cfg["hospitals"] != ["*"]:
         hospitals = [h for h in hospitals if h["id"] in cfg["hospitals"]]
-        jobs = []
-    # Refresh known providers first, rotating by week so budgets do not permanently starve the tail.
-    if hospitals:
-        rotation = datetime.now(timezone.utc).isocalendar().week % len(hospitals)
-        hospitals = hospitals[rotation:] + hospitals[:rotation]
-    targeted = [
-        (
-            p,
-            h["country"],
-            f"site:{h['domain']} treatment services prices kainynas cenrādis hinnakiri",
-            [h["domain"]],
-        )
-        for h in hospitals
-        if h["country"] in cfg["countries"]
-        for p in cfg["providers"]
+    search_budget = 0 if direct_only else max(1, cfg["max_queries"] // 2)
+    providers = cfg["providers"]
+    discovery = [
+        (provider, country, query, None)
+        for query_index in range(max(len(v) for v in QUERIES.values()))
+        for country in cfg["countries"]
+        for provider in providers
+        for query in QUERIES[country][query_index : query_index + 1]
     ]
-    # Reserve discovery slots even after the provider registry grows.
-    jobs = (
-        jobs[: min(len(jobs), cfg["max_queries"] // 2)]
-        + targeted
-        + jobs[min(len(jobs), cfg["max_queries"] // 2) :]
+    if cfg["hospitals"] == ["*"]:
+        targets = [
+            (provider, country, query, domains)
+            for country, query, domains, _slug in market_watchlist.search_jobs(cfg["countries"])
+            if country in cfg["countries"]
+            for provider in providers
+        ]
+        # Rotate the named list weekly, while always leaving room for open discovery.
+        if targets:
+            rotation = datetime.now(timezone.utc).isocalendar().week % len(targets)
+            targets = targets[rotation:] + targets[:rotation]
+        target_slots = min(len(targets), max(1, (search_budget * 2) // 3)) if search_budget else 0
+        jobs = targets[:target_slots] + discovery[: search_budget - target_slots]
+    else:
+        jobs = [
+            (
+                provider,
+                h["country"],
+                f"site:{h['domain']} treatment services prices kainynas cenrādis hinnakiri lašelinė infuzija IV wellness",
+                [h["domain"]],
+            )
+            for h in hospitals
+            if h["country"] in cfg["countries"]
+            for provider in providers
+        ][:search_budget]
+    excluded = sorted(
+        {h["domain"] for h in hospitals}
+        | {
+            host
+            for country, _query, domains, _slug in market_watchlist.search_jobs(cfg["countries"])
+            if country in cfg["countries"]
+            for host in domains
+        }
     )
-    for p, country, q, domains in jobs[: max(1, cfg["max_queries"] // 2)]:
+    for p, country, q, domains in jobs:
         _lease(owner)
         stats["queries"] += 1
         try:
@@ -318,7 +344,7 @@ def collect(run_id, cfg, owner, actor=None):
                 domains=domains,
                 api_key=api_key,
                 excluded_domains=(
-                    [h["domain"] for h in hospitals] if not domains else None
+                    excluded if not domains else None
                 ),
             ):
                 if cfg["hospitals"] != ["*"] and domain(r["url"]) not in {
@@ -333,6 +359,53 @@ def collect(run_id, cfg, owner, actor=None):
         except Exception as exc:
             stats["errors"] += 1
             log.warning("Market search failed: %s", type(exc).__name__)
+    # Identified URLs do not need Exa discovery. They join the same extraction,
+    # evidence, price-history and map pipeline as search-discovered pages.
+    selected_watchlist = set(cfg.get("watchlist_ids") or [])
+    watched = [
+        item
+        for item in market_watchlist.items(active_only=True)
+        if item["country"] in cfg["countries"]
+        and (not selected_watchlist or item["id"] in selected_watchlist)
+    ]
+    watched_by_domain = {
+        host: {
+            "id": item["id"],
+            "name": item["name"],
+            "country": item["country"],
+            "domains": item["domains"],
+        }
+        for item in watched
+        for host in item["domains"]
+    }
+    manual_candidates = []
+    for item in watched:
+        fetched = []
+        for url in item["urls"]:
+            if len(manual_candidates) + len(fetched) >= cfg["max_pages"]:
+                break
+            try:
+                fetched.append(
+                    {
+                        **scrape_url(url),
+                        "country": item["country"],
+                        "watchlist_id": item["id"],
+                        "curated_target": watched_by_domain.get(domain(url)),
+                        "fetch_method": "direct",
+                    }
+                )
+                stats["direct_fetches"] += 1
+            except Exception as exc:
+                stats["errors"] += 1
+                log.warning("Watchlist URL scrape failed for %s: %s", item["id"], type(exc).__name__)
+        source_context = [dict(source) for source in fetched]
+        for result in fetched:
+            result["ownership_sources"] = [
+                source
+                for source in source_context
+                if domain(source["url"]) == domain(result["url"])
+            ]
+            manual_candidates.append(result)
     # Country/provider round-robin prevents the first country consuming the page budget.
     buckets = {(c, p): [] for c in cfg["countries"] for p in cfg["providers"]}
     for r in candidates.values():
@@ -342,6 +415,9 @@ def collect(run_id, cfg, owner, actor=None):
         for bucket in buckets.values():
             if bucket:
                 ordered.append(bucket.pop(0))
+    searched_ordered = ordered
+    seen_urls = {r["url"] for r in manual_candidates}
+    ordered = manual_candidates + [r for r in searched_ordered if r["url"] not in seen_urls]
     stats["candidate_pages"] = len(ordered)
     stats["deferred_pages"] = max(0, len(ordered) - cfg["max_pages"])
     allowed_services = set(cfg["treatments"])
@@ -354,13 +430,40 @@ def collect(run_id, cfg, owner, actor=None):
         try:
             from web.market_search import enrich_ownership
 
+            if r["provider"] != "direct":
+                # Exa discovers the URL; the same direct deep scraper used by the
+                # manual watchlist obtains the page when the site permits it.
+                try:
+                    fetched = scrape_url(r["url"])
+                    r = {
+                        **r,
+                        "text": fetched["text"],
+                        "retrieved_at": fetched["retrieved_at"],
+                        "fetch_method": "direct",
+                    }
+                    stats["direct_fetches"] += 1
+                except Exception:
+                    # Exa's retained live-crawl text is a useful, auditable fallback.
+                    r = {**r, "fetch_method": "exa_content_fallback"}
+                    stats["discovery_content_fallbacks"] += 1
             host = domain(r["url"])
-            if host not in ownership_cache and stats["queries"] < cfg["max_queries"]:
+            if host in watched_by_domain:
+                r = {**r, "curated_target": watched_by_domain[host]}
+            if (
+                not r.get("ownership_sources")
+                and not r.get("curated_target")
+                and host not in ownership_cache
+                and stats["queries"] < cfg["max_queries"]
+            ):
                 stats["queries"] += 1
                 ownership_cache[host] = enrich_ownership(r, api_key).get(
                     "ownership_sources", []
                 )
-            r = {**r, "ownership_sources": ownership_cache.get(host, [])}
+            r = {
+                **r,
+                "ownership_sources": r.get("ownership_sources")
+                or ownership_cache.get(host, []),
+            }
             extracted = extract_services(r)
             extracted = [o for o in extracted if o["country"] == r["country"]]
             if "*" not in allowed_services:
@@ -475,7 +578,7 @@ def tick():
             run_id,
             json.loads(run["config"]),
             owner,
-            run["actor"] if run["trigger_kind"] == "manual" else None,
+            run["actor"] if run["trigger_kind"] in ("manual", "watchlist") else None,
         )
         with connect() as c:
             status = (

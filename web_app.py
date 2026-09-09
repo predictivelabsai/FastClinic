@@ -1301,7 +1301,7 @@ def get(session, slug: str):
 # --- chat ---
 @rt("/chat/new")
 def get(session, page_context: str = ""):
-    is_market = page_context in {"market", "market-map", "market-config", "search-provider"}
+    is_market = page_context in {"market", "market-watchlist", "market-map", "market-config", "search-provider"}
     email, denied = _require(session, "market" if is_market else "chat-full")
     if denied:
         return denied
@@ -1317,7 +1317,7 @@ def get(session, page_context: str = ""):
 async def post(session, message: str = "", thread_id: str = "", page_context: str = "", page_url: str = ""):
     """SSE streaming chat: slash-commands answer instantly; free-form streams the
     LangGraph agent token-by-token with a tool trace."""
-    is_market = page_context in {"market", "market-map", "market-config", "search-provider"}
+    is_market = page_context in {"market", "market-watchlist", "market-map", "market-config", "search-provider"}
     _, denied = _require(session, "market" if is_market else "chat-full")
     if denied:
         return Response("unauthorized", status_code=401)
@@ -1341,7 +1341,7 @@ async def post(session, message: str = "", thread_id: str = "", page_context: st
             try:
                 async for event, content in market_answer(msg, page_context, page_url, tid, owner_id, lang,
                                                         gate.llm if gate.used_byok else None):
-                    yield sse(event, {"text": content})
+                    yield sse(event, content if event == "chart" else {"text": content})
                 gate.commit()
             except Exception:
                 logger.exception("Market assistant failed")

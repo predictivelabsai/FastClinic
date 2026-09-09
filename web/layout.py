@@ -293,6 +293,10 @@ table.tbl tr:hover td { background: var(--surface-2); }
 .tool-trace { display: flex; flex-wrap: wrap; gap: 6px; align-self: flex-start; margin: 0 0 2px; padding: 0 4px; }
 .tool-chip { font-size: 11px; color: var(--accent-hover); background: var(--accent-light);
   border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; }
+.chat-chart { align-self:stretch; min-height:260px; background:var(--surface); border:1px solid var(--border);
+  border-radius:10px; padding:8px; box-shadow:0 4px 14px rgba(27,39,51,.06); }
+.chat-chart-title { font-size:12px; font-weight:700; color:var(--text); padding:2px 4px 4px; }
+.chat-chart-plot { width:100%; min-height:250px; }
 .chat-input textarea {
   width: 100%; resize: none; border: 1px solid var(--border); border-radius: 8px;
   padding: 8px 10px; font-family: inherit; font-size: 13px; outline: none; min-height: 52px;
@@ -569,6 +573,7 @@ NAV_ITEMS = [
     ]),
     ("MARKET", [
         ("market", "Competitive Intelligence", "📈", "/market/competitive-intelligence"),
+        ("market-watchlist", "Watchlist Editor", "✎", "/market/watchlist"),
         ("market-map", "Market Map", "🗺️", "/market/map"),
     ]),
     ("INTEGRATIONS", [
@@ -686,7 +691,7 @@ def right_pane_chat(thread_id: str, active: str = "dashboard"):
         ),
         Div(
             Div(
-                P("Ask about competitor clinics, regular prices, locations and weekly changes." if active in {"market", "market-map", "market-config", "search-provider"} else "Ask about patients, immunisations due, revenue — or tap a question below.",
+                P("Ask about competitor clinics, regular prices, locations and weekly changes." if active in {"market", "market-watchlist", "market-map", "market-config", "search-provider"} else "Ask about patients, immunisations due, revenue — or tap a question below.",
                   cls="chat-empty-hint"),
                 id="chat-body", cls="chat-body",
             ),
@@ -696,7 +701,7 @@ def right_pane_chat(thread_id: str, active: str = "dashboard"):
                 Div(
                     Input(
                         type="text", name="message", id="chat-input",
-                        placeholder=t("Ask about the competition …" if active in {"market", "market-map", "market-config", "search-provider"} else "Ask a question or type /due /lapsed /help …"),
+                        placeholder=t("Ask about the competition …" if active in {"market", "market-watchlist", "market-map", "market-config", "search-provider"} else "Ask a question or type /due /lapsed /help …"),
                         autocomplete="off",
                     ),
                     Button("Send", type="submit", cls="chat-send-btn", id="chat-send-btn"),
@@ -853,7 +858,7 @@ function fillChat(text){
   if(el){ el.value=text; el.focus(); }
 }
 
-// ---- streaming chat (SSE: token / tool_start / tool_end / done / error) ----
+// ---- streaming chat (SSE: token / tool_start / tool_end / chart / done / error) ----
 var TOOL_LABELS = {
   clinic_kpis: _tr('Reading clinic KPIs'),
   services_due: _tr("Checking what's due"),
@@ -894,6 +899,18 @@ function hideThinking(){ if(_thinker){ clearInterval(_thinker.timer);
 function addToolChip(trace, name){
   if(!trace) return; var c=document.createElement('span'); c.className='tool-chip';
   c.innerHTML='🔧 '+_esc(TOOL_LABELS[name]||name); trace.appendChild(c); _chatScroll();
+}
+function addChatChart(payload){
+  if(!payload || !payload.figure) return;
+  var cb=document.getElementById('chat-body'); if(!cb) return;
+  var card=document.createElement('div'); card.className='chat-chart';
+  if(payload.title){ var cap=document.createElement('div'); cap.className='chat-chart-title';
+    cap.textContent=payload.title; card.appendChild(cap); }
+  var plot=document.createElement('div'); plot.className='chat-chart-plot'; card.appendChild(plot);
+  cb.appendChild(card);
+  if(window.Plotly) Plotly.newPlot(plot,payload.figure.data,payload.figure.layout,
+    {displayModeBar:false,responsive:true});
+  _chatScroll();
 }
 // Sample cards / suggestion chips call this.
 function sendMessage(ev){ return streamChat(ev); }
@@ -942,6 +959,8 @@ async function streamChat(ev){
         } else if(type==='error'){
           hideThinking(); if(!bubble) bubble=addBubble('assistant','');
           bubble.innerHTML=_md('⚠ '+(payload.message||_tr('error')));
+        } else if(type==='chart'){
+          addChatChart(payload);
         } else if(type==='done'){
           hideThinking(); if(bubble) enhanceTables(bubble);
         }
@@ -1064,7 +1083,7 @@ def page(active: str, env: str, user_email: str, thread_id: str, *content,
     from web.access import can_as, effective_role as resolve_effective_role
     lang = lang or current_lang()
     role = resolve_effective_role(user_email, effective_role)
-    assistant = can_as(user_email, "chat-full", role) or (active in {"market", "market-map", "market-config", "search-provider"} and can_as(user_email, "market", role))
+    assistant = can_as(user_email, "chat-full", role) or (active in {"market", "market-watchlist", "market-map", "market-config", "search-provider"} and can_as(user_email, "market", role))
     right = right_override if right_override is not None else (right_pane_chat(thread_id, active) if assistant else None)
     has_right = right is not None
     result = (
