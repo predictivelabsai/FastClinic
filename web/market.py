@@ -5,6 +5,8 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
+import threading
 import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -13,6 +15,8 @@ from web import ops_db
 from web.market_search import COUNTRIES, QUERIES, domain, now, search, extract_services
 
 log = logging.getLogger(__name__)
+_READY_SCHEMAS = set()
+_SCHEMA_LOCK = threading.Lock()
 DEFAULT_CONFIG = dict(
     countries=list(COUNTRIES),
     hospitals=["*"],
@@ -40,23 +44,54 @@ SCHEMA = [
        price TEXT, price_max TEXT, price_type TEXT NOT NULL, currency TEXT NOT NULL,
        source_url TEXT NOT NULL, provider TEXT NOT NULL, retrieved_at TEXT NOT NULL,
        published_at TEXT, evidence TEXT NOT NULL, ownership_evidence TEXT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS market_taxonomy_node (id TEXT PRIMARY KEY,parent_id TEXT,
+       level TEXT NOT NULL,label TEXT NOT NULL,source TEXT NOT NULL,version TEXT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS market_service_taxonomy (service_id TEXT PRIMARY KEY,
+       taxonomy_id TEXT NOT NULL,method TEXT NOT NULL,confidence TEXT NOT NULL,version TEXT NOT NULL)""",
     "CREATE INDEX IF NOT EXISTS market_obs_time ON market_observation(retrieved_at)",
     "CREATE INDEX IF NOT EXISTS market_obs_match ON market_observation(hospital_id,service_id,price_type)",
 ]
 
 
+def _storage_key(connection):
+    if connection.postgres:
+        value = os.getenv("DATABASE_URL_PROD") or os.getenv("DATABASE_URL") or ""
+        return ("postgresql", hashlib.sha256(value.encode()).hexdigest(), os.getenv("FASTCLINIC_DB_SCHEMA", "fast_clinic"))
+    from pathlib import Path
+
+    path = Path(os.getenv("FASTCLINIC_OPS_DB") or ops_db.DEFAULT_PATH).resolve()
+    return ("sqlite", str(path), str(path.stat().st_ino))
+
+
+def ensure_schema(connection, name, statements, initialize=None):
+    """Initialize one operational schema once per process/database instance."""
+    key = (_storage_key(connection), name)
+    if key in _READY_SCHEMAS:
+        return
+    with _SCHEMA_LOCK:
+        if key in _READY_SCHEMAS:
+            return
+        for sql in statements:
+            connection.execute(sql)
+        if initialize:
+            initialize(connection)
+        connection.commit()
+        _READY_SCHEMAS.add(key)
+
+
 def connect():
     c = ops_db.connect()
-    for sql in SCHEMA:
-        c.execute(sql)
-    c.execute(
-        "INSERT INTO market_config (id,payload) VALUES (1,?) ON CONFLICT(id) DO NOTHING",
-        (json.dumps(DEFAULT_CONFIG),),
-    )
-    c.execute(
-        "INSERT INTO market_lock (id,owner,expires_at) VALUES (1,'','') ON CONFLICT(id) DO NOTHING"
-    )
-    c.commit()
+
+    def initialize(connection):
+        connection.execute(
+            "INSERT INTO market_config (id,payload) VALUES (1,?) ON CONFLICT(id) DO NOTHING",
+            (json.dumps(DEFAULT_CONFIG),),
+        )
+        connection.execute(
+            "INSERT INTO market_lock (id,owner,expires_at) VALUES (1,'','') ON CONFLICT(id) DO NOTHING"
+        )
+
+    ensure_schema(c, "market", SCHEMA, initialize)
     return c
 
 
@@ -112,10 +147,19 @@ def enqueue(actor, trigger="manual", at=None, config_override=None):
         else:
             c.execute("BEGIN IMMEDIATE")
         active = c.execute(
-            "SELECT id FROM market_run WHERE status IN ('queued','running') ORDER BY created_at LIMIT 1"
-        ).fetchone()
-        if active:
-            return active["id"]
+            """SELECT id,trigger_kind,config FROM market_run
+               WHERE status IN ('queued','running') ORDER BY created_at"""
+        ).fetchall()
+        if trigger == "watchlist":
+            requested = set(cfg.get("watchlist_ids") or [])
+            for row in active:
+                if row["trigger_kind"] != "watchlist":
+                    continue
+                existing = set(json.loads(row["config"]).get("watchlist_ids") or [])
+                if requested and requested <= existing:
+                    return row["id"]
+        elif active:
+            return active[0]["id"]
         if scheduled:
             existing = c.execute(
                 "SELECT id FROM market_run WHERE scheduled_week=?", (scheduled,)
@@ -125,12 +169,13 @@ def enqueue(actor, trigger="manual", at=None, config_override=None):
         recent = (datetime.fromisoformat(stamp) - timedelta(minutes=5)).isoformat(
             timespec="seconds"
         )
-        last = c.execute(
-            "SELECT id FROM market_run WHERE created_at>? ORDER BY created_at DESC LIMIT 1",
-            (recent,),
-        ).fetchone()
-        if last:
-            return last["id"]
+        if trigger == "manual":
+            last = c.execute(
+                "SELECT id FROM market_run WHERE created_at>? ORDER BY created_at DESC LIMIT 1",
+                (recent,),
+            ).fetchone()
+            if last:
+                return last["id"]
         ident = uuid.uuid4().hex
         c.execute(
             "INSERT INTO market_run (id,scheduled_week,status,trigger_kind,actor,created_at,config,stats) VALUES (?,?,?,?,?,?,?,?)",
@@ -146,7 +191,10 @@ def identity(*parts):
 
 def ingest(run_id, observations):
     """Repeatable import; never overwrite a previous observation or its evidence."""
+    from web import market_taxonomy
+
     with connect() as c:
+        market_taxonomy.ensure(c)
         for r in observations:
             hid = identity(r["country"], r["domain"])
             sid = identity(r["service"].strip().casefold())
@@ -166,6 +214,9 @@ def ingest(run_id, observations):
             c.execute(
                 "INSERT INTO market_service (id,name) VALUES (?,?) ON CONFLICT(id) DO NOTHING",
                 (sid, r["service"]),
+            )
+            market_taxonomy.map_service(
+                c, sid, r["service"] + " " + r.get("original_name", "")
             )
             oid = identity(
                 run_id,
@@ -270,7 +321,7 @@ def _lease(owner):
 
 def collect(run_id, cfg, owner, actor=None):
     from web.search_provider import resolve
-    from web import market_watchlist
+    from web import market_candidates, market_watchlist
     from web.market_search import scrape_url
 
     cfg = {**cfg, "providers": ["exa"]}
@@ -286,6 +337,8 @@ def collect(run_id, cfg, owner, actor=None):
         truncated_pages=0,
         direct_fetches=0,
         discovery_content_fallbacks=0,
+        candidates_seen=0,
+        candidates_new=0,
     )
     candidates = {}
     hospitals = rows("SELECT * FROM market_hospital ORDER BY first_seen")
@@ -311,7 +364,13 @@ def collect(run_id, cfg, owner, actor=None):
         if targets:
             rotation = datetime.now(timezone.utc).isocalendar().week % len(targets)
             targets = targets[rotation:] + targets[:rotation]
-        target_slots = min(len(targets), max(1, (search_budget * 2) // 3)) if search_budget else 0
+        target_slots = (
+            0
+            if cfg.get("campaign_country")
+            else min(len(targets), max(1, (search_budget * 2) // 3))
+            if search_budget
+            else 0
+        )
         jobs = targets[:target_slots] + discovery[: search_budget - target_slots]
     else:
         jobs = [
@@ -338,7 +397,7 @@ def collect(run_id, cfg, owner, actor=None):
         _lease(owner)
         stats["queries"] += 1
         try:
-            for r in search(
+            results = search(
                 p,
                 q,
                 domains=domains,
@@ -346,7 +405,11 @@ def collect(run_id, cfg, owner, actor=None):
                 excluded_domains=(
                     excluded if not domains else None
                 ),
-            ):
+            )
+            captured = market_candidates.capture(results, country, run_id)
+            stats["candidates_seen"] += captured["seen"]
+            stats["candidates_new"] += captured["new"]
+            for r in results:
                 if cfg["hospitals"] != ["*"] and domain(r["url"]) not in {
                     h["domain"] for h in hospitals
                 }:
@@ -528,6 +591,7 @@ def collect(run_id, cfg, owner, actor=None):
         exclude_ids=refreshed_ids,
     )
     stats["locations"] = len(market_map.clinics())
+    stats["candidates_verified"] = market_candidates.sync_verified()
     return stats
 
 
@@ -576,6 +640,23 @@ def tick():
             "SELECT * FROM market_run WHERE status='queued' ORDER BY created_at LIMIT 1"
         )
         if not queued:
+            from web import market_candidates
+
+            campaign = market_candidates.next_campaign()
+            if campaign:
+                campaign_run = enqueue(
+                    campaign["requested_by"],
+                    "campaign",
+                    config_override=market_candidates.campaign_config(campaign["country"]),
+                )
+                market_candidates.mark_campaign_started(
+                    campaign["country"], campaign_run
+                )
+                queued = rows(
+                    "SELECT * FROM market_run WHERE id=? AND status='queued'",
+                    (campaign_run,),
+                )
+        if not queued:
             return
         run = queued[0]
         run_id = run["id"]
@@ -603,6 +684,13 @@ def tick():
                 (status, json.dumps(stats), now(), run_id),
             )
             c.commit()
+        campaign_country = json.loads(run["config"]).get("campaign_country")
+        if campaign_country:
+            from web import market_candidates
+
+            market_candidates.finish_campaign(
+                campaign_country, run_id, status
+            )
     except Exception as exc:
         log.exception("Market worker failed")
         if run_id:
@@ -620,6 +708,16 @@ def tick():
                     ),
                 )
                 c.commit()
+            try:
+                cfg = json.loads(run["config"]) if run_id and run else {}
+                if cfg.get("campaign_country"):
+                    from web import market_candidates
+
+                    market_candidates.finish_campaign(
+                        cfg["campaign_country"], run_id, "failed", str(exc)
+                    )
+            except Exception:
+                log.exception("Market campaign status update failed")
     finally:
         heartbeat_stop.set()
         with connect() as c:

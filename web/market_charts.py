@@ -9,6 +9,7 @@ from statistics import median
 
 from web import market, market_map
 from web.market_catalog import CAPABILITIES, is_wellness_service
+from web.market_countries import EEA
 from web.market_search import domain
 
 
@@ -296,6 +297,7 @@ def wellness_prices(country="LT", targets=None, prices=None):
     names = sorted(by_target, key=lambda name: median(by_target[name]))
     if not names:
         return None
+    currency = EEA[country]["currency"]
     return {
         "data": [
             {
@@ -305,13 +307,13 @@ def wellness_prices(country="LT", targets=None, prices=None):
                 "x": [median(by_target[name]) for name in names],
                 "customdata": [len(by_target[name]) for name in names],
                 "marker": {"color": GREEN},
-                "hovertemplate": "<b>%{y}</b><br>Median starting/exact price: €%{x:.0f}<br>Observed tariffs: %{customdata}<extra></extra>",
+                "hovertemplate": f"<b>%{{y}}</b><br>Median starting/exact price: {currency} %{{x:.0f}}<br>Observed tariffs: %{{customdata}}<extra></extra>",
             }
         ],
         "layout": _layout(
             "Observed IV & wellness price position",
             max(300, 74 + 42 * len(names)),
-            xaxis={"title": "Median observed EUR", "gridcolor": GRID},
+            xaxis={"title": f"Median observed {currency}", "gridcolor": GRID},
             yaxis={"automargin": True},
             margin={"l": 145, "r": 24, "t": 54, "b": 48},
         ),

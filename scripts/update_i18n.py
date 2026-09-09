@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import os
 import re
 import string
 import sys
@@ -283,7 +284,56 @@ def _translate_one(text: str, lang: str) -> str:
     return translated
 
 
-def refresh_catalogs(workers: int) -> None:
+def _translate_batch_xai(texts: list[str], lang: str) -> dict[str, str]:
+    """Translate one locale in a bounded structured call when Google throttles."""
+    key = os.getenv("XAI_API_KEY", "").strip()
+    if not key:
+        raise RuntimeError("XAI_API_KEY is required for --provider xai")
+    language = LANGUAGES[lang]["name"]
+    payload = {
+        "model": os.getenv("MARKET_LLM_MODEL", "grok-4-1-fast-non-reasoning"),
+        "temperature": 0,
+        "response_format": {"type": "json_object"},
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    f"Translate FastClinic user-interface text from English to {language}. "
+                    "Return only JSON with a translations array in exactly the input order. "
+                    "Preserve every {placeholder}, HTML tag, entity, product name and acronym exactly."
+                ),
+            },
+            {"role": "user", "content": json.dumps({"strings": texts}, ensure_ascii=False)},
+        ],
+    }
+    request = Request(
+        "https://api.x.ai/v1/chat/completions",
+        data=json.dumps(payload).encode(),
+        headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"},
+        method="POST",
+    )
+    for attempt in range(3):
+        try:
+            with urlopen(request, timeout=90) as response:
+                body = json.loads(response.read())
+            result = json.loads(body["choices"][0]["message"]["content"])["translations"]
+            if not isinstance(result, list) or len(result) != len(texts):
+                raise ValueError("Translation response length did not match input")
+            translated = dict(zip(texts, map(str, result), strict=True))
+            for source, value in translated.items():
+                if not value.strip() or _fields(value) != _fields(source):
+                    raise ValueError(f"Translation changed placeholders: {source!r}")
+                if _markup_signature(value) != _markup_signature(source):
+                    raise ValueError(f"Translation changed markup: {source!r}")
+            return translated
+        except Exception:
+            if attempt == 2:
+                raise
+            time.sleep(2 ** attempt)
+    raise RuntimeError(f"Translation failed for {lang}")
+
+
+def refresh_catalogs(workers: int, provider: str = "google") -> None:
     LOCALES_DIR.mkdir(parents=True, exist_ok=True)
     source = source_strings()
     for lang in LANGUAGES:
@@ -296,12 +346,16 @@ def refresh_catalogs(workers: int) -> None:
                   and _markup_signature(key) == _markup_signature(current[key])}
         missing = sorted(source - locale.keys())
         print(f"{lang}: translating {len(missing)} of {len(source)} strings")
-        with ThreadPoolExecutor(max_workers=workers) as executor:
-            futures = {executor.submit(_translate_one, text, lang): text for text in missing}
-            for index, future in enumerate(as_completed(futures), 1):
-                locale[futures[future]] = future.result()
-                if index % 25 == 0 or index == len(missing):
-                    print(f"  {index}/{len(missing)}")
+        if provider == "xai" and missing:
+            locale.update(_translate_batch_xai(missing, lang))
+            print(f"  {len(missing)}/{len(missing)}")
+        else:
+            with ThreadPoolExecutor(max_workers=workers) as executor:
+                futures = {executor.submit(_translate_one, text, lang): text for text in missing}
+                for index, future in enumerate(as_completed(futures), 1):
+                    locale[futures[future]] = future.result()
+                    if index % 25 == 0 or index == len(missing):
+                        print(f"  {index}/{len(missing)}")
         locale.update(MANUAL_OVERRIDES[lang])
         path = LOCALES_DIR / f"{lang}.json"
         path.write_text(json.dumps(locale, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -311,9 +365,10 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--translate", action="store_true", help="translate missing copy and rewrite catalogues")
     parser.add_argument("--workers", type=int, default=6)
+    parser.add_argument("--provider", choices=("google", "xai"), default="google")
     args = parser.parse_args()
     if args.translate:
-        refresh_catalogs(max(1, args.workers))
+        refresh_catalogs(max(1, args.workers), args.provider)
     return 0 if check_catalogs() else 1
 
 

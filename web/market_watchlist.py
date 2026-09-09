@@ -27,36 +27,26 @@ SCHEMA = [
 
 def connect():
     c = market.connect()
-    for sql in SCHEMA:
-        c.execute(sql)
-    stamp = market.now()
-    for priority, target in enumerate(TARGETS, 1):
-        urls = list(dict.fromkeys([target["service_url"], f"https://{target['domains'][0]}/"]))
-        c.execute(
-            """INSERT INTO market_watchlist
-            (id,name,country,segment,cities,positioning,capabilities,scope,iv_focus,
-             urls,active,priority,origin,created_by,created_at,updated_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING""",
-            (
-                target["slug"],
-                target["name"],
-                "LT",
-                target["segment"],
-                json.dumps(target["cities"], ensure_ascii=False),
-                target["positioning"],
-                json.dumps(target["capabilities"]),
-                target["scope"],
-                target["iv_focus"],
-                json.dumps(urls, ensure_ascii=False),
-                1,
-                priority,
-                "seeded",
-                "product-brief",
-                stamp,
-                stamp,
-            ),
-        )
-    c.commit()
+
+    def initialize(connection):
+        stamp = market.now()
+        for priority, target in enumerate(TARGETS, 1):
+            urls = list(dict.fromkeys([target["service_url"], f"https://{target['domains'][0]}/"]))
+            connection.execute(
+                """INSERT INTO market_watchlist
+                (id,name,country,segment,cities,positioning,capabilities,scope,iv_focus,
+                 urls,active,priority,origin,created_by,created_at,updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING""",
+                (
+                    target["slug"], target["name"], "LT", target["segment"],
+                    json.dumps(target["cities"], ensure_ascii=False), target["positioning"],
+                    json.dumps(target["capabilities"]), target["scope"], target["iv_focus"],
+                    json.dumps(urls, ensure_ascii=False), 1, priority, "seeded",
+                    "product-brief", stamp, stamp,
+                ),
+            )
+
+    market.ensure_schema(c, "market-watchlist", SCHEMA, initialize)
     return c
 
 

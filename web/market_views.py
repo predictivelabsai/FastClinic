@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import secrets
 from datetime import timezone
@@ -19,6 +20,7 @@ from fasthtml.common import (
     Option,
     P,
     Select,
+    Span,
     Table,
     Tbody,
     Td,
@@ -35,6 +37,7 @@ from starlette.responses import RedirectResponse, Response
 
 from web import market
 from web.layout import plot_div
+from web.market_countries import EEA
 from web.market_search import COUNTRIES
 
 
@@ -61,6 +64,16 @@ MARKET_CSS = """
 .market-country-tabs {display:flex;gap:7px;flex-wrap:wrap;margin:0 0 16px}
 .market-country-tabs a {padding:7px 12px;border:1px solid #ccdada;border-radius:999px;background:#fff;color:#28516c;text-decoration:none;font-size:12px;font-weight:700}
 .market-country-tabs a.active {background:#1e6fb8;border-color:#1e6fb8;color:#fff}
+.market-shell .market-country-picker {display:flex;align-items:end;gap:10px;margin:0 0 16px;padding:10px 12px}
+.market-shell .market-country-picker label {flex:1 1 260px}
+.market-shell .market-country-picker button {padding:9px 12px}
+.market-candidate-actions details {min-width:250px}
+.market-candidate-actions form {display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0;padding:10px}
+.market-candidate-actions form label {font-size:11px}
+.market-candidate-actions form label:first-of-type {grid-column:1/-1}
+.market-candidate-actions form button {grid-column:1/-1;width:max-content;padding:6px 9px}
+.market-progress {height:8px;border-radius:999px;background:#e5ecef;overflow:hidden;min-width:100px}
+.market-progress span {display:block;height:100%;background:#1f9d72}
 .market-kpis {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}
 .market-kpi {background:linear-gradient(145deg,#fff,#f7fbfc);border:1px solid #dbe6e6;border-radius:12px;padding:16px}
 .market-kpi strong {display:block;font-size:25px;color:#1b2733;margin-bottom:3px}
@@ -225,11 +238,11 @@ def workspace(
         delta = (
             "—"
             if r["change"] is None
-            else f"{r['change']:+.2f} EUR"
+            else f"{r['change']:+.2f} {r['currency']}"
             + (f" ({r['change_pct']:+.1f}%)" if r["change_pct"] is not None else "")
         )
         if r["change_max"] is not None:
-            delta += f"; upper {r['change_max']:+.2f} EUR"
+            delta += f"; upper {r['change_max']:+.2f} {r['currency']}"
         table_rows.append(
             Tr(
                 Td(COUNTRIES[r["country"]]),
@@ -316,19 +329,36 @@ def workspace(
     })();"""
 
     return Div(
-        Div(
-            *[
-                A(label, href=f"/market/competitive-intelligence?country={code}&focus=wellness", cls="active" if code == country else "")
-                for code, label in COUNTRIES.items()
-            ],
-            cls="market-country-tabs",
+        Form(
+            Label(
+                "Country dashboard",
+                Select(
+                    *[
+                        Option(label, value=code, selected=code == country)
+                        for code, label in COUNTRIES.items()
+                    ],
+                    name="country",
+                ),
+            ),
+            Input(type="hidden", name="focus", value="wellness"),
+            Button("Open dashboard"),
+            method="get",
+            action="/market/competitive-intelligence",
+            cls="market-country-picker",
         ),
         Div(
             Div(
                 H1(COUNTRIES[country], " ", "Wellness Competition"),
                 P("IV infusion, vitamin-drip and longevity competitors, with broader multi-specialty clinics and source-backed prices."),
             ),
-            Form(Input(type="hidden", name="csrf", value=csrf), Button("Refresh with Exa", type="submit"), action="/market/search", method="post", cls="market-search-action"),
+            Form(
+                Input(type="hidden", name="csrf", value=csrf),
+                Input(type="hidden", name="country", value=country),
+                Button("Refresh with Exa", type="submit"),
+                action="/market/search",
+                method="post",
+                cls="market-search-action",
+            ),
             cls="market-hero",
         ),
         Div(
@@ -398,23 +428,71 @@ def workspace(
     )
 
 
-def watchlist_editor(csrf, edit_id="", message=""):
-    from web import market_watchlist
+def watchlist_editor(
+    csrf, edit_id="", message="", country="LT", candidate_state="discovered"
+):
+    from web import market_candidates, market_watchlist
     from web.market_charts import target_snapshot
 
-    entries = market_watchlist.items()
-    coverage = {item["id"]: item for item in target_snapshot("LT")}
+    country = country if country in COUNTRIES else "LT"
+    candidate_state = (
+        candidate_state if candidate_state in market_candidates.STATES else "discovered"
+    )
+    all_entries = market_watchlist.items()
     current = market_watchlist.get(edit_id) if edit_id else None
+    if current:
+        country = current["country"]
+    entries = [item for item in all_entries if item["country"] == country]
+    collection = {item["id"]: item for item in target_snapshot(country)}
+    market_candidates.sync_verified()
+    candidates = market_candidates.items(country, candidate_state)
+    readiness = market_candidates.coverage()
+    country_readiness = next(row for row in readiness if row["country"] == country)
+    first_city = EEA[country]["cities"][0]
     return Div(
+        Form(
+            Label(
+                "Country workspace",
+                Select(
+                    *[
+                        Option(label, value=code, selected=code == country)
+                        for code, label in COUNTRIES.items()
+                    ],
+                    name="country",
+                ),
+            ),
+            Label(
+                "Candidate state",
+                Select(
+                    *[
+                        Option(value.replace("_", " ").title(), value=value, selected=value == candidate_state)
+                        for value in market_candidates.STATES
+                    ],
+                    name="candidate_state",
+                ),
+            ),
+            Button("Apply"),
+            action="/market/watchlist",
+            method="get",
+            cls="market-country-picker",
+        ),
         Div(
             Div(
                 H1("Watchlist Editor"),
-                P("Curate identified competitor URLs without an Exa search. Active URLs are deep-scraped alongside discovered pages; the same evidence checks and price history apply to both."),
+                P(
+                    "Review discovery candidates, promote official URLs to the watchlist, "
+                    "and deep-scrape active clinics without another Exa search."
+                ),
             ),
             Div(
-                A("Back to dashboard", href="/market/competitive-intelligence?country=LT", cls="btn"),
+                A(
+                    "Back to dashboard",
+                    href=f"/market/competitive-intelligence?country={country}",
+                    cls="btn",
+                ),
                 Form(
                     Input(type="hidden", name="csrf", value=csrf),
+                    Input(type="hidden", name="country", value=country),
                     Button("Deep scrape all active", type="submit"),
                     action="/market/watchlist/scrape-all",
                     method="post",
@@ -425,23 +503,123 @@ def watchlist_editor(csrf, edit_id="", message=""):
             cls="market-hero",
         ),
         P(message, cls="market-status") if message else None,
+        Div(
+            Div(NotStr(f"<strong>{country_readiness['candidates']}</strong><span>discovery candidates</span>"), cls="market-kpi"),
+            Div(NotStr(f"<strong>{country_readiness['review']}</strong><span>awaiting review</span>"), cls="market-kpi"),
+            Div(NotStr(f"<strong>{country_readiness['watchlisted']}</strong><span>watchlisted clinics</span>"), cls="market-kpi"),
+            Div(NotStr(f"<strong>{country_readiness['verified']}/{country_readiness['target']}</strong><span>verified clinic target</span>"), cls="market-kpi"),
+            cls="market-kpis",
+        ),
+        Div(
+            Form(
+                Input(type="hidden", name="csrf", value=csrf),
+                Input(type="hidden", name="country", value=country),
+                Button(f"Discover {COUNTRIES[country]} with Exa", type="submit"),
+                action="/market/candidates/discover",
+                method="post",
+                cls="market-search-action",
+            ),
+            Form(
+                Input(type="hidden", name="csrf", value=csrf),
+                Button("Queue all 30 EEA markets", type="submit"),
+                action="/market/candidates/discover-all",
+                method="post",
+                cls="market-search-action",
+            ),
+            Form(
+                Input(type="hidden", name="csrf", value=csrf),
+                Input(type="hidden", name="country", value=country),
+                Button("Import MMG hospital seeds", type="submit"),
+                action="/market/candidates/import-mmg",
+                method="post",
+                cls="market-search-action",
+            ),
+            cls="market-row-actions",
+        ),
         Form(
             Input(type="hidden", name="csrf", value=csrf),
             Input(type="hidden", name="id", value=current["id"] if current else ""),
             Label("Clinic name", Input(name="name", value=current["name"] if current else "", required=True)),
-            Label("Country", Select(*[Option(label, value=key, selected=current and current["country"] == key) for key, label in COUNTRIES.items()], name="country")),
+            Label("Country", Select(*[Option(label, value=key, selected=(current and current["country"] == key) or (not current and country == key)) for key, label in COUNTRIES.items()], name="country")),
             Label("Competitor model", Select(*[Option(value, selected=current and current["segment"] == value) for value in ("IV / longevity specialist", "Multi-specialty clinic")], name="segment")),
-            Label("Cities (comma separated)", Input(name="cities", value=", ".join(current["cities"]) if current else "Vilnius", required=True)),
-            Label("Priority", Input(type="number", name="priority", min=1, max=999, value=current["priority"] if current else len(entries) + 1)),
+            Label("Cities (comma separated)", Input(name="cities", value=", ".join(current["cities"]) if current else first_city, required=True)),
+            Label("Priority", Input(type="number", name="priority", min=1, max=999, value=current["priority"] if current else len(all_entries) + 1)),
             Label("Positioning", Input(name="positioning", value=current["positioning"] if current else "")),
             Label("Official URLs — one per line", Textarea("\n".join(current["urls"]) if current else "", name="urls", rows=5, required=True), style="flex-basis:100%"),
             Label(Input(type="checkbox", name="active", value="yes", checked=current["active"] if current else True), "Active — include in discovery and deep scraping"),
             Button("Save competitor", type="submit"),
-            A("Cancel edit", href="/market/watchlist", cls="btn") if current else None,
+            A("Cancel edit", href=f"/market/watchlist?country={country}", cls="btn") if current else None,
             action="/market/watchlist",
             method="post",
         ),
-        Div(H2("Curated competitors"), P(f"{len(entries)} entries · paused entries remain available for audit"), cls="market-section-head"),
+        Div(
+            H2("Discovery candidate review"),
+            P(f"{len(candidates)} {candidate_state.replace('_', ' ')} candidates in {COUNTRIES[country]}"),
+            cls="market-section-head",
+        ),
+        Div(
+            Table(
+                Thead(Tr(*[Th(x) for x in ["Candidate", "Origin", "Evidence", "State", "Review"]])),
+                Tbody(
+                    *[
+                        Tr(
+                            Td(candidate["name"], P(candidate["official_domain"] or "Official domain required")),
+                            Td(candidate["source_type"], P(f"{candidate['source_count']} source(s)")),
+                            Td(A("Discovery source", href=candidate["source_url"], target="_blank", rel="noopener noreferrer"), P(candidate["last_seen_at"])),
+                            Td(candidate["state"].replace("_", " ").title(), P(candidate["rejection_reason"] or "")),
+                            Td(
+                                Details(
+                                    Summary("Review candidate"),
+                                    Form(
+                                        Input(type="hidden", name="csrf", value=csrf),
+                                        Input(type="hidden", name="country", value=country),
+                                        Label("Official provider URL", Input(name="official_url", value=candidate["source_url"] if candidate["official_domain"] else "", required=True)),
+                                        Label("Clinic name", Input(name="name", value=candidate["name"], required=True)),
+                                        Label("City or cities", Input(name="cities", value=first_city, required=True)),
+                                        Label("Model", Select(Option("Multi-specialty clinic"), Option("IV / longevity specialist"), name="segment")),
+                                        Button("Add to watchlist", type="submit"),
+                                        action=f"/market/candidates/{candidate['id']}/watchlist",
+                                        method="post",
+                                    ),
+                                ) if candidate["state"] == "discovered" else A("Open watchlist", href=f"/market/watchlist?country={country}&edit={candidate['watchlist_id']}", cls="btn") if candidate["watchlist_id"] else None,
+                                Form(
+                                    Input(type="hidden", name="csrf", value=csrf),
+                                    Input(type="hidden", name="country", value=country),
+                                    Input(name="reason", placeholder="Rejection reason") if candidate["state"] != "rejected" else None,
+                                    Button("Reject" if candidate["state"] != "rejected" else "Reopen", type="submit"),
+                                    action=f"/market/candidates/{candidate['id']}/" + ("reject" if candidate["state"] != "rejected" else "reopen"),
+                                    method="post",
+                                    cls="market-search-action",
+                                ),
+                                cls="market-candidate-actions",
+                            ),
+                        )
+                        for candidate in candidates
+                    ]
+                ),
+            ) if candidates else P("No candidates in this review state yet."),
+            cls="market-table-wrap" if candidates else "",
+        ),
+        Details(
+            Summary("EEA coverage and campaign queue"),
+            Div(
+                Table(
+                    Thead(Tr(*[Th(x) for x in ["Country", "Candidates", "Review", "Watchlist", "Verified", "Progress", "Campaign"]])),
+                    Tbody(*[
+                        Tr(
+                            Td(A(row["name"], href=f"/market/watchlist?country={row['country']}")),
+                            Td(row["candidates"]), Td(row["review"]), Td(row["watchlisted"]),
+                            Td(f"{row['verified']} / {row['target']}"),
+                            Td(Div(Span(style=f"width:{min(100, 100 * row['verified'] / max(1, row['target'])):.0f}%"), cls="market-progress")),
+                            Td(row["campaign_status"]),
+                        )
+                        for row in readiness
+                    ]),
+                ),
+                cls="market-table-wrap",
+            ),
+        ),
+        Div(H2("Curated competitors"), P(f"{len(entries)} entries in {COUNTRIES[country]} · paused entries remain available for audit"), cls="market-section-head"),
         Div(
             Table(
                 Thead(Tr(*[Th(x) for x in ["Priority", "Competitor", "Model", "URLs", "State", "Actions"]])),
@@ -454,14 +632,15 @@ def watchlist_editor(csrf, edit_id="", message=""):
                             Td(*[P(A(url, href=url, target="_blank", rel="noopener noreferrer")) for url in item["urls"]]),
                             Td(
                                 "Active" if item["active"] else "Paused",
-                                P(coverage.get(item["id"], {}).get("status", "Not collected yet")),
+                                P(collection.get(item["id"], {}).get("status", "Not collected yet")),
                                 cls="market-status " + ("priced" if item["active"] else "queued"),
                             ),
                             Td(
                                 Div(
-                                    A("Edit", href="/market/watchlist?edit=" + item["id"], cls="btn"),
+                                    A("Edit", href=f"/market/watchlist?country={country}&edit=" + item["id"], cls="btn"),
                                     Form(
                                         Input(type="hidden", name="csrf", value=csrf),
+                                        Input(type="hidden", name="country", value=country),
                                         Button("Deep scrape now", type="submit"),
                                         action="/market/watchlist/" + item["id"] + "/scrape",
                                         method="post",
@@ -816,11 +995,17 @@ def register(rt, app, require, render):
         return render(session, "market-map", map_view(country, hospital))
 
     @rt("/market/watchlist", methods=["GET"])
-    def market_watchlist_page(session, edit: str = ""):
+    def market_watchlist_page(
+        session, edit: str = "", country: str = "LT", candidate_state: str = "discovered"
+    ):
         email, denied = require(session, "market-watchlist")
         if denied:
             return denied
-        return render(session, "market-watchlist", watchlist_editor(token(session), edit))
+        return render(
+            session,
+            "market-watchlist",
+            watchlist_editor(token(session), edit, "", country, candidate_state),
+        )
 
     @rt("/market/watchlist", methods=["POST"])
     async def market_watchlist_save(request, session):
@@ -846,8 +1031,20 @@ def register(rt, app, require, render):
                 actor=email,
             )
         except ValueError as exc:
-            return render(session, "market-watchlist", watchlist_editor(token(session), str(form.get("id", "")), str(exc)))
-        return RedirectResponse("/market/watchlist?edit=" + ident, status_code=303)
+            return render(
+                session,
+                "market-watchlist",
+                watchlist_editor(
+                    token(session),
+                    str(form.get("id", "")),
+                    str(exc),
+                    str(form.get("country", "LT")),
+                ),
+            )
+        saved = market_watchlist.get(ident)
+        return RedirectResponse(
+            f"/market/watchlist?country={saved['country']}&edit={ident}", status_code=303
+        )
 
     @rt("/market/watchlist/{watchlist_id}/scrape", methods=["POST"])
     async def market_watchlist_scrape(request, session, watchlist_id: str):
@@ -872,7 +1069,10 @@ def register(rt, app, require, render):
                 "max_pages": len(item["urls"]),
             },
         )
-        return RedirectResponse("/market/watchlist?edit=" + watchlist_id, status_code=303)
+        return RedirectResponse(
+            f"/market/watchlist?country={item['country']}&edit={watchlist_id}",
+            status_code=303,
+        )
 
     @rt("/market/watchlist/scrape-all", methods=["POST"])
     async def market_watchlist_scrape_all(request, session):
@@ -884,9 +1084,16 @@ def register(rt, app, require, render):
         form = await request.form()
         if not valid(session, form):
             return Response("Invalid form token", status_code=403)
-        entries = market_watchlist.items(active_only=True)
+        country = str(form.get("country", "LT"))
+        entries = [
+            item
+            for item in market_watchlist.items(active_only=True)
+            if country not in COUNTRIES or item["country"] == country
+        ]
         if not entries:
-            return RedirectResponse("/market/watchlist", status_code=303)
+            return RedirectResponse(
+                f"/market/watchlist?country={country}", status_code=303
+            )
         market.enqueue(
             email,
             trigger="watchlist",
@@ -897,7 +1104,143 @@ def register(rt, app, require, render):
                 "max_pages": min(300, sum(len(item["urls"]) for item in entries)),
             },
         )
-        return RedirectResponse("/market/watchlist", status_code=303)
+        return RedirectResponse(f"/market/watchlist?country={country}", status_code=303)
+
+    @rt("/market/candidates/{candidate_id}/watchlist", methods=["POST"])
+    async def market_candidate_promote(request, session, candidate_id: str):
+        from web import market_candidates, market_watchlist
+
+        email, denied = require(session, "market-watchlist")
+        if denied:
+            return denied
+        form = await request.form()
+        if not valid(session, form):
+            return Response("Invalid form token", status_code=403)
+        country = str(form.get("country", "LT"))
+        try:
+            watchlist_id = market_candidates.promote(
+                candidate_id,
+                actor=email,
+                official_url=str(form.get("official_url", "")),
+                name=str(form.get("name", "")),
+                cities=str(form.get("cities", "")),
+                segment=str(form.get("segment", "")),
+            )
+            item = market_watchlist.get(watchlist_id)
+            market.enqueue(
+                email,
+                trigger="watchlist",
+                config_override={
+                    "mode": "direct",
+                    "watchlist_ids": [watchlist_id],
+                    "countries": [item["country"]],
+                    "max_pages": len(item["urls"]),
+                },
+            )
+        except ValueError as exc:
+            return render(
+                session,
+                "market-watchlist",
+                watchlist_editor(token(session), "", str(exc), country),
+            )
+        return RedirectResponse(
+            f"/market/watchlist?country={country}&edit={watchlist_id}", status_code=303
+        )
+
+    @rt("/market/candidates/{candidate_id}/reject", methods=["POST"])
+    async def market_candidate_reject(request, session, candidate_id: str):
+        from web import market_candidates
+
+        email, denied = require(session, "market-watchlist")
+        if denied:
+            return denied
+        form = await request.form()
+        if not valid(session, form):
+            return Response("Invalid form token", status_code=403)
+        country = str(form.get("country", "LT"))
+        try:
+            market_candidates.set_state(
+                candidate_id, "rejected", email, str(form.get("reason", ""))
+            )
+        except ValueError as exc:
+            return Response(str(exc), status_code=404)
+        return RedirectResponse(
+            f"/market/watchlist?country={country}", status_code=303
+        )
+
+    @rt("/market/candidates/{candidate_id}/reopen", methods=["POST"])
+    async def market_candidate_reopen(request, session, candidate_id: str):
+        from web import market_candidates
+
+        email, denied = require(session, "market-watchlist")
+        if denied:
+            return denied
+        form = await request.form()
+        if not valid(session, form):
+            return Response("Invalid form token", status_code=403)
+        country = str(form.get("country", "LT"))
+        try:
+            market_candidates.set_state(candidate_id, "discovered", email)
+        except ValueError as exc:
+            return Response(str(exc), status_code=404)
+        return RedirectResponse(
+            f"/market/watchlist?country={country}&candidate_state=discovered",
+            status_code=303,
+        )
+
+    @rt("/market/candidates/discover", methods=["POST"])
+    async def market_candidate_discover(request, session):
+        from web import market_candidates
+
+        email, denied = require(session, "market-watchlist")
+        if denied:
+            return denied
+        form = await request.form()
+        if not valid(session, form):
+            return Response("Invalid form token", status_code=403)
+        country = str(form.get("country", "LT"))
+        try:
+            market_candidates.queue_campaign([country], email)
+        except ValueError as exc:
+            return Response(str(exc), status_code=400)
+        return RedirectResponse(
+            f"/market/watchlist?country={country}", status_code=303
+        )
+
+    @rt("/market/candidates/discover-all", methods=["POST"])
+    async def market_candidate_discover_all(request, session):
+        from web import market_candidates
+
+        email, denied = require(session, "market-watchlist")
+        if denied:
+            return denied
+        form = await request.form()
+        if not valid(session, form):
+            return Response("Invalid form token", status_code=403)
+        market_candidates.queue_campaign(COUNTRIES, email)
+        return RedirectResponse("/market/watchlist?country=LT", status_code=303)
+
+    @rt("/market/candidates/import-mmg", methods=["POST"])
+    async def market_candidate_import_mmg(request, session):
+        from web import market_candidates
+
+        email, denied = require(session, "market-watchlist")
+        if denied:
+            return denied
+        form = await request.form()
+        if not valid(session, form):
+            return Response("Invalid form token", status_code=403)
+        country = str(form.get("country", "LT"))
+        try:
+            stats = await asyncio.to_thread(market_candidates.import_mmg)
+            message = f"Imported {stats['new']} new MMG seeds; {stats['seen']} profiles seen."
+        except (ValueError, RuntimeError) as exc:
+            message = str(exc)
+        return render(
+            session,
+            "market-watchlist",
+            watchlist_editor(token(session), "", message, country),
+        )
 
     @rt("/market/clinics/{hospital_id}", methods=["GET"])
     def market_clinic_page(
@@ -922,8 +1265,13 @@ def register(rt, app, require, render):
         form = await request.form()
         if not valid(session, form):
             return Response("Invalid form token", status_code=403)
-        market.enqueue(email)
-        return RedirectResponse("/market/competitive-intelligence", status_code=303)
+        country = str(form.get("country", "LT"))
+        if country not in COUNTRIES:
+            country = "LT"
+        market.enqueue(email, config_override={"countries": [country]})
+        return RedirectResponse(
+            f"/market/competitive-intelligence?country={country}", status_code=303
+        )
 
     @rt("/admin/market", methods=["GET"])
     def market_config(session):

@@ -235,17 +235,20 @@ def test_assistant_questions_and_context_match_market_page():
 
 def test_dashboard_and_watchlist_editor_render_visual_first_workspace():
     from fasthtml.common import to_xml
+    from web.market_search import COUNTRIES
     from web.market_views import watchlist_editor, workspace
 
     dashboard = to_xml(workspace("csrf"))
     assert "Lithuania Wellness Competition" in dashboard
-    assert all(country in dashboard for country in ("Lithuania", "Estonia", "Latvia", "Romania"))
+    assert all(country in dashboard for country in COUNTRIES.values())
     assert "priority-competitors" in dashboard
     assert "market-chart-grid" in dashboard
     assert "Apply filters" not in dashboard
     editor = to_xml(watchlist_editor("csrf"))
     assert "Watchlist Editor" in editor
     assert "Deep scrape now" in editor
+    assert "Discovery candidate review" in editor
+    assert "Queue all 30 EEA markets" in editor
     assert "SYNC Longevity Clinic" in editor
 
 

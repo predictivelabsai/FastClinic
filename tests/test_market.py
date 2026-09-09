@@ -35,8 +35,11 @@ def observation(stamp, price="100", kind="exact", name="Consultation"):
 
 
 def test_defaults_include_future_entries_and_exa_only():
+    from web.market_search import COUNTRIES
+
     cfg = market.config()
-    assert set(cfg["countries"]) == {"LT", "LV", "EE", "RO"}
+    assert len(COUNTRIES) == 30
+    assert set(cfg["countries"]) == set(COUNTRIES)
     assert cfg["hospitals"] == cfg["treatments"] == ["*"]
     assert cfg["providers"] == ["exa"] and cfg["weekly"]
     with pytest.raises(ValueError):
@@ -87,6 +90,25 @@ def test_weekly_and_manual_queue_deduplicate(monkeypatch):
     assert (
         market.enqueue("scheduler", "weekly", at="2026-09-14T11:00:00+00:00") != weekly
     )
+
+
+def test_watchlist_scrape_queues_behind_active_search_and_deduplicates_target():
+    first = market.enqueue("a", at="2026-09-07T10:00:00+00:00")
+    scrape = market.enqueue(
+        "reviewer",
+        "watchlist",
+        at="2026-09-07T10:01:00+00:00",
+        config_override={"mode": "direct", "watchlist_ids": ["clinic-one"]},
+    )
+    duplicate = market.enqueue(
+        "reviewer",
+        "watchlist",
+        at="2026-09-07T10:02:00+00:00",
+        config_override={"mode": "direct", "watchlist_ids": ["clinic-one"]},
+    )
+    assert scrape != first
+    assert duplicate == scrape
+    assert len(market.rows("SELECT id FROM market_run")) == 2
 
 
 def test_worker_completes_and_releases_lease(monkeypatch):

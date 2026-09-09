@@ -1,5 +1,17 @@
 # FastClinic change log
 
+## 0.8.0 — 2026-09-09
+
+- Expand Competition from four markets to all 30 EEA countries through one data-driven country registry, local-language search packs, contact routes, currencies and country dashboards.
+- Add a durable discovery-candidate review queue that retains Exa leads before strict evidence extraction; staff can review, reject, reopen or promote an official URL into the authenticated watchlist.
+- Add ordered country campaigns targeting at least 10 verified private clinics per market, with 450 broad discovery queries, bounded ownership checks and visible country-level progress.
+- Import the public My Medical Gateway hospital catalogue as unverified seeds, while keeping aggregator profiles separate from official clinic domains until a staff review.
+- Add a versioned specialty → treatment-family taxonomy based on the public MMG navigation hierarchy and extended for wellness, diagnostics, oncology, dental, dermatology, bariatric care, rehabilitation, primary care and mental health.
+- Queue direct deep scraping as soon as a reviewed candidate is promoted; manual URLs and Exa-discovered pages continue through the same evidence, address and price-history pipeline.
+- Make operational schema setup process-local and database-aware so the larger dashboard no longer replays all market DDL on every request.
+
+Validation: 173 tests and 38 subtests passed, with 35 opt-in/live checks skipped. Authenticated Chrome checks covered the 30-country selector, Romania candidate review and promotion, immediate direct-scrape queuing, country dashboard navigation, zero Plotly card overlap and zero console errors.
+
 ## 0.7.0 — 2026-09-09
 
 - Add country-specific Competition dashboards for Lithuania, Latvia, Estonia and Romania, with compact country switching and country-scoped charts, evidence and tables.
