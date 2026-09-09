@@ -75,6 +75,17 @@ def test_save_multiple_branches_idempotently():
     assert len(market_map.clinics()) == 2
 
 
+def test_translated_address_variants_do_not_duplicate_a_branch():
+    h = {"id": "hospital", "name": "Clinic", "country": "LV", "domain": "clinic.example"}
+    base = {
+        "country": "LV", "postal_code": "", "phone": "", "retrieved_at": market.now(),
+        "source_url": "https://clinic.example/contact", "evidence": "Dzirnavu iela 57а, Rīga",
+    }
+    market_map.save_clinics(h, [{**base, "address": "Dzirnavu iela 57а", "city": "Rīga"}])
+    market_map.save_clinics(h, [{**base, "address": "Dzirnavu street 57a", "city": "Riga"}])
+    assert len(market_map.clinics("LV")) == 1
+
+
 def test_geocoding_cached_and_unmatched_not_pinned(monkeypatch):
     h = {
         "id": "hospital",
@@ -145,6 +156,55 @@ def test_address_extraction_rejects_unverifiable_or_foreign_source(monkeypatch):
     assert market_map.extract_addresses(h, [source]) == []
 
 
+def test_address_source_discovery_follows_same_domain_contact_links(monkeypatch):
+    hospital = {
+        "id": "hospital",
+        "name": "Clinic",
+        "country": "EE",
+        "domain": "clinic.example",
+        "source_url": "https://clinic.example/services",
+    }
+    pages = {
+        "https://clinic.example/services": "Services [Kontakt](/kontakt/)",
+        "https://clinic.example/": "Footer [Kontakt](/kontakt/)",
+        "https://clinic.example/kontakt/": "Aadress: Kotka 12, Tallinn",
+    }
+
+    def scrape(url):
+        if url not in pages:
+            raise RuntimeError("not found")
+        return {"url": url, "text": pages[url], "retrieved_at": market.now(), "provider": "direct"}
+
+    monkeypatch.setattr(market_map, "scrape_url", scrape)
+    sources = market_map.discover_address_sources(hospital)
+    assert sources[0]["url"] == "https://clinic.example/kontakt/"
+    assert not any(market_map.domain(s["url"]) != "clinic.example" for s in sources)
+
+
+def test_pending_address_repair_rotates_and_records_attempt(monkeypatch):
+    for index in range(2):
+        market.ingest(
+            "seed",
+            [{
+                "country": "EE", "domain": f"clinic{index}.example", "clinic": f"Clinic {index}",
+                "ownership_evidence": "Private clinic", "service": "Consultation",
+                "original_name": "Consultation", "price": "50", "price_max": None,
+                "price_type": "exact", "currency": "EUR",
+                "source_url": f"https://clinic{index}.example/prices", "retrieved_at": market.now(),
+                "published_at": None, "provider": "exa", "evidence": "Consultation 50 EUR",
+            }],
+        )
+    calls = []
+    monkeypatch.setattr(
+        market_map,
+        "refresh",
+        lambda hospital, api_key=None, sources=None, **kwargs: (calls.append(hospital["id"]) or {"sources": 1, "locations": 0, "added": 0}),
+    )
+    assert market_map.repair_pending(limit=1)["attempted"] == 1
+    assert market_map.repair_pending(limit=1)["attempted"] == 1
+    assert len(set(calls)) == 2
+
+
 def test_map_is_zoomable_and_popup_uses_text_nodes():
     from web.market_views import map_view
     from fasthtml.common import to_xml
@@ -179,6 +239,7 @@ def test_dashboard_and_watchlist_editor_render_visual_first_workspace():
 
     dashboard = to_xml(workspace("csrf"))
     assert "Lithuania Wellness Competition" in dashboard
+    assert all(country in dashboard for country in ("Lithuania", "Estonia", "Latvia", "Romania"))
     assert "priority-competitors" in dashboard
     assert "market-chart-grid" in dashboard
     assert "Apply filters" not in dashboard
@@ -186,6 +247,29 @@ def test_dashboard_and_watchlist_editor_render_visual_first_workspace():
     assert "Watchlist Editor" in editor
     assert "Deep scrape now" in editor
     assert "SYNC Longevity Clinic" in editor
+
+
+def test_country_dashboard_and_clinic_drilldown_are_scoped():
+    from fasthtml.common import to_xml
+    from web.market_views import clinic_detail, workspace
+
+    market.ingest(
+        "seed",
+        [{
+            "country": "EE", "domain": "clinic.example", "clinic": "Clinic",
+            "ownership_evidence": "Private clinic", "service": "Consultation",
+            "original_name": "Consultation", "price": "50", "price_max": None,
+            "price_type": "exact", "currency": "EUR", "source_url": "https://clinic.example/prices",
+            "retrieved_at": market.now(), "published_at": None, "provider": "exa",
+            "evidence": "Consultation 50 EUR",
+        }],
+    )
+    hospital = market.rows("SELECT id FROM market_hospital WHERE domain='clinic.example'")[0]
+    estonia = to_xml(workspace("csrf", country="EE"))
+    assert "Estonia Wellness Competition" in estonia and "Clinic" in estonia
+    detail = to_xml(clinic_detail("csrf", hospital["id"]))
+    assert "‹ Back to Dashboard" in detail and "Observed services and prices" in detail
+    assert "Estonia Wellness Competition" not in detail
 
 
 def test_seed_has_all_countries_and_only_regular_source_backed_prices():

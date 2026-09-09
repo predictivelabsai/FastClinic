@@ -85,7 +85,8 @@ MANUAL_OVERRIDES = {
     for lang, values in OVERRIDE_VALUES.items()
 }
 MANUAL_OVERRIDES["lt"].update({
-    "Lithuania Wellness Competition": "Lietuvos sveikatingumo klinikų konkurentai",
+    "Wellness Competition": "Sveikatingumo klinikų konkurentai",
+    "Deep scrape all active": "Giluminiu būdu nuskaityti visus aktyvius",
     "Deep scrape now": "Vykdyti giluminį nuskaitymą",
     "Active — include in discovery and deep scraping": "Aktyvus – įtraukti į paiešką ir giluminį nuskaitymą",
     "Curated competitors": "Kuruojami konkurentai",

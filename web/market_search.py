@@ -13,7 +13,7 @@ from urllib.parse import urljoin, urlsplit, urlunsplit
 
 import requests
 
-COUNTRIES = {"LT": "Lithuania", "LV": "Latvia", "EE": "Estonia"}
+COUNTRIES = {"LT": "Lithuania", "LV": "Latvia", "EE": "Estonia", "RO": "Romania"}
 QUERIES = {
     "LT": [
         "Lietuva intraveninė terapija vitaminų lašelinės infuzija kainos klinika",
@@ -32,6 +32,11 @@ QUERIES = {
         "Eesti erakliinik erahaigla teenused hinnakiri",
         "Estonia private hospitals clinics treatment service prices",
         "erakliinik kirurgia hambaravi diagnostika hinnakiri Eesti",
+    ],
+    "RO": [
+        "România clinică privată perfuzii intravenoase vitamine prețuri",
+        "Romania private clinic IV therapy wellness infusion prices Bucharest Cluj",
+        "clinică privată servicii medicale tarife prețuri România",
     ],
 }
 

@@ -908,8 +908,16 @@ function addChatChart(payload){
     cap.textContent=payload.title; card.appendChild(cap); }
   var plot=document.createElement('div'); plot.className='chat-chart-plot'; card.appendChild(plot);
   cb.appendChild(card);
-  if(window.Plotly) Plotly.newPlot(plot,payload.figure.data,payload.figure.layout,
-    {displayModeBar:false,responsive:true});
+  if(window.Plotly){
+    var figure=JSON.parse(JSON.stringify(payload.figure));
+    figure.layout=figure.layout||{}; figure.layout.title={text:''};
+    figure.layout.height=Math.min(Number(figure.layout.height||320),320);
+    figure.layout.margin=Object.assign({},figure.layout.margin||{}, {t:18,r:16,b:52});
+    if(plot.clientWidth<520) (figure.data||[]).forEach(function(trace){
+      if(trace.type==='scatter' && String(trace.mode||'').indexOf('markers')!==-1) trace.mode='markers';
+    });
+    Plotly.newPlot(plot,figure.data,figure.layout,{displayModeBar:false,responsive:true});
+  }
   _chatScroll();
 }
 // Sample cards / suggestion chips call this.

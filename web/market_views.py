@@ -58,13 +58,16 @@ MARKET_CSS = """
 .market-hero {display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:18px}
 .market-hero p {max-width:850px;margin:0}
 .market-shell .market-search-action {margin:0;padding:0;background:transparent;border:0;flex:0 0 auto}
+.market-country-tabs {display:flex;gap:7px;flex-wrap:wrap;margin:0 0 16px}
+.market-country-tabs a {padding:7px 12px;border:1px solid #ccdada;border-radius:999px;background:#fff;color:#28516c;text-decoration:none;font-size:12px;font-weight:700}
+.market-country-tabs a.active {background:#1e6fb8;border-color:#1e6fb8;color:#fff}
 .market-kpis {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}
 .market-kpi {background:linear-gradient(145deg,#fff,#f7fbfc);border:1px solid #dbe6e6;border-radius:12px;padding:16px}
 .market-kpi strong {display:block;font-size:25px;color:#1b2733;margin-bottom:3px}
 .market-kpi span {font-size:12px;color:#607585}
 .market-chart-grid {display:grid;grid-template-columns:minmax(0,1.45fr) minmax(280px,.75fr);gap:14px;align-items:stretch}
 .market-chart-card {background:#fff;border:1px solid #dbe6e6;border-radius:12px;overflow:hidden;min-width:0}
-.market-chart-card .plot {border:0;margin:0}
+.market-chart-card .plot {border:0;margin:0;height:100%}
 .market-section-head {display:flex;align-items:end;justify-content:space-between;gap:18px;margin:26px 0 10px}
 .market-section-head h2 {margin:0}.market-section-head p {margin:0;font-size:12px}
 .market-table-tools {display:grid;grid-template-columns:minmax(180px,1.4fr) repeat(3,minmax(130px,.7fr));gap:8px;padding:10px;background:#f6fafb;border:1px solid #dbe6e6;border-bottom:0;border-radius:10px 10px 0 0}
@@ -76,10 +79,14 @@ MARKET_CSS = """
 .market-segment.multi {background:#eaf2f7;color:#1e6fb8}
 .market-status {font-weight:700;font-size:12px;color:#526576}
 .market-status.priced {color:#187c5c}.market-status.queued {color:#9a632e}
+.market-row-actions {display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.market-shell .market-row-actions .btn,.market-shell .market-row-actions button {display:inline-flex;align-items:center;width:auto;min-height:0;padding:5px 8px!important;border-radius:6px;font-size:11px;line-height:1.2;white-space:nowrap;margin:0}
+.market-shell .market-row-actions form {display:inline-flex;width:auto;margin:0;padding:0;border:0;background:transparent}
 .market-view-toggle {display:flex;gap:8px;margin:14px 0}
 .market-view-toggle a {padding:7px 11px;border:1px solid #ccdada;border-radius:999px;text-decoration:none;font-size:12px;color:#28516c;background:#fff}
 .market-view-toggle a.active {background:#1e6fb8;color:#fff;border-color:#1e6fb8}
-@media(max-width:900px){.market-kpis{grid-template-columns:repeat(2,1fr)}.market-chart-grid{grid-template-columns:1fr}.market-table-tools{grid-template-columns:1fr 1fr}.market-hero{flex-direction:column}}
+@media(max-width:1500px){.market-chart-grid{grid-template-columns:1fr}}
+@media(max-width:900px){.market-kpis{grid-template-columns:repeat(2,1fr)}.market-table-tools{grid-template-columns:1fr 1fr}.market-hero{flex-direction:column}}
 """
 
 
@@ -97,6 +104,14 @@ def price(r):
     prefix = "From " if r["price_type"] == "from" else ""
     end = "–" + r["price_max"] if r["price_type"] == "range" and r["price_max"] else ""
     return f"{prefix}{r['price']}{end} {r['currency']}"
+
+
+def location_status(value):
+    return {
+        "located": "Mapped",
+        "pending": "Address captured",
+        "needs_review": "Map match needs review",
+    }.get(value, value)
 
 
 def chart(data, title):
@@ -121,8 +136,11 @@ def market_plot(payload):
     if not payload:
         return None
     spec = json.dumps(payload["figure"], ensure_ascii=False).replace("<", "\\u003c")
+    height = int(payload["figure"].get("layout", {}).get("height", 360))
     return Div(
-        *plot_div("market-" + secrets.token_hex(6), spec), cls="market-chart-card"
+        *plot_div("market-" + secrets.token_hex(6), spec),
+        cls="market-chart-card",
+        style=f"height:{height + 2}px",
     )
 
 
@@ -146,16 +164,17 @@ def workspace(
     from web.market_catalog import is_wellness_service
     from web.market_charts import build_chart, target_snapshot
 
+    country = country if country in COUNTRIES else "LT"
     history = market.observations()
     latest = market.latest_prices(history)
-    targets = target_snapshot()
+    targets = target_snapshot(country)
     hospitals = market.rows("SELECT id,name,country,domain FROM market_hospital ORDER BY name")
     observed_by_domain = {h["domain"]: h for h in hospitals}
     effective_focus = "" if hospital or service else focus
 
     def matches(r):
         return (
-            (not country or r["country"] == country)
+            r["country"] == country
             and (not hospital or r["hospital_id"] == hospital)
             and (not service or r["service_id"] == service)
             and (not price_type or r["price_type"] == price_type)
@@ -260,7 +279,7 @@ def workspace(
                 Td(target["status"], cls="market-status " + target["coverage"]),
                 Td(
                     A("Official service page", href=target["service_url"], target="_blank", rel="noopener noreferrer"),
-                    P(target["last_checked"] or "Awaiting first run"),
+                    P(target["last_checked"] or "No retained source yet"),
                 ),
                 data_search=(target["name"] + " " + target["positioning"] + " " + " ".join(target["cities"])).casefold(),
                 data_segment=target["segment"],
@@ -298,9 +317,16 @@ def workspace(
 
     return Div(
         Div(
+            *[
+                A(label, href=f"/market/competitive-intelligence?country={code}&focus=wellness", cls="active" if code == country else "")
+                for code, label in COUNTRIES.items()
+            ],
+            cls="market-country-tabs",
+        ),
+        Div(
             Div(
-                H1("Lithuania Wellness Competition"),
-                P("A focused view of IV infusion, vitamin-drip and longevity clinics, with broader multi-specialty competitors tracked alongside source-backed prices."),
+                H1(COUNTRIES[country], " ", "Wellness Competition"),
+                P("IV infusion, vitamin-drip and longevity competitors, with broader multi-specialty clinics and source-backed prices."),
             ),
             Form(Input(type="hidden", name="csrf", value=csrf), Button("Refresh with Exa", type="submit"), action="/market/search", method="post", cls="market-search-action"),
             cls="market-hero",
@@ -313,13 +339,13 @@ def workspace(
             cls="market-kpis",
         ),
         Div(
-            market_plot(build_chart("landscape")),
-            market_plot(build_chart("collection")),
+            market_plot(build_chart("landscape", country, targets, latest)),
+            market_plot(build_chart("collection", country, targets, latest)),
             cls="market-chart-grid",
         ),
-        market_plot(build_chart("capabilities")),
-        market_plot(build_chart("wellness-prices")),
-        Div(H2("Priority competitor watchlist"), P("Filter directly above the table; no page-wide filter form."), cls="market-section-head"),
+        market_plot(build_chart("capabilities", country, targets, latest)),
+        market_plot(build_chart("wellness-prices", country, targets, latest)),
+        Div(H2("Priority competitor watchlist" if country == "LT" else "Competitor landscape register"), P("Filter directly above the table; no page-wide filter form."), cls="market-section-head"),
         Div(
             Input(id="target-search", placeholder="Search clinic or positioning"),
             Select(Option("All models", value=""), Option("IV / longevity specialist"), Option("Multi-specialty clinic"), id="target-segment"),
@@ -328,11 +354,11 @@ def workspace(
             cls="market-table-tools",
         ),
         Div(Table(Thead(Tr(*[Th(x) for x in ["Competitor", "Model", "Locations", "Observed tariffs", "Coverage", "Evidence"]])), Tbody(*target_rows), id="priority-competitors"), cls="market-table-wrap"),
-        P(f"{len(targets)} curated competitors. Positioning and capability tags are editorial classifications; prices, addresses and collection status remain source-backed observations."),
+        P(f"{len(targets)} {'curated' if country == 'LT' else 'observed'} competitors. Positioning and capability tags are classifications; prices, addresses and collection status remain source-backed observations."),
         Div(H2("Source-backed tariff evidence"), P(f"{count} matching tariffs · showing up to 500", id="tariff-count"), cls="market-section-head"),
         Div(
-            A("Wellness & IV", href="/market/competitive-intelligence?focus=wellness", cls="active" if effective_focus == "wellness" else ""),
-            A("All collected services", href="/market/competitive-intelligence?focus=", cls="active" if not effective_focus else ""),
+            A("Wellness & IV", href=f"/market/competitive-intelligence?country={country}&focus=wellness", cls="active" if effective_focus == "wellness" else ""),
+            A("All collected services", href=f"/market/competitive-intelligence?country={country}&focus=", cls="active" if not effective_focus else ""),
             cls="market-view-toggle",
         ),
         Div(
@@ -374,8 +400,10 @@ def workspace(
 
 def watchlist_editor(csrf, edit_id="", message=""):
     from web import market_watchlist
+    from web.market_charts import target_snapshot
 
     entries = market_watchlist.items()
+    coverage = {item["id"]: item for item in target_snapshot("LT")}
     current = market_watchlist.get(edit_id) if edit_id else None
     return Div(
         Div(
@@ -383,7 +411,17 @@ def watchlist_editor(csrf, edit_id="", message=""):
                 H1("Watchlist Editor"),
                 P("Curate identified competitor URLs without an Exa search. Active URLs are deep-scraped alongside discovered pages; the same evidence checks and price history apply to both."),
             ),
-            A("Back to dashboard", href="/market/competitive-intelligence", cls="btn"),
+            Div(
+                A("Back to dashboard", href="/market/competitive-intelligence?country=LT", cls="btn"),
+                Form(
+                    Input(type="hidden", name="csrf", value=csrf),
+                    Button("Deep scrape all active", type="submit"),
+                    action="/market/watchlist/scrape-all",
+                    method="post",
+                    cls="market-search-action",
+                ),
+                cls="market-row-actions",
+            ),
             cls="market-hero",
         ),
         P(message, cls="market-status") if message else None,
@@ -414,16 +452,23 @@ def watchlist_editor(csrf, edit_id="", message=""):
                             Td(item["name"], P(", ".join(item["cities"]))),
                             Td(item["segment"]),
                             Td(*[P(A(url, href=url, target="_blank", rel="noopener noreferrer")) for url in item["urls"]]),
-                            Td("Active" if item["active"] else "Paused", cls="market-status " + ("priced" if item["active"] else "queued")),
                             Td(
-                                A("Edit", href="/market/watchlist?edit=" + item["id"], cls="btn"),
-                                Form(
-                                    Input(type="hidden", name="csrf", value=csrf),
-                                    Button("Deep scrape now", type="submit"),
-                                    action="/market/watchlist/" + item["id"] + "/scrape",
-                                    method="post",
-                                    cls="market-search-action",
-                                ) if item["active"] else None,
+                                "Active" if item["active"] else "Paused",
+                                P(coverage.get(item["id"], {}).get("status", "Not collected yet")),
+                                cls="market-status " + ("priced" if item["active"] else "queued"),
+                            ),
+                            Td(
+                                Div(
+                                    A("Edit", href="/market/watchlist?edit=" + item["id"], cls="btn"),
+                                    Form(
+                                        Input(type="hidden", name="csrf", value=csrf),
+                                        Button("Deep scrape now", type="submit"),
+                                        action="/market/watchlist/" + item["id"] + "/scrape",
+                                        method="post",
+                                        cls="market-search-action",
+                                    ) if item["active"] else None,
+                                    cls="market-row-actions",
+                                ),
                             ),
                         )
                         for item in entries
@@ -610,7 +655,7 @@ def map_view(country="", hospital=""):
                     Tr(
                         Td(A(r["name"], href="/market/clinics/" + r["hospital_id"])),
                         Td(r["address"] + ", " + r["city"]),
-                        Td(r["geocode_status"]),
+                        Td(location_status(r["geocode_status"])),
                         Td(
                             A(
                                 "Address source",
@@ -649,7 +694,15 @@ def clinic_detail(csrf, hospital_id, service="", price_type="", q=""):
     locations = [
         r for r in market_map.clinics(h["country"]) if r["hospital_id"] == hospital_id
     ]
+    tariffs = [r for r in market.latest_prices() if r["hospital_id"] == hospital_id]
+    if service:
+        tariffs = [r for r in tariffs if r["service_id"] == service]
+    if price_type:
+        tariffs = [r for r in tariffs if r["price_type"] == price_type]
+    if q:
+        tariffs = [r for r in tariffs if q.casefold() in (r["service"] + " " + r["original_name"]).casefold()]
     return Div(
+        A("‹ Back to Dashboard", href=f"/market/competitive-intelligence?country={h['country']}", cls="btn"),
         H1(h["name"]),
         P(COUNTRIES[h["country"]]),
         A(
@@ -660,8 +713,6 @@ def clinic_detail(csrf, hospital_id, service="", price_type="", q=""):
         ),
         " · ",
         A("View on map", href="/market/map?hospital=" + hospital_id),
-        " · ",
-        A("All competitors", href="/market/competitive-intelligence"),
         P("Evidence: " + h["evidence"]),
         A(
             "Official service page",
@@ -669,20 +720,38 @@ def clinic_detail(csrf, hospital_id, service="", price_type="", q=""):
             target="_blank",
             rel="noopener noreferrer",
         ),
-        *[
-            P(
-                r["address"]
-                + ", "
-                + r["city"]
-                + " · "
-                + (r["phone"] or "")
-                + " · "
-                + r["geocode_status"]
-            )
-            for r in locations
-        ],
-        workspace(
-            csrf, hospital=hospital_id, service=service, price_type=price_type, q=q
+        Div(
+            Div(NotStr(f"<strong>{len(tariffs)}</strong><span>observed tariffs</span>"), cls="market-kpi"),
+            Div(NotStr(f"<strong>{len(locations)}</strong><span>verified clinic locations</span>"), cls="market-kpi"),
+            cls="market-kpis",
+        ),
+        H2("Clinic locations"),
+        Div(
+            Table(
+                Thead(Tr(Th("Address"), Th("City"), Th("Status"), Th("Evidence"))),
+                Tbody(*[
+                    Tr(
+                        Td(r["address"]), Td(r["city"]), Td(location_status(r["geocode_status"])),
+                        Td(A("Address source", href=r["source_url"], target="_blank", rel="noopener noreferrer"), P(r["evidence"])),
+                    )
+                    for r in locations
+                ]),
+            ) if locations else P("Address discovery pending"),
+            cls="market-table-wrap" if locations else "",
+        ),
+        H2("Observed services and prices"),
+        Div(
+            Table(
+                Thead(Tr(Th("Service"), Th("Original tariff"), Th("Price"), Th("Collected UTC"), Th("Evidence"))),
+                Tbody(*[
+                    Tr(
+                        Td(r["service"]), Td(r["original_name"]), Td(price(r)), Td(r["retrieved_at"]),
+                        Td(A("Source", href=r["source_url"], target="_blank", rel="noopener noreferrer"), P(r["evidence"])),
+                    )
+                    for r in tariffs
+                ]),
+            ) if tariffs else P("No source-backed tariffs collected yet"),
+            cls="market-table-wrap" if tariffs else "",
         ),
     )
 
@@ -699,7 +768,7 @@ def register(rt, app, require, render):
     @rt("/market/competitive-intelligence", methods=["GET"])
     def market_page(
         session,
-        country: str = "",
+        country: str = "LT",
         hospital: str = "",
         service: str = "",
         price_type: str = "",
@@ -804,6 +873,31 @@ def register(rt, app, require, render):
             },
         )
         return RedirectResponse("/market/watchlist?edit=" + watchlist_id, status_code=303)
+
+    @rt("/market/watchlist/scrape-all", methods=["POST"])
+    async def market_watchlist_scrape_all(request, session):
+        from web import market_watchlist
+
+        email, denied = require(session, "market-watchlist")
+        if denied:
+            return denied
+        form = await request.form()
+        if not valid(session, form):
+            return Response("Invalid form token", status_code=403)
+        entries = market_watchlist.items(active_only=True)
+        if not entries:
+            return RedirectResponse("/market/watchlist", status_code=303)
+        market.enqueue(
+            email,
+            trigger="watchlist",
+            config_override={
+                "mode": "direct",
+                "watchlist_ids": [item["id"] for item in entries],
+                "countries": sorted({item["country"] for item in entries}),
+                "max_pages": min(300, sum(len(item["urls"]) for item in entries)),
+            },
+        )
+        return RedirectResponse("/market/watchlist", status_code=303)
 
     @rt("/market/clinics/{hospital_id}", methods=["GET"])
     def market_clinic_page(

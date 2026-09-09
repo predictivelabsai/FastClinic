@@ -35,19 +35,20 @@ def _layout(title, height=360, **extra):
     return layout
 
 
-def target_snapshot():
+def target_snapshot(country="LT"):
     """Combine editorial targets with observed sources, prices and branch records."""
     prices = market.latest_prices()
     sources = market.rows(
         "SELECT url,retrieved_at,status FROM market_source ORDER BY retrieved_at DESC"
     )
-    branches = market_map.clinics("LT")
+    branches = market_map.clinics(country)
     from web.market_watchlist import items
 
     result = []
-    for target in items():
+    watched = [target for target in items() if target["country"] == country]
+    for target in watched:
         domains = set(target["domains"])
-        tariffs = [r for r in prices if r["country"] == "LT" and r["domain"] in domains]
+        tariffs = [r for r in prices if r["country"] == country and r["domain"] in domains]
         wellness = [r for r in tariffs if is_wellness_service(r)]
         source_rows = [s for s in sources if domain(s["url"]) in domains]
         target_branches = [
@@ -81,11 +82,81 @@ def target_snapshot():
                 "coverage": coverage,
             }
         )
+    if country != "LT":
+        watched_domains = {host for target in watched for host in target["domains"]}
+        hospitals = market.rows(
+            "SELECT * FROM market_hospital WHERE country=? ORDER BY name", (country,)
+        )
+        for priority, hospital in enumerate(hospitals, len(result) + 1):
+            if hospital["domain"] in watched_domains:
+                continue
+            tariffs = [r for r in prices if r["country"] == country and r["domain"] == hospital["domain"]]
+            wellness = [r for r in tariffs if is_wellness_service(r)]
+            source_rows = [s for s in sources if domain(s["url"]) == hospital["domain"]]
+            target_branches = [b for b in branches if b["hospital_id"] == hospital["id"]]
+            service_text = " ".join(r["service"] + " " + r["original_name"] for r in tariffs)
+            capabilities = []
+            if wellness:
+                capabilities.append("iv_therapy")
+            if re.search(r"longevity|anti[ -]?aging|ilgaamž", service_text, re.I):
+                capabilities.append("longevity")
+            if re.search(r"family|general practice|primary|perearst|ģimenes|medicină de familie", service_text, re.I):
+                capabilities.append("primary_care")
+            if re.search(r"diagnostic|imaging|laborator|ultrasound|radiolog", service_text, re.I):
+                capabilities.append("diagnostics")
+            if len({r["service"] for r in tariffs}) >= 5:
+                capabilities.append("multi_specialty")
+            scope = min(5, max(1, 1 + round(math.log2(max(1, len(tariffs))))))
+            iv_focus = min(5, max(1, round(1 + 4 * len(wellness) / max(1, len(tariffs)))))
+            segment = "IV / longevity specialist" if wellness and len(wellness) * 2 >= len(tariffs) else "Multi-specialty clinic"
+            if wellness:
+                status, coverage = "Wellness prices captured", "priced"
+            elif tariffs:
+                status, coverage = "Other services captured", "services"
+            elif source_rows:
+                status, coverage = "Official source found", "source"
+            else:
+                status, coverage = "Queued for collection", "queued"
+            result.append(
+                {
+                    "id": hospital["id"], "name": hospital["name"], "country": country,
+                    "domains": (hospital["domain"],), "segment": segment,
+                    "cities": tuple(sorted({b["city"] for b in target_branches})) or ("Location pending",),
+                    "positioning": "Observed competitor from collected official sources",
+                    "capabilities": tuple(capabilities), "scope": scope, "iv_focus": iv_focus,
+                    "urls": (hospital["source_url"],), "service_url": hospital["source_url"],
+                    "active": True, "priority": priority, "origin": "observed",
+                    "tariffs": len(tariffs), "wellness_tariffs": len(wellness),
+                    "priced_wellness": sum(r["price"] is not None for r in wellness),
+                    "sources": len(source_rows), "branches": len(target_branches),
+                    "last_checked": source_rows[0]["retrieved_at"] if source_rows else "",
+                    "status": status, "coverage": coverage,
+                }
+            )
     return result
 
 
-def landscape():
-    rows = [r for r in target_snapshot() if r["active"]]
+def _empty(title, message, height=320):
+    return {
+        "data": [],
+        "layout": _layout(
+            title,
+            height,
+            xaxis={"visible": False},
+            yaxis={"visible": False},
+            annotations=[{"text": message, "showarrow": False, "font": {"color": MUTED, "size": 13}}],
+        ),
+    }
+
+
+def landscape(country="LT", targets=None):
+    rows = [
+        r
+        for r in (targets if targets is not None else target_snapshot(country))
+        if r["active"]
+    ]
+    if not rows:
+        return _empty("Competitive landscape", "Run discovery to build this country dashboard.", 360)
     colors = {
         "IV / longevity specialist": GREEN,
         "Multi-specialty clinic": BLUE,
@@ -105,9 +176,10 @@ def landscape():
     for row in rows:
         grouped[(row["scope"], row["iv_focus"])].append(row["id"])
     coordinates = {}
+    show_labels = len(rows) <= 12 and max(map(len, grouped.values()), default=0) <= 4
     label_positions = ["top left", "bottom right", "top right", "bottom left"]
     for (scope, focus), identifiers in grouped.items():
-        spacing = 0.44 if len(identifiers) < 3 else 0.5
+        spacing = min(0.5, 1.2 / max(1, len(identifiers) - 1))
         midpoint = (len(identifiers) - 1) / 2
         for index, identifier in enumerate(identifiers):
             x = scope + (index - midpoint) * spacing
@@ -125,7 +197,7 @@ def landscape():
         traces.append(
             {
                 "type": "scatter",
-                "mode": "markers+text",
+                "mode": "markers+text" if show_labels else "markers",
                 "name": segment,
                 "x": [coordinates[r["id"]][0] for r in selected],
                 "y": [coordinates[r["id"]][1] for r in selected],
@@ -151,8 +223,8 @@ def landscape():
     return {
         "data": traces,
         "layout": _layout(
-            "Lithuania competitive landscape",
-            430,
+            "Competitive landscape",
+            455,
             xaxis={
                 "title": "Breadth of clinic offering →",
                 "range": [0.35, 5.8],
@@ -167,14 +239,20 @@ def landscape():
                 "gridcolor": GRID,
                 "zeroline": False,
             },
-            legend={"orientation": "h", "y": -0.18},
-            margin={"l": 62, "r": 28, "t": 54, "b": 78},
+            legend={"orientation": "h", "x": 0, "y": -0.31},
+            margin={"l": 62, "r": 28, "t": 54, "b": 118},
         ),
     }
 
 
-def capability_heatmap():
-    rows = [r for r in target_snapshot() if r["active"]]
+def capability_heatmap(country="LT", targets=None):
+    rows = [
+        r
+        for r in (targets if targets is not None else target_snapshot(country))
+        if r["active"]
+    ]
+    if not rows:
+        return _empty("Capability coverage", "No collected competitors yet.", 300)
     keys = [key for key, _ in CAPABILITIES]
     labels = [label for _, label in CAPABILITIES]
     return {
@@ -201,13 +279,15 @@ def capability_heatmap():
     }
 
 
-def wellness_prices():
-    from web.market_watchlist import items
-
+def wellness_prices(country="LT", targets=None, prices=None):
     by_target = defaultdict(list)
-    targets = items(active_only=True)
-    for row in market.latest_prices():
-        if row["country"] != "LT" or row["price"] is None or not is_wellness_service(row):
+    targets = [
+        r
+        for r in (targets if targets is not None else target_snapshot(country))
+        if r["active"]
+    ]
+    for row in prices if prices is not None else market.latest_prices():
+        if row["country"] != country or row["price"] is None or not is_wellness_service(row):
             continue
         for target in targets:
             if row["domain"] in target["domains"]:
@@ -238,8 +318,14 @@ def wellness_prices():
     }
 
 
-def collection_coverage():
-    rows = [r for r in target_snapshot() if r["active"]]
+def collection_coverage(country="LT", targets=None):
+    rows = [
+        r
+        for r in (targets if targets is not None else target_snapshot(country))
+        if r["active"]
+    ]
+    if not rows:
+        return _empty("Collection coverage", "No competitors collected yet.", 300)
     counts = Counter(r["coverage"] for r in rows)
     labels = ["Wellness prices", "Other services", "Official source", "Queued"]
     keys = ["priced", "services", "source", "queued"]
@@ -262,7 +348,7 @@ def collection_coverage():
             }
         ],
         "layout": _layout(
-            "Priority competitor collection coverage",
+            "Collection coverage",
             340,
             showlegend=False,
             margin={"l": 20, "r": 20, "t": 54, "b": 20},
@@ -278,12 +364,15 @@ BUILDERS = {
 }
 
 
-def build_chart(name):
+def build_chart(name, country="LT", targets=None, prices=None):
     entry = BUILDERS.get(name)
     if not entry:
         return None
     title, builder = entry
-    figure = builder()
+    if name == "wellness-prices":
+        figure = builder(country, targets, prices)
+    else:
+        figure = builder(country, targets)
     return {"name": name, "title": title, "figure": figure} if figure else None
 
 

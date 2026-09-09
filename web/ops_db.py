@@ -9,12 +9,16 @@ from __future__ import annotations
 import os
 import re
 import sqlite3
+import hashlib
+import threading
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_PATH = ROOT / "fastclinic_ops.sqlite"
 _SCHEMA_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_INITIALIZED_DATABASES: set[tuple[str, str, str]] = set()
+_INITIALIZE_LOCK = threading.Lock()
 
 
 def backend_name() -> str:
@@ -135,7 +139,12 @@ def connect(sqlite_path: str | Path | None = None) -> Connection:
             options=f"-c search_path={_schema()}",
         )
         connection = Connection(raw, True)
-        initialize(connection)
+        key = (
+            "postgresql",
+            hashlib.sha256(url.encode()).hexdigest(),
+            _schema(),
+        )
+        _initialize_once(connection, key)
         return connection
     path = Path(sqlite_path or os.getenv("FASTCLINIC_OPS_DB") or DEFAULT_PATH)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -143,8 +152,23 @@ def connect(sqlite_path: str | Path | None = None) -> Connection:
     raw.row_factory = sqlite3.Row
     raw.execute("PRAGMA busy_timeout=15000")
     connection = Connection(raw, False)
-    initialize(connection)
+    resolved = path.resolve()
+    # Re-created test databases at the same path have a different inode and are
+    # initialized independently, while ordinary requests avoid replaying the
+    # complete application DDL and seed set on every connection.
+    key = ("sqlite", str(resolved), str(resolved.stat().st_ino))
+    _initialize_once(connection, key)
     return connection
+
+
+def _initialize_once(connection: Connection, key: tuple[str, str, str]) -> None:
+    if key in _INITIALIZED_DATABASES:
+        return
+    with _INITIALIZE_LOCK:
+        if key in _INITIALIZED_DATABASES:
+            return
+        initialize(connection)
+        _INITIALIZED_DATABASES.add(key)
 
 
 _TABLES = (

@@ -1,10 +1,12 @@
 # Market intelligence
 
-The staff navigation has **Market → Competitive Intelligence**, **Market → Watchlist Editor** and **Market → Market Map** directly after Communications. The dashboard now focuses on Lithuania's IV infusion, vitamin-drip, longevity and wellness market while retaining broader Baltic source history. This is accumulating coverage, not a complete national directory.
+The staff navigation has **Market → Competitive Intelligence**, **Market → Watchlist Editor** and **Market → Market Map** directly after Communications. Country tabs provide separate Lithuania, Latvia, Estonia and Romania dashboards for IV infusion, vitamin-drip, longevity and broader private-clinic competition. This is accumulating coverage, not yet a complete national directory.
 
 ## Using the workspace
 
 Competitive Intelligence is a visual-first dashboard: positioning bubbles, collection coverage, a capability heatmap and observed IV/wellness price position sit above the evidence register. The priority watchlist covers SYNC, ID Clinic, AUM, UnaVita, Unomeda, Bendrystės, Northway, Meliva, Affidea, Antėja, Privatus gydytojas and RVL. Compact controls filter each table in place instead of submitting a large page-wide filter form. “From”, range, exact and unavailable prices remain separate. Only regular self-pay prices are intended for comparison; unsupported, conditional and ambiguous tariffs are withheld or shown unavailable. Source links, evidence and collection timestamps support review.
+
+Clinic links open a focused provider drill-down with that clinic's captured branches, address evidence and tariff history; they do not repeat the aggregate dashboard. Use **‹ Back to Dashboard** to return to the provider's country view. Charts stack at narrower cockpit widths, and assistant-streamed scatter charts switch to hover labels in the narrow right rail.
 
 ## Discovery, curation and deep scraping
 
@@ -14,6 +16,8 @@ There are two inputs to one evidence pipeline:
 2. Authenticated staff curate identified competitors and up to eight official URLs per competitor in **Market → Watchlist Editor**. They can change priority, positioning, locations and competitor model, or pause future monitoring without erasing history.
 
 Every active watchlist URL is deep-fetched directly over HTTP(S) during a normal collection run, so known URLs do not depend on search recall. **Deep scrape now** creates a watchlist-only queue item with zero Exa searches. Exa-discovered URLs are passed to the same direct deep scraper; retained Exa live-crawl content is used only when a site blocks direct retrieval. Search-discovered and manually curated pages then use the same grounded LLM extraction, source retention, append-only price history and address pipeline. Direct fetching validates public DNS targets and redirects, accepts HTML/text only, and caps responses at 2 MB.
+
+**Deep scrape all active** runs the same direct pipeline for every active curated entry. Address discovery is independent of price extraction: it starts from retained official pages and the provider homepage, follows same-domain contact/location links in Lithuanian, Latvian, Estonian, Romanian and English, and probes a small bounded set of conventional contact paths. xAI structures candidate branches, but a row is stored only when its street address and city occur verbatim in the retained official page. Address-less providers are rotated through a bounded repair queue so one difficult site cannot starve the rest.
 
 Market Map uses locally bundled Leaflet 1.9.4 and OpenStreetMap tiles. Pan, zoom in/out and open markers to navigate to clinic prices. Each branch has its own database record with provider identity, name, street address, city, country, phone when available, official source, evidence, retrieval timestamp and geocoding status. Unknown or ambiguous addresses do not receive invented coordinates. Several providers may share a building; pins represent street-address matches, not a claim about an entrance.
 

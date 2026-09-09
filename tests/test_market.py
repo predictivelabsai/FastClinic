@@ -36,7 +36,7 @@ def observation(stamp, price="100", kind="exact", name="Consultation"):
 
 def test_defaults_include_future_entries_and_exa_only():
     cfg = market.config()
-    assert set(cfg["countries"]) == {"LT", "LV", "EE"}
+    assert set(cfg["countries"]) == {"LT", "LV", "EE", "RO"}
     assert cfg["hospitals"] == cfg["treatments"] == ["*"]
     assert cfg["providers"] == ["exa"] and cfg["weekly"]
     with pytest.raises(ValueError):
@@ -217,7 +217,7 @@ def test_routes_csrf_scope_keys_and_chart_rendering(monkeypatch):
         assert client.get("/admin/market").status_code == 403
         market.ingest("one", [observation(market.now())])
         sid = market.rows("SELECT id FROM market_service")[0]["id"]
-        html = client.get("/market/competitive-intelligence?service=" + sid).text
+        html = client.get("/market/competitive-intelligence?country=EE&service=" + sid).text
         assert "Plotly.newPlot" in html and "100 EUR" in html
         client.get("/test-login?role=admin")
         assert client.get("/admin/market").status_code == 200

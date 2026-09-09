@@ -185,7 +185,9 @@ def test_matched_search_benchmark_reports_reviewed_candidate_coverage():
     for provider in ("exa", "tavily"):
         selected = [r for r in rows if r["provider"] == provider]
         assert len(selected) == 48
-        assert {r["country"] for r in selected} == set(search.COUNTRIES)
+        # This frozen matched-provider benchmark is intentionally Baltic-only;
+        # new live country coverage has its own parametrized smoke evaluation.
+        assert {r["country"] for r in selected} == {"EE", "LT", "LV"}
         hits = [r for r in selected if r["provider_page_candidate"]]
         metrics[provider] = {
             "candidate_results": len(hits),

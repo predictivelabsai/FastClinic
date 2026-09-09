@@ -1,5 +1,14 @@
 # FastClinic change log
 
+## 0.7.0 — 2026-09-09
+
+- Add country-specific Competition dashboards for Lithuania, Latvia, Estonia and Romania, with compact country switching and country-scoped charts, evidence and tables.
+- Replace aggregate clinic drill-downs with focused clinic pages containing only that provider's addresses, source evidence and observed tariffs plus a back-to-dashboard link.
+- Add an independent official-domain address crawler that follows multilingual contact/location links and uses xAI only to structure verbatim address-and-city evidence.
+- Rotate bounded address repairs through providers without location rows, preserve evidence URLs, capture long-page footers, retry high-signal individual pages and suppress translated duplicate branches.
+- Add **Deep scrape all active** for the authenticated curated watchlist, compact row actions, clearer collection states and responsive/non-overlapping dashboard and assistant charts.
+- Add Romanian private-clinic discovery queries and retain direct/manual scraping without Exa discovery.
+
 ## 0.6.0 — 2026-09-09
 
 - Replace the form-heavy Competition workspace with a Lithuania wellness dashboard: positioning landscape, collection coverage, capability heatmap, IV/wellness price chart, and compact in-table filters.

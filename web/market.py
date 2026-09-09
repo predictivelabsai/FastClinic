@@ -507,6 +507,7 @@ def collect(run_id, cfg, owner, actor=None):
     from web import market_map
 
     stats["locations"] = 0
+    refreshed_ids = []
     for h in rows("SELECT * FROM market_hospital ORDER BY name"):
         if h["domain"] not in location_sources:
             continue
@@ -515,10 +516,17 @@ def collect(run_id, cfg, owner, actor=None):
             sources = list(
                 {s["url"]: s for s in location_sources[h["domain"]]}.values()
             )
-            market_map.refresh(h, api_key, sources)
+            market_map.refresh(h, api_key, sources, False)
+            refreshed_ids.append(h["id"])
         except Exception as exc:
             stats["errors"] += 1
             log.warning("Market address lookup failed: %s", type(exc).__name__)
+    _lease(owner)
+    stats["address_repair"] = market_map.repair_pending(
+        api_key,
+        limit=max(0, min(20, int(cfg.get("max_address_clinics", 6)))),
+        exclude_ids=refreshed_ids,
+    )
     stats["locations"] = len(market_map.clinics())
     return stats
 
