@@ -7,9 +7,10 @@ import os
 import re
 import time
 import unicodedata
+from html import unescape
 from collections import deque
 from datetime import datetime, timedelta, timezone
-from urllib.parse import urljoin
+from urllib.parse import parse_qs, unquote, urljoin, urlsplit
 
 import requests
 from web import market
@@ -41,6 +42,7 @@ ADDRESS_HINT = re.compile(
     re.IGNORECASE,
 )
 MARKDOWN_LINK = re.compile(r"\[([^\]]*)\]\(([^\s)]+)(?:\s+[^)]*)?\)")
+MAP_LINK = re.compile(r"\[([^\]]*)\]\(\s*(https?://[^\s)]+)", re.IGNORECASE)
 
 
 def connect():
@@ -260,6 +262,54 @@ def _address_key(address, city):
     return normalize(city).translate(lookalikes), words
 
 
+LOOKALIKES = str.maketrans(
+    {"а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "х": "x"}
+)
+
+
+def _tokens(value, ignored=()):
+    return {
+        word
+        for word in re.findall(r"[a-z0-9]+", normalize(value).translate(LOOKALIKES))
+        if len(word) >= 3 and word not in ignored
+    }
+
+
+def _settlement_matches(wanted_city, address):
+    wanted = [
+        normalize(part).removesuffix(" linn").strip()
+        for part in re.split(r"[,;/]", wanted_city)
+        if part.strip()
+    ]
+    actual = [
+        normalize(address.get(key, "")).removesuffix(" linn").strip()
+        for key in ["city", "town", "village", "municipality"]
+        if address.get(key)
+    ]
+    return any(
+        left == right
+        or min(len(left), len(right)) >= 6
+        and left[:6] == right[:6]
+        for left in wanted
+        for right in actual
+    )
+
+
+def _clinic_name_matches(clinic, result):
+    ignored = {
+        "clinic", "klinika", "kliinik", "privatklinika", "centras", "centrs",
+        "medical", "medicinos", "veselibas", "health", "hospital", "center",
+    }
+    wanted = _tokens(clinic.get("name", ""), ignored)
+    address = result.get("address", {})
+    actual = set()
+    for key in ["name", "display_name"]:
+        actual.update(_tokens(result.get(key, ""), ignored))
+    for key in ["amenity", "healthcare", "building", "shop", "office"]:
+        actual.update(_tokens(address.get(key, ""), ignored))
+    return bool(wanted.intersection(actual))
+
+
 def match_geocode(clinic, results):
     """Accept a single house-level match in the correct country and settlement."""
     matches = []
@@ -267,26 +317,32 @@ def match_geocode(clinic, results):
         a = r.get("address", {})
         if a.get("country_code", "").upper() != clinic["country"]:
             continue
-        house = str(a.get("house_number", "")).strip()
-        if not house or not re.search(
-            r"(?<!\w)" + re.escape(house) + r"(?!\w)", clinic["address"], re.I
-        ):
+        result_name = _tokens(r.get("name") or r.get("display_name", ""))
+        venue_address = (
+            len(result_name) >= 2
+            and result_name.issubset(_tokens(clinic["address"]))
+        )
+        house = normalize(str(a.get("house_number", ""))).translate(LOOKALIKES).strip()
+        clinic_address = normalize(clinic["address"]).translate(LOOKALIKES)
+        exact_house = house and re.search(
+            r"(?<!\w)" + re.escape(house) + r"(?!\w)", clinic_address, re.I
+        )
+        base = re.match(r"\d+", house)
+        named_suffix = (
+            base
+            and house != base.group()
+            and re.search(r"(?<!\w)" + base.group() + r"(?!\w)", clinic_address)
+            and _clinic_name_matches(clinic, r)
+        )
+        if not exact_house and not named_suffix and not venue_address:
             continue
-        settlements = [
-            a.get(k, "") for k in ["city", "town", "village", "municipality"]
-        ]
-        if normalize(clinic["city"]).removesuffix(" linn") not in {
-            normalize(s).removesuffix(" linn") for s in settlements
-        }:
+        if not _settlement_matches(clinic["city"], a):
             continue
         road = a.get("road") or a.get("pedestrian") or a.get("residential") or ""
-        ignored = {"street", "gatve", "iela", "avenue", "road"}
-        words = lambda value: {
-            w
-            for w in re.findall(r"[a-z]+", normalize(value))
-            if len(w) >= 4 and w not in ignored
-        }
-        if not words(road).intersection(words(clinic["address"])):
+        ignored = {"street", "gatve", "gatves", "iela", "avenue", "road", "tee"}
+        if not venue_address and not _tokens(road, ignored).intersection(
+            _tokens(clinic["address"], ignored)
+        ):
             continue
         try:
             lat, lon = float(r["lat"]), float(r["lon"])
@@ -295,38 +351,71 @@ def match_geocode(clinic, results):
         except (KeyError, ValueError, TypeError):
             continue
         matches.append(r)
+    named = [r for r in matches if _clinic_name_matches(clinic, r)]
+    if named:
+        matches = named
     buildings = [r for r in matches if r.get("category") == "building"]
-    if buildings:
-        matches = buildings
+    if buildings and not named:
+        # A postal address may contain several mapped structures (a clinic campus
+        # or office complex). Any one of those building objects is a valid pin for
+        # the exact evidenced address; prefer the primary Nominatim result.
+        return buildings[0]
     else:
         matches = [
             r
             for r in matches
             if r.get("category") not in {"shop", "tourism", "leisure"}
         ]
-    # Duplicate OSM objects at effectively the same point are acceptable; conflicting pins are not.
+    # All remaining objects passed country, settlement, road and house validation.
+    # A tight campus cluster is one postal location; genuinely conflicting pins
+    # remain unplaced.
     if matches and all(
-        abs(float(r["lat"]) - float(matches[0]["lat"])) < 0.0003
-        and abs(float(r["lon"]) - float(matches[0]["lon"])) < 0.0003
+        abs(float(r["lat"]) - float(matches[0]["lat"])) < 0.002
+        and abs(float(r["lon"]) - float(matches[0]["lon"])) < 0.002
         for r in matches
     ):
         return matches[0]
     return None
 
 
-def geocode(clinic):
-    endpoint = os.getenv(
-        "MARKET_GEOCODER_URL", "https://nominatim.openstreetmap.org/search"
-    )
-    if not endpoint:
-        return
+def _clean_geocode_address(clinic):
     geo_address = re.sub(
         r",\s*[^,]*(?:floor|korrus).*$", "", clinic["address"], flags=re.I
     )
-    geo_address = re.sub(r"\b(?:Street|St\.)\s*$", "", geo_address, flags=re.I).strip()
-    cache_id = market.identity(
-        endpoint, "structured-v2", geo_address, clinic["city"], clinic["country"]
+    geo_address = re.sub(
+        r"\s*[([]?\d+\.?\s*(?:floor|korrus)(?:el)?[^,)]*[)]]?\s*$",
+        "",
+        geo_address,
+        flags=re.I,
     )
+    geo_address = re.sub(r"\s*[–-]\s*\d+[A-Za-zА-Яа-я]?\s*$", "", geo_address)
+    geo_address = re.sub(r",\s*(?:PC|TC)\b.*$", "", geo_address, flags=re.I)
+    geo_address = geo_address.translate(LOOKALIKES)
+    replacements = {
+        "LT": [(r"\b(?:street|str|iela)\b\.?", "g.")],
+        "LV": [(r"(?:\b(?:street|str)\b\.?|\bg\.)", "iela")],
+        "EE": [(r"\broad\b", "tee"), (r"\bstreet\b", "tänav")],
+    }
+    for pattern, replacement in replacements.get(clinic["country"], []):
+        geo_address = re.sub(pattern, replacement, geo_address, flags=re.I)
+    geo_address = re.sub(r",?\s*\b(?:nr|no)\.\s*", " ", geo_address, flags=re.I)
+    if clinic["country"] == "LV" and not re.search(
+        r"\b(?:iela|gatve|bulvaris|prospekts)\b", geo_address, re.I
+    ):
+        geo_address = re.sub(
+            r"^(.*?)(\s+\d+[A-Za-z]?(?:[/]\d+)?)$", r"\1 iela\2", geo_address
+        )
+    return re.sub(r"\s+", " ", geo_address).strip(" ,")
+
+
+def _clean_geocode_city(clinic):
+    city = clinic["city"].strip()
+    if clinic["country"] == "RO":
+        city = re.sub(r"^Ora[sș]\s+", "", city, flags=re.I)
+    return city
+
+
+def _geocoder_results(endpoint, cache_id, params, parser=None):
     with connect() as c:
         cached = c.execute(
             "SELECT payload FROM market_geocode_cache WHERE id=?", (cache_id,)
@@ -346,41 +435,240 @@ def geocode(clinic):
             # Another worker has reserved multiple slots; leave this location pending.
             if (scheduled - current).total_seconds() > 31:
                 return
+            try:
+                interval = float(os.getenv("MARKET_GEOCODER_MIN_INTERVAL_SECONDS", "1.1"))
+            except ValueError:
+                interval = 1.1
+            # The public Nominatim policy permits at most one request/second.
+            interval = max(1.1, interval)
             c.execute(
                 "UPDATE market_geocode_gate SET next_at=? WHERE id=1",
-                ((scheduled + timedelta(seconds=16)).isoformat(),),
+                ((scheduled + timedelta(seconds=interval)).isoformat(),),
             )
             c.commit()
             time.sleep(max(0, (scheduled - current).total_seconds()))
             try:
                 response = requests.get(
                     endpoint,
-                    params={
-                        "street": geo_address,
-                        "city": clinic["city"],
-                        "country": COUNTRIES[clinic["country"]],
-                        "countrycodes": clinic["country"].lower(),
-                        "format": "jsonv2",
-                        "addressdetails": 1,
-                        "limit": 3,
-                    },
+                    params=params,
                     headers={
                         "User-Agent": "FastClinic-MarketMap/1.0 (https://fastclinic.dev; public clinic addresses)"
                     },
                     timeout=25,
                 )
                 response.raise_for_status()
-                results = response.json()
+                payload = response.json()
+                results = parser(payload) if parser else payload
                 if not isinstance(results, list):
-                    return
+                    return None
             except (requests.RequestException, ValueError):
-                return
+                return None
             c.execute(
                 "INSERT INTO market_geocode_cache (id,payload,checked_at) VALUES (?,?,?) ON CONFLICT(id) DO NOTHING",
                 (cache_id, json.dumps(results), now()),
             )
             c.commit()
+    return results
+
+
+def _photon_features(payload):
+    results = []
+    for feature in payload.get("features", []) if isinstance(payload, dict) else []:
+        properties = feature.get("properties", {})
+        coordinates = feature.get("geometry", {}).get("coordinates", [])
+        if len(coordinates) < 2:
+            continue
+        results.append(
+            {
+                "lat": coordinates[1],
+                "lon": coordinates[0],
+                "name": properties.get("name", ""),
+                "display_name": properties.get("name", ""),
+                "category": (
+                    "building" if properties.get("osm_key") == "building"
+                    else properties.get("osm_key", "")
+                ),
+                "address": {
+                    "house_number": properties.get("housenumber", ""),
+                    "road": properties.get("street", ""),
+                    "city": properties.get("city", ""),
+                    "town": properties.get("town", ""),
+                    "village": properties.get("village", ""),
+                    "municipality": properties.get("county", ""),
+                    "country_code": properties.get("countrycode", ""),
+                    "amenity": properties.get("name", ""),
+                },
+            }
+        )
+    return results
+
+
+def _map_coordinates(value):
+    """Extract a public map pin from an official-page map URL."""
+    decoded = unescape(str(value))
+    for _ in range(3):
+        expanded = unquote(decoded)
+        if expanded == decoded:
+            break
+        decoded = expanded
+
+    patterns = [
+        (r"!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)", False),
+        (r"!1d(-?\d+\.\d+)!2d(-?\d+\.\d+)", True),
+        (r"!2d(-?\d+\.\d+)!3d(-?\d+\.\d+)", True),
+        (r"@(-?\d+\.\d+),(-?\d+\.\d+)", False),
+        (r"\[(-?\d+\.\d+),(-?\d+\.\d+)\]", False),
+    ]
+    for pattern, reversed_pair in patterns:
+        matches = re.findall(pattern, decoded)
+        for first, second in reversed(matches):
+            lat, lon = (float(second), float(first)) if reversed_pair else (
+                float(first), float(second)
+            )
+            if 34 <= lat <= 72 and -25 <= lon <= 45:
+                return lat, lon
+    return None
+
+
+def _resolved_map_coordinates(url):
+    direct = _map_coordinates(url)
+    if direct:
+        return direct
+    host = (urlsplit(url).hostname or "").lower()
+    if host not in {
+        "google.com", "www.google.com", "maps.google.com", "maps.app.goo.gl", "goo.gl"
+    }:
+        return None
+    targets = [url]
+    query = parse_qs(urlsplit(unescape(url)).query).get("query", [])
+    if query:
+        targets.insert(0, "https://www.google.com/maps?q=" + query[0] + "&output=embed")
+    for target in targets:
+        try:
+            response = requests.get(
+                target,
+                headers={"User-Agent": "Mozilla/5.0 (compatible; FastClinic-MarketMap/1.0)"},
+                timeout=25,
+            )
+            response.raise_for_status()
+        except requests.RequestException:
+            continue
+        coordinates = _map_coordinates(response.url + " " + response.text)
+        if coordinates:
+            return coordinates
+    return None
+
+
+def _official_map_match(clinic):
+    """Use a coordinate link placed beside this exact address by the clinic."""
+    try:
+        source = scrape_url(clinic["source_url"])
+    except Exception:
+        return None
+    candidates = []
+    wanted = _tokens(clinic["address"] + " " + clinic["city"])
+    texts = [clinic.get("evidence", ""), source.get("text", "")]
+    for text in texts:
+        for link in MAP_LINK.finditer(text):
+            label, url = link.group(1), unescape(link.group(2))
+            host = (urlsplit(url).hostname or "").lower()
+            if not (
+                host in {"maps.app.goo.gl", "goo.gl", "maps.google.com"}
+                or host.endswith(".google.com") and "/maps" in urlsplit(url).path
+            ):
+                continue
+            context = text[max(0, link.start() - 350):link.end() + 350]
+            label_score = len(wanted.intersection(_tokens(label + " " + unquote(url))))
+            context_score = len(wanted.intersection(_tokens(context)))
+            score = label_score * 10 + context_score
+            if score:
+                candidates.append((score, url))
+    for _, url in sorted(set(candidates), reverse=True):
+        coordinates = _resolved_map_coordinates(url)
+        if coordinates:
+            return {"lat": str(coordinates[0]), "lon": str(coordinates[1])}
+    return None
+
+
+def geocode(clinic):
+    endpoint = os.getenv(
+        "MARKET_GEOCODER_URL", "https://nominatim.openstreetmap.org/search"
+    )
+    if not endpoint:
+        return
+    match_source = endpoint
+    geo_address = _clean_geocode_address(clinic)
+    geo_city = _clean_geocode_city(clinic)
+    common = {
+        "countrycodes": clinic["country"].lower(),
+        "format": "jsonv2",
+        "addressdetails": 1,
+        "limit": 10,
+    }
+    cache_id = market.identity(
+        endpoint, "structured-v5", geo_address, geo_city, clinic["country"]
+    )
+    results = _geocoder_results(
+        endpoint,
+        cache_id,
+        {
+            **common,
+            "street": geo_address,
+            "city": geo_city,
+            "country": COUNTRIES[clinic["country"]],
+        },
+    )
+    if results is None:
+        return
     match = match_geocode(clinic, results)
+    if not match:
+        query = ", ".join(
+            part
+            for part in [geo_address, geo_city, COUNTRIES[clinic["country"]]]
+            if part
+        )
+        freeform_id = market.identity(endpoint, "freeform-v1", query)
+        fallback = _geocoder_results(endpoint, freeform_id, {**common, "q": query})
+        if fallback is None:
+            return
+        match = match_geocode(clinic, fallback)
+    if not match:
+        named_query = ", ".join(
+            part
+            for part in [
+                clinic.get("name", ""), geo_address, geo_city,
+                COUNTRIES[clinic["country"]],
+            ]
+            if part
+        )
+        named_id = market.identity(endpoint, "named-v1", named_query)
+        named_results = _geocoder_results(
+            endpoint, named_id, {**common, "q": named_query}
+        )
+        if named_results is None:
+            return
+        match = match_geocode(clinic, named_results)
+    if not match:
+        fallback_endpoint = os.getenv(
+            "MARKET_FALLBACK_GEOCODER_URL", "https://photon.komoot.io/api/"
+        )
+        if fallback_endpoint:
+            photon_id = market.identity(fallback_endpoint, "photon-v1", named_query)
+            photon_results = _geocoder_results(
+                fallback_endpoint,
+                photon_id,
+                {"q": named_query, "limit": 10, "lang": "en"},
+                _photon_features,
+            )
+            if photon_results is None:
+                return
+            match = match_geocode(clinic, photon_results)
+            if match:
+                match_source = fallback_endpoint
+    if not match:
+        match = _official_map_match(clinic)
+        if match:
+            match_source = clinic["source_url"] + "#official-map"
     with connect() as c:
         c.execute(
             "UPDATE market_clinic SET latitude=?,longitude=?,geocode_status=?,geocode_source=?,geocoded_at=? WHERE id=?",
@@ -388,12 +676,47 @@ def geocode(clinic):
                 match["lat"] if match else None,
                 match["lon"] if match else None,
                 "located" if match else "needs_review",
-                endpoint,
+                match_source,
                 now(),
                 clinic["id"],
             ),
         )
         c.commit()
+
+
+def geocode_pending(limit=100, retry_review=False):
+    """Drain evidenced addresses into map coordinates in one rate-limited queue."""
+    states = ["pending", "needs_review"] if retry_review else ["pending"]
+    placeholders = ",".join("?" for _ in states)
+    with connect() as c:
+        pending = [
+            dict(row)
+            for row in c.execute(
+                f"""SELECT * FROM market_clinic WHERE geocode_status IN ({placeholders})
+                    ORDER BY retrieved_at,id LIMIT ?""",
+                (*states, max(0, min(500, int(limit)))),
+            ).fetchall()
+        ]
+    stats = {"attempted": 0, "mapped": 0, "needs_review": 0, "pending": 0}
+    for clinic in pending:
+        stats["attempted"] += 1
+        try:
+            geocode(clinic)
+        except Exception:
+            # Transport failures remain queued for the next worker tick.
+            pass
+        with connect() as c:
+            current = c.execute(
+                "SELECT geocode_status FROM market_clinic WHERE id=?", (clinic["id"],)
+            ).fetchone()
+        state = current["geocode_status"] if current else "pending"
+        if state == "located":
+            stats["mapped"] += 1
+        elif state == "needs_review":
+            stats["needs_review"] += 1
+        else:
+            stats["pending"] += 1
+    return stats
 
 
 def refresh(hospital, api_key=None, sources=None, geocode_locations=True):
@@ -445,7 +768,7 @@ def repair_pending(api_key=None, limit=6, exclude_ids=()):
         stats["attempted"] += 1
         status, error = "no_address", None
         try:
-            result = refresh(hospital, api_key, geocode_locations=False)
+            result = refresh(hospital, api_key, geocode_locations=True)
             stats["sources"] += result["sources"]
             stats["repaired"] += int(bool(result["locations"]))
             status = "repaired" if result["locations"] else "no_address"

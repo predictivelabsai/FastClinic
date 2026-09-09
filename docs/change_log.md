@@ -1,5 +1,13 @@
 # FastClinic change log
 
+## 0.8.1 — 2026-09-09
+
+- Geocode every newly scraped clinic address in the same collection task and drain transport-interrupted lookups on the next worker tick, removing the persistent **Address captured** state.
+- Add localized Baltic/Romanian address cleanup, clinic/venue-aware matching, a cached Photon fallback and source-adjacent official map-link coordinates while retaining country, settlement, street and house validation.
+- Repair the live market-map backlog to 71 mapped branches with no pending or review-only locations.
+
+Validation: 182 tests and 38 subtests passed, with 35 opt-in/live checks skipped.
+
 ## 0.8.0 — 2026-09-09
 
 - Expand Competition from four markets to all 30 EEA countries through one data-driven country registry, local-language search packs, contact routes, currencies and country dashboards.

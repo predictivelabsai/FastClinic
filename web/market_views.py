@@ -122,7 +122,7 @@ def price(r):
 def location_status(value):
     return {
         "located": "Mapped",
-        "pending": "Address captured",
+        "pending": "Mapping coordinates…",
         "needs_review": "Map match needs review",
     }.get(value, value)
 

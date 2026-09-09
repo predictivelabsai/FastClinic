@@ -579,7 +579,7 @@ def collect(run_id, cfg, owner, actor=None):
             sources = list(
                 {s["url"]: s for s in location_sources[h["domain"]]}.values()
             )
-            market_map.refresh(h, api_key, sources, False)
+            market_map.refresh(h, api_key, sources, True)
             refreshed_ids.append(h["id"])
         except Exception as exc:
             stats["errors"] += 1
@@ -590,6 +590,7 @@ def collect(run_id, cfg, owner, actor=None):
         limit=max(0, min(20, int(cfg.get("max_address_clinics", 6)))),
         exclude_ids=refreshed_ids,
     )
+    stats["geocoding"] = market_map.geocode_pending(limit=100)
     stats["locations"] = len(market_map.clinics())
     stats["candidates_verified"] = market_candidates.sync_verified()
     return stats
@@ -634,6 +635,9 @@ def tick():
                 (stamp,),
             )
             c.commit()
+        from web import market_map
+
+        market_map.geocode_pending(limit=100)
         if config()["weekly"]:
             enqueue("scheduler", "weekly")
         queued = rows(

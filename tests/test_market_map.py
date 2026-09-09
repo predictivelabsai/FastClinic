@@ -50,6 +50,20 @@ def test_geocoder_requires_country_street_house_and_city():
     assert market_map.match_geocode(c, [r, {**r, "lat": "59.9"}]) is None
 
 
+def test_geocoder_accepts_local_inflection_and_municipality_suffix():
+    c = {**clinic(), "city": "Rīgā, Rīgas valstspilsēta", "country": "LV"}
+    r = {
+        **match(),
+        "address": {
+            "house_number": "12",
+            "road": "Kotka iela",
+            "city": "Rīga",
+            "country_code": "lv",
+        },
+    }
+    assert market_map.match_geocode(c, [r]) == r
+
+
 def test_save_multiple_branches_idempotently():
     h = {
         "id": "hospital",
@@ -122,6 +136,168 @@ def test_geocoding_cached_and_unmatched_not_pinned(monkeypatch):
     assert calls[0]["params"]["countrycodes"] == "ee"
     assert "FastClinic" in calls[0]["headers"]["User-Agent"]
     assert market_map.clinics()[0]["geocode_status"] == "located"
+
+
+def test_geocoder_uses_localized_freeform_fallback(monkeypatch):
+    h = {
+        "id": "hospital", "name": "Northway", "country": "LT",
+        "domain": "clinic.example",
+    }
+    loc = {
+        "address": "Dragūnų str. 2", "city": "Klaipėda", "country": "LT",
+        "source_url": "https://clinic.example/contact",
+        "evidence": "Dragūnų str. 2, Klaipėda", "retrieved_at": market.now(),
+    }
+    market_map.save_clinics(h, [loc])
+    calls = []
+
+    class Response:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return self.payload
+
+    fallback = {
+        "lat": "55.7502", "lon": "21.1300", "display_name": "Northway",
+        "category": "amenity",
+        "address": {
+            "house_number": "2", "road": "Dragūnų g.", "city": "Klaipėda",
+            "country_code": "lt", "amenity": "Northway",
+        },
+    }
+
+    def get(*args, **kwargs):
+        calls.append(kwargs["params"])
+        return Response([] if "street" in kwargs["params"] else [fallback])
+
+    monkeypatch.setattr(market_map.requests, "get", get)
+    monkeypatch.setattr(market_map.time, "sleep", lambda _: None)
+    market_map.geocode(market_map.clinics()[0])
+    assert calls[0]["street"] == "Dragūnų g. 2"
+    assert calls[1]["q"].startswith("Dragūnų g. 2, Klaipėda")
+    assert market_map.clinics()[0]["geocode_status"] == "located"
+
+
+def test_geocoder_prefers_named_clinic_at_shared_address():
+    c = {**clinic(), "name": "Northway"}
+    generic = {**match(), "lat": "59.4145", "category": "building"}
+    named = {
+        **match(), "display_name": "Northway medical clinic", "category": "amenity",
+    }
+    assert market_map.match_geocode(c, [generic, named]) == named
+
+
+def test_geocoder_cleans_local_street_names_and_unit_suffixes():
+    assert market_map._clean_geocode_address({
+        **clinic(), "country": "LV", "address": "Brīvības gatve 234-75",
+    }) == "Brīvības gatve 234"
+    assert market_map._clean_geocode_address({
+        **clinic(), "country": "LV", "address": "Tālivalža street 2a",
+    }) == "Tālivalža iela 2a"
+    assert market_map._clean_geocode_address({
+        **clinic(), "country": "LV", "address": "Ģimnāzijas 10A-2а",
+    }) == "Ģimnāzijas iela 10A"
+    assert market_map._clean_geocode_address({
+        **clinic(), "country": "RO", "address": "Strada Nicolae Jiga, Nr. 13",
+    }) == "Strada Nicolae Jiga 13"
+    assert market_map._clean_geocode_city({
+        **clinic(), "country": "RO", "city": "Oras Pantelimon",
+    }) == "Pantelimon"
+
+
+def test_geocoder_accepts_named_venue_address_without_street_syntax():
+    c = {
+        **clinic(), "name": "Heal Kliinik",
+        "address": "Tallinn, Ülemiste City, Tervisemaja 2, 5. korrusel",
+    }
+    result = {
+        "lat": "59.4213526", "lon": "24.8065058",
+        "name": "Ülemiste tervisemaja 2", "category": "building",
+        "address": {
+            "house_number": "12/1", "road": "Sepapaja", "city": "Tallinn",
+            "country_code": "ee",
+        },
+    }
+    assert market_map.match_geocode(c, [result]) == result
+
+
+def test_photon_fallback_is_converted_to_validated_address_result():
+    results = market_map._photon_features({"features": [{
+        "geometry": {"coordinates": [24.7006625, 59.399555]},
+        "properties": {
+            "name": "Haavakliinik", "street": "Juhan Sütiste tee",
+            "housenumber": "17/1", "city": "Tallinn", "countrycode": "EE",
+            "osm_key": "building",
+        },
+    }]})
+    c = {
+        **clinic(), "name": "Haavakliinik", "address": "J. Sütiste tee 17/1",
+    }
+    assert market_map.match_geocode(c, results) == results[0]
+
+
+def test_official_address_map_link_supplies_final_coordinates(monkeypatch):
+    c = {
+        **clinic(), "name": "KliinikPluss", "address": "Tulika 19c",
+        "source_url": "https://clinic.example/contact",
+        "evidence": "Tulika 19c, Tallinn",
+    }
+    text = (
+        "[Tulika 19c, Tallinn](https://www.google.com/maps/dir/start/"
+        "Tulika+19c/data=!2m2!1d24.7200972!2d59.4287324)"
+    )
+    monkeypatch.setattr(
+        market_map,
+        "scrape_url",
+        lambda url: {"url": url, "text": text, "retrieved_at": market.now()},
+    )
+    assert market_map._official_map_match(c) == {
+        "lat": "59.4287324", "lon": "24.7200972",
+    }
+
+
+def test_pending_addresses_are_drained_to_mapped(monkeypatch):
+    h = {"id": "hospital", "name": "Clinic", "country": "EE", "domain": "clinic.example"}
+    loc = {
+        "address": "Kotka 12", "city": "Tallinn", "country": "EE",
+        "source_url": "https://clinic.example/contact", "evidence": "Kotka 12, Tallinn",
+        "retrieved_at": market.now(),
+    }
+    market_map.save_clinics(h, [loc])
+
+    def resolve(clinic):
+        with market_map.connect() as connection:
+            connection.execute(
+                "UPDATE market_clinic SET geocode_status='located',latitude='59.4',longitude='24.7' WHERE id=?",
+                (clinic["id"],),
+            )
+            connection.commit()
+
+    monkeypatch.setattr(market_map, "geocode", resolve)
+    assert market_map.geocode_pending() == {
+        "attempted": 1, "mapped": 1, "needs_review": 0, "pending": 0,
+    }
+    assert market_map.clinics()[0]["geocode_status"] == "located"
+
+
+def test_review_addresses_can_be_explicitly_retried(monkeypatch):
+    h = {"id": "hospital", "name": "Clinic", "country": "EE", "domain": "clinic.example"}
+    loc = {
+        "address": "Kotka 12", "city": "Tallinn", "country": "EE",
+        "source_url": "https://clinic.example/contact", "evidence": "Kotka 12, Tallinn",
+        "retrieved_at": market.now(),
+    }
+    market_map.save_clinics(h, [loc])
+    with market_map.connect() as connection:
+        connection.execute("UPDATE market_clinic SET geocode_status='needs_review'")
+        connection.commit()
+    monkeypatch.setattr(market_map, "geocode", lambda clinic: None)
+    assert market_map.geocode_pending()["attempted"] == 0
+    assert market_map.geocode_pending(retry_review=True)["attempted"] == 1
 
 
 def test_address_extraction_rejects_unverifiable_or_foreign_source(monkeypatch):
